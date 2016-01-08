@@ -1,0 +1,35 @@
+# Use gsl headers and libraries in LOCAL_SOFT or from downloaded gsl
+SIMINF_LOCAL_SOFT=$(shell "${R_HOME}/bin/R" CMD config LOCAL_SOFT)
+ifeq ($(wildcard "${SIMINF_LOCAL_SOFT}/include/gsl/gsl_rng.h"),)
+ifneq ($(wildcard gsl/include/gsl/gsl_rng.h),)
+SIMINF_GSL_LIB = -L"gsl/lib$(R_ARCH)"
+SIMINF_GSL_INCLUDE = -Igsl/include
+endif
+endif
+
+PKG_CFLAGS = -I. -Icore -Ievents -Imisc -Imodels $(SIMINF_GSL_INCLUDE) $(SHLIB_OPENMP_CFLAGS)
+PKG_LIBS = $(SIMINF_GSL_LIB) $(SHLIB_OPENMP_CFLAGS) -lm -lgsl -lgslcblas
+
+# List all model files to compile
+MODELS_SRC = $(wildcard models/*.c)
+MODELS_OBJ = $(MODELS_SRC:.c=.o)
+
+OBJECTS.core = \
+    core/siminf_run.o \
+    core/siminf_solver.o
+
+OBJECTS.events = \
+    events/siminf_vec.o \
+    events/siminf_events.o
+
+OBJECTS.misc = \
+    misc/siminf_arg.o \
+    misc/siminf_error.o \
+    misc/siminf_forward_euler_linear_decay.o
+
+OBJECTS = \
+   siminf.o \
+   $(OBJECTS.core) \
+   $(OBJECTS.events) \
+   $(OBJECTS.misc) \
+   $(MODELS_OBJ)

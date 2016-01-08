@@ -1,0 +1,36 @@
+Package: SimInf
+Title: A Framework for Stochastic Disease Spread Simulations
+Version: 1.0.0
+Author: Stefan Widgren (National Veterinary Institute, Sweden),
+        Pavol Bauer (Uppsala University, Sweden),
+        Stefan Engblom (Uppsala University, Sweden)
+Maintainer: Stefan Widgren <stefan.widgren@gmail.com>
+Description: Livestock movements are important for the spread of many
+    infectious diseases between herds. The package provides an
+    efficient and flexible framework for stochastic disease spread
+    modelling that integrates within-herd disease dynamics as
+    continuous-time Markov chains and livestock movements between
+    herds as scheduled events. The core simulation solver is
+    implemented in C and uses 'OpenMP' (if available) to divide work
+    over multiple processors. The package contains template models and
+    can be extended with user defined models.
+Acknowledgements: This work was financially supported by the Swedish
+        Research Council within the UPMARC Linnaeus center of
+        Excellence (Pavol Bauer and Stefan Engblom).
+License: GPL-3
+URL: https://github.com/stewid/SimInf
+BugReports: https://github.com/stewid/SimInf/issues
+Type: Package
+LazyData: true
+Biarch: true
+NeedsCompilation: yes
+SystemRequirements: GNU Scientific Library (GSL)
+Depends: R(>= 3.0.2), methods
+Imports: graphics, Matrix
+Collate: 'AllGenerics.R' 'check_arguments.R' 'scheduled_events.R'
+        'siminf_model.R' 'SISe.R' 'SISe3.R' 'demo_model.R'
+        'dependencies.R' 'siminf.R'
+RoxygenNote: 5.0.1
+Packaged: 2016-01-08 16:51:47 UTC; stefan
+Repository: CRAN
+Date/Publication: 2016-01-08 18:36:02
