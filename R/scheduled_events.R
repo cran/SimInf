@@ -1,7 +1,7 @@
-## siminf, a framework for stochastic disease spread simulations
+## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015  Stefan Engblom
-## Copyright (C) 2015  Stefan Widgren
+## Copyright (C) 2015 - 2016  Stefan Engblom
+## Copyright (C) 2015 - 2016  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -34,60 +34,61 @@ is_wholenumber <- function(x, tol = .Machine$double.eps^0.5)
 ##' @section Slots:
 ##' \describe{
 ##'   \item{E}{
-##'     Sparse matrix of object class \code{"\linkS4class{dgCMatrix}"}.
-##'     Each row corresponds to one state in the compartment model. The
-##'     non-zero entries in a column indicates the states to select and
-##'     include in an event.  For the events \code{EXIT_EVENT},
-##'     \code{INTERNAL_TRANSFER_EVENT} and \code{EXTERNAL_TRANSFER_EVENT},
-##'     a non-zero entry in element \code{i} of select column \code{j}
-##'     indicate the compartments to sample individuals from.  For the
-##'     \code{ENTER_EVENT}, all individuals enter first non-zero compartment,
-##'     i.e. a non-zero entry in element \code{i} of select column \code{j}.
+##'     Each row corresponds to one compartment in the model. The
+##'     non-zero entries in a column indicates the compartments to
+##'     include in an event.  For the \emph{exit}, \emph{internal
+##'     transfer} and \emph{external transfer} events, a non-zero
+##'     entry indicate the compartments to sample individuals from.
+##'     For the \emph{enter} event, all individuals enter first
+##'     non-zero compartment. Sparse matrix of object class
+##'     \code{"\linkS4class{dgCMatrix}"}.
 ##'   }
 ##'   \item{N}{
-##'     For the \code{INTERNAL_TRANSFER_EVENT}, a non-zero entry in
-##'     element \code{i} of select column \code{j} in \code{E} indicate
-##'     the compartments to sample individuals from. The value of element
-##'     \code{i} of column \code{k} in \code{N} determines the
-##'     target compartment. The target compartment for sampled individuals
-##'     is given by adding the value.
+##'     Each row represents one compartment in the model and the
+##'     values determine how to move sampled individuals in
+##'     \emph{internal transfer} and \emph{external transfer} events.
 ##'   }
 ##'   \item{event}{
-##'     Integer vector of length \code{len} with scheduled events.
-##'     The following four type events exists; \code{EXIT_EVENT = 0},
-##'     \code{ENTER_EVENT = 1}, \code{INTERNAL_TRANSFER_EVENT = 2}, and
-##'     \code{EXTERNAL_TRANSFER_EVENT = 3}.
+##'     Type of event: 0) \emph{exit}, 1) \emph{enter}, 2)
+##'     \emph{internal transfer}, and 3) \emph{external transfer}.
+##'     Other values are reserved for future event types and not
+##'     supported by the current default core solver. Integer vector.
 ##'   }
 ##'   \item{time}{
-##'     Integer vector of length \code{len} with the time for the event.
+##'     Time for the event. Integer vector.
 ##'   }
 ##'   \item{node}{
-##'     Integer vector of length \code{len}. The node of the event \code{i}.
+##'     The node that the event operates on. Also the source node for
+##'     an \emph{external transfer} event.  Integer vector.
+##'     1 <= \code{node[i]} <= Number of nodes.
 ##'   }
 ##'   \item{dest}{
-##'     Integer vector of length \code{len}. The destination node for a
-##'     \code{EXTERNAL_TRANSFER_EVENT}.
+##'     The destination node for an \emph{external transfer} event.
+##'     Should be \code{0} for the other event types.
+##'     Integer vector. dest[i] >= 0.
 ##'   }
 ##'   \item{n}{
-##'     Integer vector of length \code{len}. The number of individuals in the
-##'     event. n[i] >= 0.
+##'     The number of individuals affected by the event. Integer vector.
+##'     n[i] >= 0.
 ##'   }
 ##'   \item{proportion}{
-##'     Numeric vector of length \code{len}. If n[i] equals zero,
-##'     then the number of individuals to sample is calculated by summing
-##'     the number of individuals in the states determined by
-##'     select[i] and multiplying with the proportion.
+##'     If \code{n[i]} equals zero, the number of individuals affected by
+##'     \code{event[i]} is calculated by summing the number of individuls
+##      in the compartments determined by \code{select[i]} and multiplying
+##'     with \code{proportion[i]}. Numeric vector.
 ##'     0 <= proportion[i] <= 1.
 ##'   }
 ##'   \item{select}{
-##'     Integer vector of length \code{len}. Column \code{j} in the event
-##'     matrix \code{E} that determines the states to sample from.
+##'     The column \code{j} in the event matrix \code{E} that
+##'     determines the compartments that the event operates
+##'     on. Integer vector.
 ##'   }
 ##'   \item{shift}{
-##'     Integer vector of length \code{len}. Column j in the matrix
-##'     \code{N} that determines how to move the sampled states in an
-##'     \code{INTERNAL_TRANSFER_EVENT}. Should be \code{-1} for the other
-##'     event types.
+##'     The column \code{k} in the shift matrix \code{N} that
+##'     determines how individuals in \emph{internal transfer} and
+##'     \emph{external transfer} events are shifted to enter another
+##'     compartment.  Should be \code{0} for the other event types.
+##'     Integer vector.
 ##'   }
 ##' }
 ##' @keywords methods
@@ -96,7 +97,7 @@ is_wholenumber <- function(x, tol = .Machine$double.eps^0.5)
 ##' @export
 setClass("scheduled_events",
          slots = c(E          = "dgCMatrix",
-                   N          = "dgCMatrix",
+                   N          = "matrix",
                    event      = "integer",
                    time       = "integer",
                    node       = "integer",
@@ -116,7 +117,8 @@ setClass("scheduled_events",
                                             length(object@proportion),
                                             length(object@select),
                                             length(object@shift)))) , 1L)) {
-                 errors <- c(errors, "All scheduled events must have equal length.")
+                 errors <- c(errors,
+                             "All scheduled events must have equal length.")
              }
 
              if (!all(object@time > 0)) {
@@ -129,58 +131,76 @@ setClass("scheduled_events",
                              "event must be in the range 0 <= event <= 3")
              }
 
+             if (any(object@node < 1)) {
+                 errors <- c(errors,
+                             "'node' must be greater or equal to 1")
+             }
+
+             if (any(object@dest[object@event == 3] < 1)) {
+                 errors <- c(errors,
+                             "'dest' must be greater or equal to 1")
+             }
+
              if (any(object@proportion < 0, object@proportion > 1)) {
                  errors <- c(errors,
                              "prop must be in the range 0 <= prop <= 1")
              }
 
-             if (any(object@select < 0, object@select >= dim(object@E)[2])) {
+             if (any(object@select < 1, object@select > dim(object@E)[2])) {
                  errors <- c(errors,
-                             "select must be in the range 0 <= select < Nselect")
+                             "select must be in the range 1 <= select <= Nselect")
+             }
+
+             if (any(object@shift[object@event == 2] < 1)) {
+                 errors <- c(errors,
+                             "'shift' must be greater or equal to 1")
              }
 
              if (length(errors) == 0) TRUE else errors
          }
 )
 
-##' Create S4 class \code{scheduled_events}
+##' Create a \code{"\linkS4class{scheduled_events}"} object
 ##'
 ##' The argument events must be a \code{data.frame} with the following
 ##' columns:
-##' \itemize{
+##' \describe{
 ##'   \item{event}{
-##'     The event type. The following four type of events exists;
-##'     \code{EXIT_EVENT = 0}, \code{ENTER_EVENT = 1},
-##'     \code{INTERNAL_TRANSFER_EVENT = 2}, and
-##'     \code{EXTERNAL_TRANSFER_EVENT = 3}.
+##'     Type of event: 0) \emph{exit}, 1) \emph{enter}, 2)
+##'     \emph{internal transfer}, and 3) \emph{external transfer}.
+##'     Other values are reserved for future event types and not
+##'     supported by the current default core solver.
 ##'   }
 ##'   \item{time}{
-##'     The time of the event.
+##'     Time for the event. Integer vector of length \code{len}.
 ##'   }
 ##'   \item{node}{
-##'     The node of the event
+##'     The node that the event operates on. Also the source node for
+##'     an \emph{external transfer} event.
+##'     1 <= \code{node[i]} <= Number of nodes.
 ##'   }
 ##'   \item{dest}{
-##'     The destination node for an \code{EXTERNAL_TRANSFER_EVENT}.
+##'     The destination node for an \emph{external transfer} event.
+##'     Should be \code{0} for the other event types. dest[i] >= 0.
 ##'   }
 ##'   \item{n}{
-##'     The number of individuals in the event. n[i] >= 0.
+##'     The number of individuals affected by the event. n[i] >= 0.
 ##'   }
 ##'   \item{proportion}{
-##'     If n[i] equals zero, then the number of individuals to sample
-##'     is calculated by summing the number of individuals in the
-##'     states determined by select[i] and multiplying with the
-##'     proportion. 0 <= proportion[i] <= 1.
+##'     If \code{n[i]} equals zero, the number of individuals affected by
+##'     \code{event[i]} is calculated by summing the number of individuls
+##      in the compartments determined by \code{select[i]} and multiplying
+##'     with \code{proportion[i]}. 0 <= proportion[i] <= 1.
 ##'   }
 ##'   \item{select}{
-##'     Column \code{j} in the event matrix \code{E} that determines
-##'     the states to sample from.
+##'     The column \code{j} in the event matrix \code{E} that
+##'     determines the compartments that the event operates on.
 ##'   }
 ##'   \item{shift}{
-##'     The column \code{shift[i]} in the \code{N} matrix determines
-##'     how to change state of a sampled individual in an
-##'     \code{INTERNAL_TRANSFER_EVENT}. Should be \code{-1} for the
-##'     other event types.
+##'     The column \code{k} in the shift matrix \code{N} that
+##'     determines how individuals in \emph{internal transfer} and
+##'     \emph{external transfer} events are shifted to enter another
+##'     compartment.  Should be \code{0} for the other event types.
 ##'   }
 ##' }
 ##'
@@ -207,7 +227,14 @@ scheduled_events <- function(E      = NULL,
     if (is.null(N)) {
         if (!is.null(events))
             stop("events is not NULL when N is NULL")
-        N <- new("dgCMatrix")
+        N <- matrix(integer(0), nrow = 0, ncol = 0)
+    }
+    if (!all(is.matrix(N), is.numeric(N)))
+        stop("'N' must be an integer matrix")
+    if (!is.integer(N)) {
+        if (!all(is_wholenumber(N)))
+            stop("'N' must be an integer matrix")
+        storage.mode(N) <- "integer"
     }
 
     ## Check events
@@ -276,8 +303,62 @@ scheduled_events <- function(E      = NULL,
                shift      = as.integer(events$shift)))
 }
 
+##' @rdname plot-methods
+##' @param frame.plot Draw a frame around each plot. Default is FALSE.
+##' @aliases plot plot-methods plot,scheduled_events-method
+##' @docType methods
+##' @importFrom graphics par
+##' @importFrom graphics plot
+##' @importFrom graphics mtext
+##' @importFrom stats xtabs
+##' @export
+setMethod("plot",
+          signature(x = "scheduled_events"),
+          function(x, frame.plot = FALSE, ...)
+          {
+              savepar <- graphics::par(mfrow = c(2, 2),
+                                       oma = c(1, 1, 2, 0),
+                                       mar = c(4, 3, 1, 1))
+              on.exit(par(savepar))
+
+              yy <- stats::xtabs(n ~ event + time,
+                         cbind(event = x@event, time = x@time, n = x@n))
+              xx <- as.integer(colnames(yy))
+              ylim <- c(0, max(yy))
+
+              ## Exit events
+              graphics::plot(xx, yy[1,], type = "l", ylim = ylim,
+                             xlab = "", ylab = "", frame.plot = frame.plot, ...)
+              graphics::mtext("Exit", side = 3, line = 0)
+              graphics::mtext("Individuals", side = 2, line = 2)
+              graphics::mtext("Time", side = 1, line = 2)
+
+              ## Enter events
+              graphics::plot(xx, yy[2,], type = "l", ylim = ylim,
+                             xlab = "", ylab = "", frame.plot = frame.plot, ...)
+              graphics::mtext("Enter", side = 3, line = 0)
+              graphics::mtext("Individuals", side = 2, line = 2)
+              graphics::mtext("Time", side = 1, line = 2)
+
+              ## Internal transfer events
+              graphics::plot(xx, yy[3,], type = "l", ylim = ylim,
+                             xlab = "", ylab = "", frame.plot = frame.plot, ...)
+              graphics::mtext("Internal transfer", side = 3, line = 0)
+              graphics::mtext("Individuals", side = 2, line = 2)
+              graphics::mtext("Time", side = 1, line = 2)
+
+              ## External transfer events
+              graphics::plot(xx, yy[4,], type = "l", ylim = ylim,
+                             xlab = "", ylab = "", frame.plot = frame.plot, ...)
+              graphics::mtext("External transfer", side = 3, line = 0)
+              graphics::mtext("Individuals", side = 2, line = 2)
+              graphics::mtext("Time", side = 1, line = 2)
+          }
+)
+
 ##' Brief summary of \code{scheduled_events}
 ##'
+##' Shows the number of scheduled events.
 ##' @aliases show,scheduled_events-methods
 ##' @docType methods
 ##' @param object The scheduled_events \code{object}
@@ -288,56 +369,75 @@ setMethod("show",
           signature(object = "scheduled_events"),
           function (object)
           {
-              cat("\nScheduled events:\n")
-              cat(sprintf("E: %i x %i\n", dim(object@E)[1], dim(object@E)[2]))
-              cat(sprintf("N: %i x %i\n", dim(object@N)[1], dim(object@N)[2]))
+              cat(sprintf("Number of scheduled events: %i\n",
+                          length(object@event)))
+          }
+)
 
-              if (length(object@event)) {
-                  cat(sprintf("event: 1 x %i\n", length(object@event)))
+##' Summary of \code{scheduled_events}
+##'
+##' Shows the number of scheduled events and the number of scheduled
+##' events per event type.
+##' @aliases summary,scheduled_events-methods
+##' @docType methods
+##' @param object The \code{scheduled_events} object
+##' @param ... Additional arguments affecting the summary produced.
+##' @return None (invisible 'NULL').
+##' @keywords methods
+##' @export
+setMethod("summary",
+          signature(object = "scheduled_events"),
+          function(object, ...)
+          {
+              n <- length(object@event)
+              cat(sprintf("Number of scheduled events: %i\n", n))
+
+              ## Summarise exit events
+              i <- which(object@event == 0L)
+              if (length(i) > 0) {
+                  cat(sprintf(" - Exit: %i (n: min = %i max = %i avg = %.1f)\n",
+                              length(i),
+                              min(object@n[i]),
+                              max(object@n[i]),
+                              mean(object@n[i])))
               } else {
-                  cat("event: 0 x 0\n")
+                  cat(" - Exit: 0\n")
               }
 
-              if (length(object@time)) {
-                  cat(sprintf("time: 1 x %i\n", length(object@time)))
+              ## Summarise enter events
+              i <- which(object@event == 1L)
+              if (length(i) > 0) {
+                  cat(sprintf(" - Enter: %i (n: min = %i max = %i avg = %.1f)\n",
+                              length(i),
+                              min(object@n[i]),
+                              max(object@n[i]),
+                              mean(object@n[i])))
               } else {
-                  cat("time: 0 x 0\n")
+                  cat(" - Enter: 0\n")
               }
 
-              if (length(object@node)) {
-                  cat(sprintf("node: 1 x %i\n", length(object@node)))
+              ## Summarise internal transfer events
+              i <- which(object@event == 2L)
+              if (length(i) > 0) {
+                  cat(sprintf(" - Internal transfer: %i (n: min = %i max = %i avg = %.1f)\n",
+                              length(i),
+                              min(object@n[i]),
+                              max(object@n[i]),
+                              mean(object@n[i])))
               } else {
-                  cat("node: 0 x 0\n")
+                  cat(" - Internal transfer: 0\n")
               }
 
-              if (length(object@dest)) {
-                  cat(sprintf("dest: 1 x %i\n", length(object@dest)))
+              ## Summarise external transfer events
+              i <- which(object@event == 3L)
+              if (length(i) > 0) {
+                  cat(sprintf(" - External transfer: %i (n: min = %i max = %i avg = %.1f)\n",
+                              length(i),
+                              min(object@n[i]),
+                              max(object@n[i]),
+                              mean(object@n[i])))
               } else {
-                  cat("dest: 0 x 0\n")
-              }
-
-              if (length(object@n)) {
-                  cat(sprintf("n: 1 x %i\n", length(object@n)))
-              } else {
-                  cat("n: 0 x 0\n")
-              }
-
-              if (length(object@proportion)) {
-                  cat(sprintf("proportion: 1 x %i\n", length(object@proportion)))
-              } else {
-                  cat("proportion: 0 x 0\n")
-              }
-
-              if (length(object@select)) {
-                  cat(sprintf("select: 1 x %i\n", length(object@select)))
-              } else {
-                  cat("select: 0 x 0\n")
-              }
-
-              if (length(object@shift)) {
-                  cat(sprintf("shift: 1 x %i\n", length(object@shift)))
-              } else {
-                  cat("shift: 0 x 0\n")
+                  cat(" - External transfer: 0\n")
               }
           }
 )

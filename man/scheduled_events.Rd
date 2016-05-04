@@ -2,7 +2,7 @@
 % Please edit documentation in R/scheduled_events.R
 \name{scheduled_events}
 \alias{scheduled_events}
-\title{Create S4 class \code{scheduled_events}}
+\title{Create a \code{"\linkS4class{scheduled_events}"} object}
 \usage{
 scheduled_events(E = NULL, N = NULL, events = NULL)
 }
@@ -22,40 +22,42 @@ S4 class \code{scheduled_events}
 \description{
 The argument events must be a \code{data.frame} with the following
 columns:
-\itemize{
+\describe{
   \item{event}{
-    The event type. The following four type of events exists;
-    \code{EXIT_EVENT = 0}, \code{ENTER_EVENT = 1},
-    \code{INTERNAL_TRANSFER_EVENT = 2}, and
-    \code{EXTERNAL_TRANSFER_EVENT = 3}.
+    Type of event: 0) \emph{exit}, 1) \emph{enter}, 2)
+    \emph{internal transfer}, and 3) \emph{external transfer}.
+    Other values are reserved for future event types and not
+    supported by the current default core solver.
   }
   \item{time}{
-    The time of the event.
+    Time for the event. Integer vector of length \code{len}.
   }
   \item{node}{
-    The node of the event
+    The node that the event operates on. Also the source node for
+    an \emph{external transfer} event.
+    1 <= \code{node[i]} <= Number of nodes.
   }
   \item{dest}{
-    The destination node for an \code{EXTERNAL_TRANSFER_EVENT}.
+    The destination node for an \emph{external transfer} event.
+    Should be \code{0} for the other event types. dest[i] >= 0.
   }
   \item{n}{
-    The number of individuals in the event. n[i] >= 0.
+    The number of individuals affected by the event. n[i] >= 0.
   }
   \item{proportion}{
-    If n[i] equals zero, then the number of individuals to sample
-    is calculated by summing the number of individuals in the
-    states determined by select[i] and multiplying with the
-    proportion. 0 <= proportion[i] <= 1.
+    If \code{n[i]} equals zero, the number of individuals affected by
+    \code{event[i]} is calculated by summing the number of individuls
+    with \code{proportion[i]}. 0 <= proportion[i] <= 1.
   }
   \item{select}{
-    Column \code{j} in the event matrix \code{E} that determines
-    the states to sample from.
+    The column \code{j} in the event matrix \code{E} that
+    determines the compartments that the event operates on.
   }
   \item{shift}{
-    The column \code{shift[i]} in the \code{N} matrix determines
-    how to change state of a sampled individual in an
-    \code{INTERNAL_TRANSFER_EVENT}. Should be \code{-1} for the
-    other event types.
+    The column \code{k} in the shift matrix \code{N} that
+    determines how individuals in \emph{internal transfer} and
+    \emph{external transfer} events are shifted to enter another
+    compartment.  Should be \code{0} for the other event types.
   }
 }
 }

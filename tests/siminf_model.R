@@ -1,7 +1,7 @@
 ## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015  Stefan Engblom
-## Copyright (C) 2015  Stefan Widgren
+## Copyright (C) 2015 - 2016  Stefan Engblom
+## Copyright (C) 2015 - 2016  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -124,7 +124,7 @@ res <- tools::assertError(new("siminf_model",
                               sd    = rep(0L, Nn),
                               tspan = as.numeric(1:10),
                               u0    = u0))
-stopifnot(length(grep("Stochiometric matrix must be an integer matrix.",
+stopifnot(length(grep("'S' matrix must be an integer matrix.",
                       res[[1]]$message)) > 0)
 
 ## Check G
@@ -188,63 +188,79 @@ stopifnot(length(grep("Wrong size of 'ldata' matrix.",
                       res[[1]]$message)) > 0)
 
 ## Check initial state
-init <- structure(list(id  = c(0, 1, 2, 3, 4, 5),
-                       S_1 = c(0, 1, 2, 3, 4, 5),
-                       I_1 = c(0, 0, 0, 0, 0, 0),
-                       S_2 = c(0, 1, 2, 3, 4, 5),
-                       I_2 = c(0, 0, 0, 0, 0, 0),
-                       S_3 = c(0, 1, 2, 3, 4, 5),
-                       I_3 = c(0, 0, 0, 0, 0, 0)),
-                  .Names = c("id", "S_1", "I_1", "S_2", "I_2", "S_3", "I_3"),
-                  row.names = c(NA, -6L), class = "data.frame")
+u0 <- structure(list(S_1 = c(0, 1, 2, 3, 4, 5),
+                     I_1 = c(0, 0, 0, 0, 0, 0),
+                     S_2 = c(0, 1, 2, 3, 4, 5),
+                     I_2 = c(0, 0, 0, 0, 0, 0),
+                     S_3 = c(0, 1, 2, 3, 4, 5),
+                     I_3 = c(0, 0, 0, 0, 0, 0)),
+                .Names = c("S_1", "I_1", "S_2", "I_2", "S_3", "I_3"),
+                row.names = c(NA, -6L), class = "data.frame")
 
-## Both u0 and init are NULL
+## 'u0' is NULL
 res <- tools::assertError(siminf_model())
-stopifnot(length(grep("Both u0 and init are NULL",
-                      res[[1]]$message)) > 0)
-
-## Both u0 and init are non NULL
-res <- tools::assertError(siminf_model(init = init, u0 = u0))
-stopifnot(length(grep("Both u0 and init are non NULL",
+stopifnot(length(grep("'u0' is NULL",
                       res[[1]]$message)) > 0)
 
 ## Check show method without events
-show_expected <- c("Epidemiological model:", "G: 2 x 2", "S: 2 x 2", "U: 0 x 0",
-                   "V: 0 x 0", "ldata: 4 x 1", "gdata: 1 x 8",
-                   "tspan: 1 x 1000", "u0: 2 x 1", "v0: 1 x 1", "",
-                   "Scheduled events:", "E: 2 x 2", "N: 0 x 0", "event: 0 x 0",
-                   "time: 0 x 0", "node: 0 x 0", "dest: 0 x 0", "n: 0 x 0",
-                   "proportion: 0 x 0", "select: 0 x 0", "shift: 0 x 0")
+show_expected <- c("Model: SISe",
+                   "",
+                   "Number of nodes: 1",
+                   "Number of compartments: 2",
+                   "Number of transitions: 2",
+                   "Number of scheduled events: 0",
+                   "",
+                   "U: 0 x 0",
+                   "V: 0 x 0")
 
 show_observed <- capture.output(show(demo_model()))
 
 stopifnot(identical(show_observed, show_expected))
 
-## Check show method with events
-init <- structure(list(id  = c(0, 1, 2, 3, 4, 5),
-                       S_1 = c(0, 1, 2, 3, 4, 5),
-                       I_1 = c(0, 0, 0, 0, 0, 0),
-                       S_2 = c(0, 1, 2, 3, 4, 5),
-                       I_2 = c(0, 0, 0, 0, 0, 0),
-                       S_3 = c(0, 1, 2, 3, 4, 5),
-                       I_3 = c(0, 0, 0, 0, 0, 0)),
-                  .Names = c("id", "S_1", "I_1", "S_2", "I_2", "S_3", "I_3"),
-                  row.names = c(NA, -6L),
-                  class = "data.frame")
+## Check summary method without events
+summary_expected <- c("Model: SISe",
+                      "",
+                      "Number of nodes: 1",
+                      "Number of compartments: 2",
+                      "Number of transitions: 2",
+                      "Number of scheduled events: 0",
+                      " - Exit: 0",
+                      " - Enter: 0",
+                      " - Internal transfer: 0",
+                      " - External transfer: 0",
+                      "",
+                      "U: 2 x 1000",
+                      "V: 1 x 1000")
 
-events <- structure(list(event      = c(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
-                         time       = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-                         node       = c(1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5),
-                         dest       = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-                         n          = c(1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5),
-                         proportion = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
-                         select     = c(3, 4, 5, 3, 4, 5, 3, 4, 5, 3, 4, 5, 3, 4, 5),
-                         shift      = c(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1)),
+summary_observed <- capture.output(summary(run(demo_model())))
+
+stopifnot(identical(summary_observed, summary_expected))
+
+## Check show method with events
+u0 <- structure(list(S_1 = c(0, 1, 2, 3, 4, 5),
+                     I_1 = c(0, 0, 0, 0, 0, 0),
+                     S_2 = c(0, 1, 2, 3, 4, 5),
+                     I_2 = c(0, 0, 0, 0, 0, 0),
+                     S_3 = c(0, 1, 2, 3, 4, 5),
+                     I_3 = c(0, 0, 0, 0, 0, 0)),
+                .Names = c("S_1", "I_1", "S_2", "I_2", "S_3", "I_3"),
+                row.names = c(NA, -6L),
+                class = "data.frame")
+
+events <- structure(list(
+    event      = c(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
+    time       = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    node       = c(2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6),
+    dest       = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    n          = c(1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5),
+    proportion = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    select     = c(4, 5, 6, 4, 5, 6, 4, 5, 6, 4, 5, 6, 4, 5, 6),
+    shift      = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)),
                     .Names = c("event", "time", "node", "dest",
                         "n", "proportion", "select", "shift"),
                     row.names = c(NA, -15L), class = "data.frame")
 
-model <- SISe3(init,
+model <- SISe3(u0        = u0,
                tspan     = 0:10,
                events    = events,
                phi       = rep(1, 6),
@@ -265,16 +281,38 @@ model <- SISe3(init,
                end_t4    = 365,
                epsilon   = 1)
 
-show_expected <- c("Epidemiological model:", "G: 6 x 6", "S: 6 x 6", "U: 0 x 0",
-                   "V: 0 x 0", "ldata: 4 x 6", "gdata: 1 x 12",
-                   "tspan: 1 x 11", "u0: 6 x 6", "v0: 1 x 6", "",
-                   "Scheduled events:", "E: 6 x 6", "N: 6 x 2", "event: 1 x 15",
-                   "time: 1 x 15", "node: 1 x 15", "dest: 1 x 15", "n: 1 x 15",
-                   "proportion: 1 x 15", "select: 1 x 15", "shift: 1 x 15")
+show_expected <- c("Model: SISe3",
+                   "",
+                   "Number of nodes: 6",
+                   "Number of compartments: 6",
+                   "Number of transitions: 6",
+                   "Number of scheduled events: 15",
+                   "",
+                   "U: 0 x 0",
+                   "V: 0 x 0")
 
 show_observed <- capture.output(show(model))
 
 stopifnot(identical(show_observed, show_expected))
+
+## Check summary method with events
+summary_expected <- c("Model: SISe3",
+                      "",
+                      "Number of nodes: 6",
+                      "Number of compartments: 6",
+                      "Number of transitions: 6",
+                      "Number of scheduled events: 15",
+                      " - Exit: 0",
+                      " - Enter: 0",
+                      " - Internal transfer: 0",
+                      " - External transfer: 15 (n: min = 1 max = 5 avg = 3.0)",
+                      "",
+                      "U: 36 x 11",
+                      "V: 6 x 11")
+
+summary_observed <- capture.output(summary(run(model)))
+
+stopifnot(identical(summary_observed, summary_expected))
 
 ## Check U. Change storage mode of U to double.
 ## Should not raise error

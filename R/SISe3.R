@@ -1,7 +1,7 @@
-## siminf, a framework for stochastic disease spread simulations
+## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015  Stefan Engblom
-## Copyright (C) 2015  Stefan Widgren
+## Copyright (C) 2015 - 2016  Stefan Engblom
+## Copyright (C) 2015 - 2016  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -29,12 +29,9 @@ setClass("SISe3", contains = c("siminf_model"))
 ##' Create a SISe3 model to be used by the simulation framework.
 ##'
 ##'
-##' The argument init must be a \code{data.frame} with the following
-##' columns:
+##' The argument \code{u0} must be a \code{data.frame} with one row for
+##' each node with the following columns:
 ##' \describe{
-##' \item{id}{Node identifier that uniquely identifies each node. The
-##' node identifiers must be zero-based, i.e. the first identifier
-##' must be equal to zero.}
 ##' \item{S_1}{The number of sucsceptible in age category 1}
 ##' \item{I_1}{The number of infected in age category 1}
 ##' \item{S_2}{The number of sucsceptible in age category 2}
@@ -44,7 +41,7 @@ setClass("SISe3", contains = c("siminf_model"))
 ##' }
 ##'
 ##' @template beta-section
-##' @param init A \code{data.frame} with the initial state in each
+##' @param u0 A \code{data.frame} with the initial state in each
 ##' node, see details.
 ##' @param tspan An increasing sequence of points in time where the
 ##' state of the system is to be returned.
@@ -71,7 +68,7 @@ setClass("SISe3", contains = c("siminf_model"))
 ##' @return \code{SISe3}
 ##' @include check_arguments.R
 ##' @export
-SISe3 <- function(init,
+SISe3 <- function(u0,
                   tspan,
                   events    = NULL,
                   phi       = NULL,
@@ -96,14 +93,17 @@ SISe3 <- function(init,
 
     ## Check arguments.
 
-    ## Check init
-    if (!all(c("id", compartments) %in% names(init)))
-        stop("Missing columns in init")
+    ## Check u0
+    if (!is.data.frame(u0))
+        stop("'u0' must be a data.frame")
+    if (!all(compartments %in% names(u0)))
+        stop("Missing columns in u0")
+    u0 <- u0[, compartments]
 
     ## Check initial infectious pressure
     if (is.null(phi))
-        phi <- rep(0, nrow(init))
-    check_infectious_pressure_arg(nrow(init), phi)
+        phi <- rep(0, nrow(u0))
+    check_infectious_pressure_arg(nrow(u0), phi)
 
     ## Check 'gdata' parameters
     check_gdata_arg(upsilon_1, upsilon_2, upsilon_3, gamma_1, gamma_2, gamma_3,
@@ -112,18 +112,16 @@ SISe3 <- function(init,
     ## Check interval endpoints
     check_integer_arg(end_t1, end_t2, end_t3, end_t4)
     if (identical(length(end_t1), 1L))
-        end_t1 <- rep(end_t1, nrow(init))
+        end_t1 <- rep(end_t1, nrow(u0))
     if (identical(length(end_t2), 1L))
-        end_t2 <- rep(end_t2, nrow(init))
+        end_t2 <- rep(end_t2, nrow(u0))
     if (identical(length(end_t3), 1L))
-        end_t3 <- rep(end_t3, nrow(init))
+        end_t3 <- rep(end_t3, nrow(u0))
     if (identical(length(end_t4), 1L))
-        end_t4 <- rep(end_t4, nrow(init))
-    check_end_t_arg(nrow(init), end_t1, end_t2, end_t3, end_t4)
+        end_t4 <- rep(end_t4, nrow(u0))
+    check_end_t_arg(nrow(u0), end_t1, end_t2, end_t3, end_t4)
 
     ## Arguments seems ok...go on
-
-    init <- init[,c("id", compartments)]
 
     E <- Matrix(c(1, 0, 0, 1, 0, 0,
                   0, 0, 0, 1, 0, 0,
@@ -139,7 +137,7 @@ SISe3 <- function(init,
     colnames(E) <- as.character(1:6)
     rownames(E) <- compartments
 
-    N <- Matrix(c(2, 0,
+    N <- matrix(c(2, 0,
                   2, 0,
                   0, 2,
                   0, 2,
@@ -147,9 +145,7 @@ SISe3 <- function(init,
                   0, 0),
                 nrow   = 6,
                 ncol   = 2,
-                byrow  = TRUE,
-                sparse = TRUE)
-    N <- as(N, "dgCMatrix")
+                byrow  = TRUE)
     colnames(N) <- as.character(1:2)
     rownames(N) <- compartments
 
@@ -197,34 +193,25 @@ SISe3 <- function(init,
                beta_t1, beta_t2, beta_t3, beta_t4,
                epsilon)
     storage.mode(gdata) <- "double"
+    names(gdata) <- c("upsilon_1", "upsilon_2", "upsilon_3",
+                      "gamma_1", "gamma_2", "gamma_3",
+                      "alpha",
+                      "beta_t1", "beta_t2", "beta_t3", "beta_t4",
+                      "epsilon")
 
     model <- siminf_model(G      = G,
                           S      = S,
-                          init   = init,
                           E      = E,
                           N      = N,
                           tspan  = tspan,
                           events = events,
                           ldata  = ldata,
                           gdata  = gdata,
+                          u0     = u0,
                           v0     = v0)
 
     return(as(model, "SISe3"))
 }
-
-##' @rdname run-methods
-##' @export
-setMethod("run",
-          signature(model = "SISe3"),
-          function(model, threads, seed)
-          {
-              ## check that siminf_model contains all data structures
-              ## required by the siminf solver and that they make sense
-              validObject(model);
-
-              .Call(SISe3_run, model, threads, seed)
-          }
-)
 
 ##' @rdname susceptible-methods
 ##' @export

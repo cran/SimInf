@@ -1,7 +1,7 @@
-## siminf, a framework for stochastic disease spread simulations
+## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015  Stefan Engblom
-## Copyright (C) 2015  Stefan Widgren
+## Copyright (C) 2015 - 2016  Stefan Engblom
+## Copyright (C) 2015 - 2016  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -30,25 +30,28 @@
 ##'     \code{"\linkS4class{dgCMatrix}"}.
 ##'   }
 ##'   \item{S}{
-##'     Each column corresponds to a transition, and execution of state
-##'     transition \code{j} amounts to adding the \code{S[, j]} to the
-##'     state vector of the node where the state transition occurred.
-##'     Sparse matrix (\eqn{Nc \times Nt}) of object class
-##'     \code{"\linkS4class{dgCMatrix}"}.
+##'     Each column corresponds to a state transition, and execution
+##'     of state transition \code{j} amounts to adding the \code{S[,
+##'     j]} column to the state vector \code{u[, i]} of node \emph{i}
+##'     where the transition occurred. Sparse matrix (\eqn{Nc \times
+##'     Nt}) of object class \code{"\linkS4class{dgCMatrix}"}.
 ##'   }
 ##'   \item{U}{
-##'     The result matrix with the number of individuals in each disease
-##'     state in every node (\eqn{N_n N_c \times} \code{length(tspan)}).
-##'     \code{U[, j]} contains the number of individuals in each disease
-##'     state at \code{tspan[j]}. \code{U[1:Nc, j]} contains the state
-##'     of node \code{1} at \code{tspan[j]}. \code{U[(Nc + 1):(2 * Nc), j]}
-##'     contains the state of node \code{2} at \code{tspan[j]} etc.
+##'     The result matrix with the number of individuals in each
+##'     compartment in every node. \code{U[, j]} contains the number
+##'     of individuals in each compartment at
+##'     \code{tspan[j]}. \code{U[1:Nc, j]} contains the number of
+##'     individuals in node 1 at \code{tspan[j]}. \code{U[(Nc + 1):(2
+##'     * Nc), j]} contains the number of individuals in node 2 at
+##'     \code{tspan[j]} etc. Integer matrix (\eqn{N_n N_c \times}
+##'     \code{length(tspan)}).
 ##'   }
 ##'   \item{V}{
-##'     The result matrix for the real-valued continous compartment state
-##'     (\eqn{N_n}\code{dim(ldata)[1]} \eqn{\times} \code{length(tspan)}).
-##'     \code{V[, j]} contains the real-valued state of the system at
-##'     \code{tspan[j]}.
+##'     The result matrix for the real-valued continous
+##'     state. \code{V[, j]} contains the real-valued state of the
+##'     system at \code{tspan[j]}. Numeric matrix
+##'     (\eqn{N_n}\code{dim(ldata)[1]} \eqn{\times}
+##'     \code{length(tspan)}).
 ##'   }
 ##'   \item{ldata}{
 ##'     A matrix with local data for the nodes. The column \code{ldata[, j]}
@@ -74,10 +77,8 @@
 ##'     the number of individuals in each compartment in every node.
 ##'   }
 ##'   \item{v0}{
-##'      The initial continuous state vector in every node.
-##'      (\eqn{N_N \times} \code{dim(ldata)[1]}). The continuous
-##'      state vector is updated by the specific model during the
-##'      simulation in the post time step function.
+##'      The initial value for the real-valued continuous state.
+##'      Numeric matrix (\code{dim(ldata)[1]} \eqn{\times N_n}).
 ##'   }
 ##'   \item{events}{
 ##'     Scheduled events \code{"\linkS4class{scheduled_events}"}
@@ -100,68 +101,84 @@ setClass("siminf_model",
                    v0     = "matrix",
                    events = "scheduled_events"),
          validity = function(object) {
-             errors <- character()
+             ## Check events
+             errors <- validObject(object@events)
+             if (identical(errors, TRUE))
+                 errors <- character()
 
              ## Check tspan.
              if (!is.double(object@tspan)) {
                  errors <- c(errors, "Input time-span must be a double vector.")
              } else if (any(length(object@tspan) < 2,
                             any(diff(object@tspan) <= 0))) {
-                 errors <- c(errors, "Input time-span must be an increasing vector.")
+                 errors <- c(errors,
+                             "Input time-span must be an increasing vector.")
              }
 
              ## Check u0.
              if (!identical(storage.mode(object@u0), "integer")) {
-                 errors <- c(errors, "Initial state 'u0' must be an integer matrix.")
+                 errors <- c(errors,
+                             "Initial state 'u0' must be an integer matrix.")
              } else if (any(object@u0 < 0L)) {
-                 errors <- c(errors, "Initial state 'u0' has negative elements.")
+                 errors <- c(errors,
+                             "Initial state 'u0' has negative elements.")
              }
 
              ## Check U.
              if (!identical(storage.mode(object@U), "integer")) {
-                 errors <- c(errors, "Output state 'U' must be an integer matrix.")
+                 errors <- c(errors,
+                             "Output state 'U' must be an integer matrix.")
              } else if (any(object@U < 0L)) {
-                 errors <- c(errors, "Output state 'U' has negative elements.")
+                 errors <- c(errors,
+                             "Output state 'U' has negative elements.")
              }
 
              ## Check v0.
              if (!identical(storage.mode(object@v0), "double")) {
-                 errors <- c(errors, "Initial model state 'v0' must be a double matrix.")
+                 errors <- c(errors,
+                             "Initial model state 'v0' must be a double matrix.")
              }
 
              ## Check V.
              if (!identical(storage.mode(object@V), "double")) {
-                 errors <- c(errors, "Output model state 'V' must be a double matrix.")
+                 errors <- c(errors,
+                             "Output model state 'V' must be a double matrix.")
              }
 
              ## Check S.
              if (!all(is_wholenumber(object@S@x))) {
-                 stop("Stochiometric matrix must be an integer matrix.")
+                 errors <- c(errors,
+                             "'S' matrix must be an integer matrix.")
              }
 
              ## Check G.
              Nt <- dim(object@S)[2]
              if (!identical(dim(object@G), c(Nt, Nt))) {
-                 errors <- c(errors, "Wrong size of dependency graph.")
+                 errors <- c(errors,
+                             "Wrong size of dependency graph.")
              }
 
              ## Check sd.
              Nn <- dim(object@u0)[2]
              if (!identical(length(object@sd), Nn)) {
-                 errors <- c(errors, "Wrong size of subdomain vector.")
+                 errors <- c(errors,
+                             "Wrong size of subdomain vector.")
              }
 
              ## Check ldata.
              if (!is.double(object@ldata)) {
-                 errors <- c(errors, "'ldata' matrix must be a double matrix.")
+                 errors <- c(errors,
+                             "'ldata' matrix must be a double matrix.")
              }
              if (!identical(dim(object@ldata)[2], Nn)) {
-                 errors <- c(errors, "Wrong size of 'ldata' matrix.")
+                 errors <- c(errors,
+                             "Wrong size of 'ldata' matrix.")
              }
 
              ## Check gdata.
              if (!is.double(object@gdata)) {
-                 errors <- c(errors, "'gdata' must be a double vector.")
+                 errors <- c(errors,
+                             "'gdata' must be a double vector.")
              }
 
              if (length(errors) == 0) TRUE else errors
@@ -199,17 +216,16 @@ setClass("siminf_model",
 ##'     vector of length \code{Nn}.
 ##' @param tspan A vector of increasing time points where the state of
 ##'     each node is to be returned.
-##' @param u0 The initial state vector (\eqn{N_c \times N_n}) with the
-##'     number of individuals in each compartment in every node.
-##' @param events A \code{data.frame} with the scheduled events.
-##' @param init A \code{data.frame} with the initial number of
+##' @param u0 The initial state vector. Either a matrix (\eqn{N_c
+##'     \times N_n}) or a a \code{data.frame} with the number of
 ##'     individuals in each compartment in every node.
+##' @param events A \code{data.frame} with the scheduled events.
 ##' @param V The result matrix for the real-valued continous
 ##'     compartment state (\eqn{N_n}\code{dim(ldata)[1]} \eqn{\times}
 ##'     \code{length(tspan)}).  \code{V[, j]} contains the real-valued
 ##'     state of the system at \code{tspan[j]}.
 ##' @param v0 The initial continuous state vector in every node.
-##'     (\eqn{N_N \times} \code{dim(ldata)[1]}). The continuous state
+##'     (\code{dim(ldata)[1]} \eqn{N_N \times}). The continuous state
 ##'     vector is updated by the specific model during the simulation
 ##'     in the post time step function.
 ##' @param E Sparse matrix to handle scheduled events, see
@@ -227,20 +243,22 @@ siminf_model <- function(G,
                          gdata  = NULL,
                          U      = NULL,
                          u0     = NULL,
-                         init   = NULL,
                          v0     = NULL,
                          V      = NULL,
                          E      = NULL,
                          N      = NULL)
 {
-    ## Check initial state
-    if (all(is.null(u0), is.null(init)))
-        stop("Both u0 and init are NULL")
-    if (all(!is.null(u0), !is.null(init)))
-        stop("Both u0 and init are non NULL")
-
     ## Check u0
-    if (!is.null(u0)) {
+    if (is.null(u0))
+        stop("'u0' is NULL")
+    if (is.data.frame(u0)) {
+        n_col <- ncol(u0)
+        n_row <- nrow(u0)
+        u0 <- t(data.matrix(u0))
+        attributes(u0) <- NULL
+        dim(u0) <- c(n_col, n_row)
+        storage.mode(u0) <- "integer"
+    } else {
         if (!all(is.matrix(u0), is.numeric(u0)))
             stop("u0 must be an integer matrix")
         if (!is.integer(u0)) {
@@ -248,30 +266,6 @@ siminf_model <- function(G,
                 stop("u0 must be an integer matrix")
             storage.mode(u0) <- "integer"
         }
-    }
-
-    ## Check init
-    if (!is.null(init)) {
-        if (!is.data.frame(init))
-            stop("init must be a data.frame")
-        if (!("id" %in% names(init)))
-            stop("init must contain the column id")
-        if (!is.integer(init$id)) {
-            if (!all(is_wholenumber(init$id)))
-                stop("init$id must be an integer")
-            init$id <- as.integer(init$id)
-        }
-        init <- init[order(init$id),]
-        if (!identical(min(init$id), 0L))
-            stop("init$id must be zero based")
-        if (!identical(init$id, seq_len(max(init$id+1L))-1L))
-            stop("init$id must be a sequence from 0 to max(init$id)-1")
-
-        init$id <- NULL
-        u0 <- t(data.matrix(init))
-        attributes(u0) <- NULL
-        dim(u0) <- c(ncol(init), nrow(init))
-        storage.mode(u0) <- "integer"
     }
 
     ## Check G
@@ -355,6 +349,79 @@ siminf_model <- function(G,
                V      = V,
                events = events))
 }
+
+##' Report error
+##'
+##' @param err The error code.
+##' @keywords internal
+##' @noRd
+siminf_error <- function(err)
+{
+    if (!is.numeric(err))
+        stop("'err' must be an integer vector of length 1")
+    if (!identical(length(err), 1L))
+        stop("'err' must be an integer vector of length 1")
+    if (!is_wholenumber(err))
+        stop("'err' must be an integer vector of length 1")
+
+    err <- as.integer(err)
+
+    if (identical(err, -1L))
+        stop("Negative state detected.")
+
+    if (identical(err, -2L))
+        stop("Unable to allocate memory buffer")
+
+    if (identical(err, -5L))
+        stop("Invalid 'p_edge': Must be in interval 0 < p_edge < 1")
+
+    if (identical(err, -6L))
+        stop("Invalid 'seed' value")
+
+    if (identical(err, -7L))
+        stop("Invalid 'threads' value")
+
+    if (identical(err, -8L))
+        stop("The continuous state 'v' is not finite.")
+
+    if (identical(err, -9L))
+        stop("Unable to sample individuals for event.")
+
+    if (identical(err, -10L))
+        stop("Invalid model.")
+
+    stop("Unknown error code.")
+}
+
+##' @rdname run-methods
+##' @export
+setMethod("run",
+          signature(model = "siminf_model"),
+          function(model, threads, seed)
+          {
+              ## Check that siminf_model contains all data structures
+              ## required by the siminf solver and that they make sense
+              validObject(model);
+
+              ## The model name
+              name <- as.character(class(model))
+
+              ## The model C run function
+              run_fn <- paste0(name, "_run")
+
+              ## Create expression to parse
+              expr <- ".Call(run_fn, model, threads, seed, PACKAGE = 'SimInf')"
+
+              ## Run model
+              result <- eval(parse(text = expr))
+
+              ## Check for error
+              if (!is.null(result$error))
+                  siminf_error(result$error)
+
+              result$model
+          }
+)
 
 ##' Plot \code{\linkS4class{siminf_model}}
 ##'
@@ -472,18 +539,45 @@ setMethod("show",
           signature(object = "siminf_model"),
           function (object)
           {
-              cat("Epidemiological model:\n")
-              cat(sprintf("G: %i x %i\n", dim(object@G)[1], dim(object@G)[2]))
-              cat(sprintf("S: %i x %i\n", dim(object@S)[1], dim(object@S)[2]))
+              ## The model name
+              cat(sprintf("Model: %s\n\n",
+                          as.character(class(object))))
+
+              cat(sprintf("Number of nodes: %i\n", dim(object@u0)[2]))
+              cat(sprintf("Number of compartments: %i\n", dim(object@S)[1]))
+              cat(sprintf("Number of transitions: %i\n", dim(object@G)[1]))
+              show(object@events)
+
+              cat("\n")
               cat(sprintf("U: %i x %i\n", dim(object@U)[1], dim(object@U)[2]))
               cat(sprintf("V: %i x %i\n", dim(object@V)[1], dim(object@V)[2]))
-              cat(sprintf("ldata: %i x %i\n", dim(object@ldata)[1], dim(object@ldata)[2]))
-              cat(sprintf("gdata: 1 x %i\n", length(object@gdata)))
-              cat(sprintf("sd: %i x %i\n", dim(object@sd)[1], dim(object@sd)[2]))
-              cat(sprintf("tspan: 1 x %i\n", length(object@tspan)))
-              cat(sprintf("u0: %i x %i\n", dim(object@u0)[1], dim(object@u0)[2]))
-              cat(sprintf("v0: %i x %i\n", dim(object@v0)[1], dim(object@v0)[2]))
+          }
+)
 
-              show(object@events)
+##' Summary of \code{siminf_model}
+##'
+##' @aliases summary,siminf_model-methods
+##' @docType methods
+##' @param object The \code{siminf_model} object
+##' @param ... Additional arguments affecting the summary produced.
+##' @return None (invisible 'NULL').
+##' @keywords methods
+##' @export
+setMethod("summary",
+          signature(object = "siminf_model"),
+          function(object, ...)
+          {
+              ## The model name
+              cat(sprintf("Model: %s\n\n",
+                          as.character(class(object))))
+
+              cat(sprintf("Number of nodes: %i\n", dim(object@u0)[2]))
+              cat(sprintf("Number of compartments: %i\n", dim(object@S)[1]))
+              cat(sprintf("Number of transitions: %i\n", dim(object@G)[1]))
+              summary(object@events)
+
+              cat("\n")
+              cat(sprintf("U: %i x %i\n", dim(object@U)[1], dim(object@U)[2]))
+              cat(sprintf("V: %i x %i\n", dim(object@V)[1], dim(object@V)[2]))
           }
 )

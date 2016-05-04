@@ -1,7 +1,7 @@
-## siminf, a framework for stochastic disease spread simulations
+## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015  Stefan Engblom
-## Copyright (C) 2015  Stefan Widgren
+## Copyright (C) 2015 - 2016  Stefan Engblom
+## Copyright (C) 2015 - 2016  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -29,28 +29,25 @@ setClass("SISe", contains = c("siminf_model"))
 ##' Create a SISe model to be used by the simulation framework.
 ##'
 ##'
-##' The argument init must be a \code{data.frame} with the following
-##' columns:
+##' The argument \code{u0} must be a \code{data.frame} with one row for
+##' each node with the following columns:
 ##' \describe{
-##' \item{id}{Node identifier that uniquely identifies each node. The
-##' node identifiers must be zero-based, i.e. the first identifier
-##' must be equal to zero.}
-##' \item{S}{The number of sucsceptible}
-##' \item{I}{The number of infected}
+##' \item{S}{The number of sucsceptible in each node}
+##' \item{I}{The number of infected in each node}
 ##' }
 ##'
 ##' @template beta-section
-##' @param init A \code{data.frame} with the initial state in each
-##' node, see details.
+##' @param u0 A \code{data.frame} with the initial state in each node,
+##'     see details.
 ##' @param tspan An increasing sequence of points in time where the
-##' state of the system is to be returned.
+##'     state of the system is to be returned.
 ##' @param events a \code{data.frame} with the scheduled events, see
-##' \code{\link{siminf_model}}.
+##'     \code{\link{siminf_model}}.
 ##' @param phi A numeric vector with the initial environmental
-##' infectious pressure in each node. Default NULL which gives 0 in
-##' each node.
+##'     infectious pressure in each node. Default NULL which gives 0
+##'     in each node.
 ##' @param upsilon Indirect transmission rate of the environmental
-##' infectious pressure
+##'     infectious pressure
 ##' @param gamma The recovery rate from infected to susceptible
 ##' @param alpha Shed rate from infected individuals
 ##' @template beta-param
@@ -58,7 +55,7 @@ setClass("SISe", contains = c("siminf_model"))
 ##' @return \code{SISe}
 ##' @include check_arguments.R
 ##' @export
-SISe <- function(init,
+SISe <- function(u0,
                  tspan,
                  events  = NULL,
                  phi     = NULL,
@@ -79,14 +76,17 @@ SISe <- function(init,
 
     ## Check arguments.
 
-    ## Check init
-    if (!all(c("id", compartments) %in% names(init)))
-        stop("Missing columns in init")
+    ## Check u0
+    if (!is.data.frame(u0))
+        stop("'u0' must be a data.frame")
+    if (!all(compartments %in% names(u0)))
+        stop("Missing columns in u0")
+    u0 <- u0[, compartments]
 
     ## Check initial infectious pressure
     if (is.null(phi))
-        phi <- rep(0, nrow(init))
-    check_infectious_pressure_arg(nrow(init), phi)
+        phi <- rep(0, nrow(u0))
+    check_infectious_pressure_arg(nrow(u0), phi)
 
     ## Check for non-numeric parameters
     check_gdata_arg(upsilon, gamma, alpha, beta_t1, beta_t2, beta_t3, beta_t4,
@@ -95,18 +95,16 @@ SISe <- function(init,
     ## Check interval endpoints
     check_integer_arg(end_t1, end_t2, end_t3, end_t4)
     if (identical(length(end_t1), 1L))
-        end_t1 <- rep(end_t1, nrow(init))
+        end_t1 <- rep(end_t1, nrow(u0))
     if (identical(length(end_t2), 1L))
-        end_t2 <- rep(end_t2, nrow(init))
+        end_t2 <- rep(end_t2, nrow(u0))
     if (identical(length(end_t3), 1L))
-        end_t3 <- rep(end_t3, nrow(init))
+        end_t3 <- rep(end_t3, nrow(u0))
     if (identical(length(end_t4), 1L))
-        end_t4 <- rep(end_t4, nrow(init))
-    check_end_t_arg(nrow(init), end_t1, end_t2, end_t3, end_t4)
+        end_t4 <- rep(end_t4, nrow(u0))
+    check_end_t_arg(nrow(u0), end_t1, end_t2, end_t3, end_t4)
 
     ## Arguments seems ok...go on
-
-    init <- init[,c("id", compartments)]
 
     E <- Matrix(c(1, 1,
                   0, 1),
@@ -118,7 +116,7 @@ SISe <- function(init,
     colnames(E) <- as.character(1:2)
     rownames(E) <- compartments
 
-    N <- new("dgCMatrix")
+    N <- matrix(integer(0), nrow = 0, ncol = 0)
 
     G <- Matrix(c(1, 1,
                   1, 1),
@@ -151,34 +149,23 @@ SISe <- function(init,
     gdata <- c(upsilon, gamma, alpha, beta_t1, beta_t2, beta_t3, beta_t4,
                epsilon)
     storage.mode(gdata) <- "double"
+    names(gdata) <- c("upsilon", "gamma", "alpha",
+                      "beta_t1", "beta_t2", "beta_t3", "beta_t4",
+                      "epsilon")
 
     model <- siminf_model(G      = G,
                           S      = S,
-                          init   = init,
                           E      = E,
                           N      = N,
                           tspan  = tspan,
                           events = events,
                           ldata  = ldata,
                           gdata  = gdata,
+                          u0     = u0,
                           v0     = v0)
 
     return(as(model, "SISe"))
 }
-
-##' @rdname run-methods
-##' @export
-setMethod("run",
-          signature(model = "SISe"),
-          function(model, threads, seed)
-          {
-              ## check that siminf_model contains all data structures
-              ## required by the siminf solver and that they make sense
-              validObject(model);
-
-              .Call(SISe_run, model, threads, seed)
-          }
-)
 
 ##' @rdname susceptible-methods
 ##' @export

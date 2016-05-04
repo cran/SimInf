@@ -1,8 +1,8 @@
 /*
- *  siminf, a framework for stochastic disease spread simulations
+ *  SimInf, a framework for stochastic disease spread simulations
  *  Copyright (C) 2015  Pavol Bauer
- *  Copyright (C) 2015  Stefan Engblom
- *  Copyright (C) 2015  Stefan Widgren
+ *  Copyright (C) 2015 - 2016  Stefan Engblom
+ *  Copyright (C) 2015 - 2016  Stefan Widgren
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,7 +21,25 @@
 #include <Rdefines.h>
 #include <time.h>
 
-#include "siminf_error.h"
+#include "siminf.h"
+
+/**
+ * Check dgCMatrix argument
+ *
+ * @param arg The arg to check
+ * @return 0 if OK, else -1
+ */
+int siminf_arg_check_dgCMatrix(SEXP arg)
+{
+    SEXP class_name;
+
+    if (R_NilValue == arg || S4SXP != TYPEOF(arg))
+        return -1;
+    class_name = getAttrib(arg, R_ClassSymbol);
+    if (0 != strcmp(CHAR(STRING_ELT(class_name, 0)), "dgCMatrix"))
+        return -1;
+    return 0;
+}
 
 /**
  * Check integer argument
@@ -33,6 +51,51 @@ int siminf_arg_check_integer(SEXP arg)
 {
     if (arg == R_NilValue || !isInteger(arg) ||
         length(arg) != 1  || NA_INTEGER == INTEGER(arg)[0])
+        return -1;
+    return 0;
+}
+
+/**
+ * Check matrix argument
+ *
+ * @param arg The arg to check
+ * @return 0 if OK, else -1
+ */
+int siminf_arg_check_matrix(SEXP arg)
+{
+    if (arg == R_NilValue || !isMatrix(arg))
+        return -1;
+    return 0;
+}
+
+/**
+ * Check model argument
+ *
+ * @param arg The arg to check
+ * @return 0 if OK, else -1
+ */
+int siminf_arg_check_model(SEXP arg)
+{
+    static const char *valid[] = {"siminf_model", ""};
+
+    if (arg == R_NilValue || !IS_S4_OBJECT(arg))
+        return -1;
+
+    if (R_check_class_etc(arg, valid) < 0)
+        return -1;
+
+    return 0;
+}
+
+/**
+ * Check real argument
+ *
+ * @param arg The arg to check
+ * @return 0 if OK, else -1
+ */
+int siminf_arg_check_real(SEXP arg)
+{
+    if (arg == R_NilValue || !isReal(arg) || length(arg) != 1 || !R_finite(REAL(arg)[0]))
         return -1;
     return 0;
 }

@@ -4,14 +4,14 @@
 \alias{SISe}
 \title{Create a SISe model}
 \usage{
-SISe(init, tspan, events = NULL, phi = NULL, upsilon = NULL,
-  gamma = NULL, alpha = NULL, beta_t1 = NULL, beta_t2 = NULL,
-  beta_t3 = NULL, beta_t4 = NULL, end_t1 = NULL, end_t2 = NULL,
-  end_t3 = NULL, end_t4 = NULL, epsilon = NULL)
+SISe(u0, tspan, events = NULL, phi = NULL, upsilon = NULL, gamma = NULL,
+  alpha = NULL, beta_t1 = NULL, beta_t2 = NULL, beta_t3 = NULL,
+  beta_t4 = NULL, end_t1 = NULL, end_t2 = NULL, end_t3 = NULL,
+  end_t4 = NULL, epsilon = NULL)
 }
 \arguments{
-\item{init}{A \code{data.frame} with the initial state in each
-node, see details.}
+\item{u0}{A \code{data.frame} with the initial state in each node,
+see details.}
 
 \item{tspan}{An increasing sequence of points in time where the
 state of the system is to be returned.}
@@ -20,8 +20,8 @@ state of the system is to be returned.}
 \code{\link{siminf_model}}.}
 
 \item{phi}{A numeric vector with the initial environmental
-infectious pressure in each node. Default NULL which gives 0 in
-each node.}
+infectious pressure in each node. Default NULL which gives 0
+in each node.}
 
 \item{upsilon}{Indirect transmission rate of the environmental
 infectious pressure}
@@ -59,14 +59,11 @@ in the fourth interval of the year.}
 Create a SISe model to be used by the simulation framework.
 }
 \details{
-The argument init must be a \code{data.frame} with the following
-columns:
+The argument \code{u0} must be a \code{data.frame} with one row for
+each node with the following columns:
 \describe{
-\item{id}{Node identifier that uniquely identifies each node. The
-node identifiers must be zero-based, i.e. the first identifier
-must be equal to zero.}
-\item{S}{The number of sucsceptible}
-\item{I}{The number of infected}
+\item{S}{The number of sucsceptible in each node}
+\item{I}{The number of infected in each node}
 }
 }
 \section{Beta}{

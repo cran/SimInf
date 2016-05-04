@@ -1,4 +1,4 @@
-## siminf, a framework for stochastic disease spread simulations
+## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
 ## Copyright (C) 2015  Stefan Engblom
 ## Copyright (C) 2015  Stefan Widgren
@@ -25,7 +25,9 @@
 ##' @return A model
 ##' @include scheduled_events.R
 ##' @include SISe.R
+##' @include SISe_sp.R
 ##' @include SISe3.R
+##' @include SISe_sp.R
 ##' @export
 ##' @examples
 ##' ## Create a 'SISe3' demo model with 1 node and
@@ -35,7 +37,7 @@
 ##' plot(result)
 demo_model <- function(nodes = 1,
                        days = 1000,
-                       model = c("SISe", "SISe3"))
+                       model = c("SISe", "SISe3", "SISe_sp"))
 {
     ## Check 'nodes' argument
     if (!is.numeric(nodes))
@@ -63,11 +65,9 @@ demo_model <- function(nodes = 1,
     model <- match.arg(model)
 
     if (identical(model, "SISe")) {
-        init <- data.frame(id = seq_len(nodes) - 1,
-                           S = 99,
-                           I = 1)
+        u0 <- data.frame(S = rep(99, nodes), I = rep(1, nodes))
 
-        model <- SISe(init    = init,
+        model <- SISe(u0      = u0,
                       tspan   = seq_len(days) - 1,
                       events  = NULL,
                       phi     = rep(1, nodes),
@@ -84,15 +84,11 @@ demo_model <- function(nodes = 1,
                       end_t4  = 365,
                       epsilon = 0.000011)
     } else if (identical(model, "SISe3")) {
-        init <- data.frame(id = seq_len(nodes) - 1,
-                           S_1 = 10,
-                           I_1 =  0,
-                           S_2 = 20,
-                           I_2 =  0,
-                           S_3 = 70,
-                           I_3 =  0)
+        u0 <- data.frame(S_1 = rep(10, nodes), I_1 = rep( 0, nodes),
+                         S_2 = rep(20, nodes), I_2 = rep( 0, nodes),
+                         S_3 = rep(70, nodes), I_3 = rep( 0, nodes))
 
-        model <- SISe3(init      = init,
+        model <- SISe3(u0        = u0,
                        tspan     = seq_len(days) - 1,
                        events    = NULL,
                        phi       = rep(1, nodes),
@@ -112,6 +108,36 @@ demo_model <- function(nodes = 1,
                        end_t3    = 273,
                        end_t4    = 365,
                        epsilon   = 0.000011)
+    } else if (identical(model, "SISe_sp")) {
+        ## Place nodes on a grid
+        nodes <- sqrt(nodes)
+        if (!is_wholenumber(nodes))
+            stop("'sqrt(nodes)' must be integer")
+        distance <- expand.grid(x = seq_len(nodes),
+                                y = seq_len(nodes))
+        distance <- distance_matrix(distance$x, distance$y, 2)
+
+        u0 <- data.frame(S = rep(99, nrow(distance)),
+                         I = rep( 1, nrow(distance)))
+
+        model <- SISe_sp(u0      = u0,
+                         tspan   = seq_len(days) - 1,
+                         events  = NULL,
+                         phi     = rep(1, nrow(distance)),
+                         upsilon = 0.017,
+                         gamma   = 0.1,
+                         alpha   = 1,
+                         beta_t1 = 0.19,
+                         beta_t2 = 0.085,
+                         beta_t3 = 0.075,
+                         beta_t4 = 0.185,
+                         end_t1  = 91,
+                         end_t2  = 182,
+                         end_t3  = 273,
+                         end_t4  = 365,
+                         epsilon = 0.000011,
+                         distance  = distance,
+                         coupling  = 0.002)
     }
 
     model

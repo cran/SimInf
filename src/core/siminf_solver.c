@@ -1,8 +1,8 @@
 /*
- *  siminf, a framework for stochastic disease spread simulations
+ *  SimInf, a framework for stochastic disease spread simulations
  *  Copyright (C) 2015  Pavol Bauer
- *  Copyright (C) 2015  Stefan Engblom
- *  Copyright (C) 2015  Stefan Widgren
+ *  Copyright (C) 2015 - 2016 Stefan Engblom
+ *  Copyright (C) 2015 - 2016 Stefan Widgren
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -40,13 +40,13 @@
  * compartment, i.e. a non-zero entry in element in the select column.
  *
  * INTERNAL_TRANSFER_EVENT (2): Internal transfer events are events
- * that change states of individuals whithin one node e.g. ageing n
- * individuals from age_1 to age_2.
+ * that change the number of individuals in the compartments whithin
+ * one node e.g. aging of n individuals from age_1 to age_2 in a model
+ * with age categories.
  *
  * EXTERNAL_TRANSFER_EVENT (3): External transfer events are events
- * that move individuals from one node to another node but keep
- * individuals in the same states e.g. moving n individuals from
- * states of age_1 in node A to the same states of age_1 in node B.
+ * that move individuals from compartments in one node to compartments
+ * in another node e.g. moving n individuals from node A to node B.
  */
 enum {EXIT_EVENT,
       ENTER_EVENT,
@@ -75,7 +75,7 @@ typedef struct scheduled_events
                          *   determines the states to sample from. */
     int *shift;         /**< Column j in the shift matrix that
                          *   determines the shift of the internal
-                         *   transfer event. */
+                         *   and external transfer event. */
 } scheduled_events;
 
 /* Maximum number of individuals to sample from */
@@ -103,26 +103,21 @@ typedef struct siminf_thread_args
                      *   G[k]. */
     const int *jcG; /**< Dependency graph. Index to data of first
                      *   non-zero element in row k. */
-    const int *irS; /**< Stoichiometric matrix. irS[k] is the row of
+    const int *irS; /**< State-change matrix. irS[k] is the row of
                      *   S[k]. */
-    const int *jcS; /**< Stoichiometric matrix. Index to data of first
+    const int *jcS; /**< State-change matrix. Index to data of first
                      *   non-zero element in row k. */
-    const int *prS; /**< Stoichiometric matrix. Value of item (i, j)
+    const int *prS; /**< State-change matrix. Value of item (i, j)
                      *   in S. */
     const int *irE; /**< Select matrix for events. irE[k] is the row
                      *   of E[k]. */
     const int *jcE; /**< Select matrix for events. Index to data of
                      *   first non-zero element in row k. */
-    const int *jcN; /**< Shift matrix for internal transfer
-                     *   events. Index to data of first non-zero
-                     *   element in row k. */
-    const int *prN; /**< Shift matrix for internal transfer
-                     *   events. Value of item (i, j) in N. */
 
     /*** Callbacks ***/
-    PropensityFun *t_fun;    /**< Vector of function pointers to
-                              *   transition functions */
-    PostTimeStepFun pts_fun; /**< Callback after each time step */
+    TRFun *tr_fun;  /**< Vector of function pointers to
+                     *   transition rate functions */
+    PTSFun pts_fun; /**< Callback after each time step */
 
     /*** Keep track of time ***/
     double tt;           /**< The global time. */
@@ -144,11 +139,15 @@ typedef struct siminf_thread_args
                        *   state of the system at tspan(j). */
     double *v;        /**< Vector with continuous state in each node
                        *   in thread. */
+    double *v_new;    /**< Vector with continuous state in each node
+                       *   in thread after post time step function. */
     const double *ldata; /**< Matrix (Nld X Nn). ldata(:,j) gives a
                           *   local data vector for node #j. */
     const double *gdata; /**< The global data vector. */
     const int *sd;    /**< Each node can be assigned to a
                        *   sub-domain. */
+    const int *N;     /**< Shift matrix for internal and external
+                       *   transfer events. */
     int *update_node; /**< Vector of length Nn used to indicate nodes
                        *   for update. */
 
@@ -184,7 +183,8 @@ typedef struct siminf_thread_args
 /* Shared variables */
 int n_thread = 0;
 int *uu = NULL;
-double *vv = NULL;
+double *vv_1 = NULL;
+double *vv_2 = NULL;
 int *update_node = NULL;
 siminf_thread_args *sim_args = NULL;
 
@@ -307,17 +307,18 @@ static void siminf_free_args(siminf_thread_args *sa)
  * @param len Number of scheduled events.
  * @param event The type of event i.
  * @param time The time of event i.
- * @param node The source node of event i.
- * @param dest The dest node of event i.
+ * @param node The source node index (one based) of event i.
+ * @param dest The dest node index (one-based) of event i.
  * @param n The number of individuals in event i. n[i] >= 0.
  * @param proportion If n[i] equals zero, then the number of
  *        individuals to sample is calculated by summing the number of
  *        individuals in the states determined by select[i] and
  *        multiplying with the proportion. 0 <= p[i] <= 1.
- * @param select Column j in the event matrix that determines the
- *        states to sample from.
- * @param shift Column j in the shift matrix S that determines the
- *        shift of the internal transfer event.
+ * @param select Column j (one-based) in the event matrix that
+ *        determines the states to sample from.
+ * @param shift Column j (one-based) in the shift matrix S that
+ *        determines the shift of the internal and external
+ *        transfer event.
  * @param Nn Total number of nodes.
  * @return 0 if Ok, else error code.
  */
@@ -346,7 +347,7 @@ static int siminf_split_events(
         case EXIT_EVENT:
         case ENTER_EVENT:
         case INTERNAL_TRANSFER_EVENT:
-            k = node[i] / chunk_size;
+            k = (node[i] - 1) / chunk_size;
             if (k >= n_thread)
                 k = n_thread - 1;
             E1_i[k]++;
@@ -383,7 +384,7 @@ static int siminf_split_events(
         case EXIT_EVENT:
         case ENTER_EVENT:
         case INTERNAL_TRANSFER_EVENT:
-            k = node[i] / chunk_size;
+            k = (node[i] - 1) / chunk_size;
             if (k >= n_thread)
                 k = n_thread - 1;
             j = E1_i[k]++;
@@ -400,12 +401,12 @@ static int siminf_split_events(
 
         e->event[j]      = event[i];
         e->time[j]       = time[i];
-        e->node[j]       = node[i];
-        e->dest[j]       = dest[i];
+        e->node[j]       = node[i] - 1;
+        e->dest[j]       = dest[i] - 1;
         e->n[j]          = n[i];
         e->proportion[j] = proportion[i];
-        e->select[j]     = select[i];
-        e->shift[j]      = shift[i];
+        e->select[j]     = select[i] - 1;
+        e->shift[j]      = shift[i] - 1;
     }
 
 cleanup:
@@ -473,7 +474,7 @@ static int sample_select(
     if (Nstates <= 0        /* No states to sample from, we shouldn't be here. */
         || n > Nindividuals /* Can not sample this number of individuals       */
         || n < 0)           /* Can not sample negative number of individuals.  */
-        return 1;
+        return SIMINF_ERR_SAMPLE_SELECT;
 
     /* Handle cases that require no random sampling */
     if (n == 0) {
@@ -566,12 +567,12 @@ static int siminf_solver()
                 sa.sum_t_rate[node] = 0.0;
                 for (j = 0; j < sa.Nt; j++) {
                     sa.t_rate[node * sa.Nt + j] =
-                        (*sa.t_fun[j])(&sa.u[node * sa.Nc],
-                                       &sa.v[node * sa.Nd],
-                                       &sa.ldata[node * sa.Nld],
-                                       sa.gdata,
-                                       sa.tt,
-                                       sa.sd[node]);
+                        (*sa.tr_fun[j])(&sa.u[node * sa.Nc],
+                                        &sa.v[node * sa.Nd],
+                                        &sa.ldata[node * sa.Nld],
+                                        sa.gdata,
+                                        sa.tt,
+                                        sa.sd[node]);
 
                     sa.sum_t_rate[node] += sa.t_rate[node * sa.Nt + j];
                 }
@@ -604,14 +605,14 @@ static int siminf_solver()
                 for (node = 0; node < sa.Nn && !sa.errcode; node++) {
                     while (sa.t_time[node] < sa.next_day) {
                         double cum, rand, tot_rate, delta = 0.0;
-                        int j, tr = 0;
+                        int j, tr;
 
                         /* a) Determine the transition that did occur
                          * (directSSA). */
-                        cum = sa.t_rate[node * sa.Nt];
-                        rand = gsl_rng_uniform(sa.rng) * sa.sum_t_rate[node];
-                        while (tr < sa.Nt && rand > cum)
-                            cum += sa.t_rate[node * sa.Nt + (++tr)];
+                        rand = gsl_rng_uniform_pos(sa.rng) * sa.sum_t_rate[node];
+                        for (tr = 0, cum = sa.t_rate[node * sa.Nt];
+                             tr < sa.Nt && rand > cum;
+                             tr++, cum += sa.t_rate[node * sa.Nt + tr]);
 
                         /* b) Update the state of the node */
                         for (j = sa.jcS[tr]; j < sa.jcS[tr + 1]; j++) {
@@ -623,9 +624,9 @@ static int siminf_solver()
                         /* c) Recalculate sum_t_rate[node] using
                          * dependency graph. */
                         for (j = sa.jcG[tr]; j < sa.jcG[tr + 1]; j++) {
-                            double old = sa.t_rate[node * sa.Nt + sa.irG[j]];
+                            const double old = sa.t_rate[node * sa.Nt + sa.irG[j]];
                             delta += (sa.t_rate[node * sa.Nt + sa.irG[j]] =
-                                      (*sa.t_fun[sa.irG[j]])(
+                                      (*sa.tr_fun[sa.irG[j]])(
                                           &sa.u[node * sa.Nc],
                                           &sa.v[node * sa.Nd],
                                           &sa.ldata[node * sa.Nld],
@@ -652,12 +653,13 @@ static int siminf_solver()
                        sa.tt >= e1.time[sa.E1_index] &&
                        !sa.errcode)
                 {
-                    int j = sa.E1_index;
-                    int s = e1.select[j];
+                    const int j = sa.E1_index;
+                    const int s = e1.select[j];
 
                     if (e1.event[j] == ENTER_EVENT) {
-                        /* All individuals enter first non-zero compartment,
-                         * i.e. a non-zero entry in element in the select column. */
+                        /* All individuals enter first non-zero
+                         * compartment, i.e. a non-zero entry in
+                         * element in the select column. */
                         if (sa.jcE[s] < sa.jcE[s + 1]) {
                             uu[e1.node[j] * sa.Nc + sa.irE[sa.jcE[s]]] += e1.n[j];
                             if (uu[e1.node[j] * sa.Nc + sa.irE[sa.jcE[s]]] < 0)
@@ -669,44 +671,45 @@ static int siminf_solver()
                             e1.select[j], e1.n[j], e1.proportion[j],
                             sa.individuals, sa.kind, sa.kind_dest, sa.rng);
 
-                        if (!sa.errcode) {
-                            if (e1.event[j] == EXIT_EVENT) {
-                                int ii;
+                        if (sa.errcode)
+                            break;
 
-                                for (ii = sa.jcE[s]; ii < sa.jcE[s + 1]; ii++) {
-                                    /* Remove individuals from node */
-                                    uu[e1.node[j] * sa.Nc + sa.irE[ii]] -=
-                                        sa.individuals[sa.irE[ii]];
-                                    if (uu[e1.node[j] * sa.Nc + sa.irE[ii]] < 0) {
-                                        sa.errcode = SIMINF_ERR_NEGATIVE_STATE;
-                                        break;
-                                    }
+                        if (e1.event[j] == EXIT_EVENT) {
+                            int ii;
+
+                            for (ii = sa.jcE[s]; ii < sa.jcE[s + 1]; ii++) {
+                                const int jj = sa.irE[ii];
+                                const int kk = e1.node[j] * sa.Nc + jj;
+
+                                /* Remove individuals from node */
+                                uu[kk] -= sa.individuals[jj];
+                                if (uu[kk] < 0) {
+                                    sa.errcode = SIMINF_ERR_NEGATIVE_STATE;
+                                    break;
                                 }
-                            } else { /* INTERNAL_TRANSFER_EVENT */
-                                int ii, jj;
+                            }
+                        } else { /* INTERNAL_TRANSFER_EVENT */
+                            int ii;
 
-                                for (ii = sa.jcE[s], jj = sa.jcN[e1.shift[j]];
-                                     ii < sa.jcE[s + 1] && jj < sa.jcN[e1.shift[j] + 1];
-                                     ii++, jj++)
-                                {
-                                    /* Add individuals to new
-                                     * compartments in node */
-                                    uu[e1.node[j] * sa.Nc + sa.irE[ii] + sa.prN[jj]] +=
-                                        sa.individuals[sa.irE[ii]];
-                                    if (uu[e1.node[j] * sa.Nc + sa.irE[ii] + sa.prN[jj]] < 0) {
-                                        sa.errcode = SIMINF_ERR_NEGATIVE_STATE;
-                                        break;
-                                    }
+                            for (ii = sa.jcE[s]; ii < sa.jcE[s + 1]; ii++) {
+                                const int jj = sa.irE[ii];
+                                const int kk = e1.node[j] * sa.Nc + jj;
+                                const int ll = sa.N[e1.shift[j] * sa.Nc + jj];
 
-                                    /* Remove individuals from
-                                     * previous compartments in
-                                     * node */
-                                    uu[e1.node[j] * sa.Nc + sa.irE[ii]] -=
-                                        sa.individuals[sa.irE[ii]];
-                                    if (uu[e1.node[j] * sa.Nc + sa.irE[ii]] < 0) {
-                                        sa.errcode = SIMINF_ERR_NEGATIVE_STATE;
-                                        break;
-                                    }
+                                /* Add individuals to new compartments
+                                 * in node */
+                                uu[kk + ll] += sa.individuals[jj];
+                                if (uu[kk + ll] < 0) {
+                                    sa.errcode = SIMINF_ERR_NEGATIVE_STATE;
+                                    break;
+                                }
+
+                                /* Remove individuals from previous
+                                 * compartments in node */
+                                uu[kk] -= sa.individuals[jj];
+                                if (uu[kk] < 0) {
+                                    sa.errcode = SIMINF_ERR_NEGATIVE_STATE;
+                                    break;
                                 }
                             }
                         }
@@ -738,33 +741,38 @@ static int siminf_solver()
                         e2.proportion[sa.E2_index], sa.individuals,
                         sa.kind, sa.kind_dest, sa.rng);
 
-                    if (!sa.errcode) {
-                        for (i = sa.jcE[e2.select[sa.E2_index]];
-                             i < sa.jcE[e2.select[sa.E2_index] + 1];
-                             i++)
-                        {
-                            /* Add individuals to dest */
-                            uu[e2.dest[sa.E2_index] * sa.Nc + sa.irE[i]] +=
-                                sa.individuals[sa.irE[i]];
-                            if (uu[e2.dest[sa.E2_index] * sa.Nc + sa.irE[i]] < 0) {
-                                sa.errcode = SIMINF_ERR_NEGATIVE_STATE;
-                                break;
-                            }
+                    if (sa.errcode)
+                        break;
 
-                            /* Remove individuals from node */
-                            uu[e2.node[sa.E2_index] * sa.Nc + sa.irE[i]] -=
-                                sa.individuals[sa.irE[i]];
-                            if (uu[e2.node[sa.E2_index] * sa.Nc + sa.irE[i]] < 0) {
-                                sa.errcode = SIMINF_ERR_NEGATIVE_STATE;
-                                break;
-                            }
+                    for (i = sa.jcE[e2.select[sa.E2_index]];
+                         i < sa.jcE[e2.select[sa.E2_index] + 1];
+                         i++)
+                    {
+                        const int jj = sa.irE[i];
+                        const int k1 = e2.dest[sa.E2_index] * sa.Nc + jj;
+                        const int k2 = e2.node[sa.E2_index] * sa.Nc + jj;
+                        const int ll = e2.shift[sa.E2_index] < 0 ? 0 :
+                            sa.N[e2.shift[sa.E2_index] * sa.Nc + jj];
+
+                        /* Add individuals to dest */
+                        uu[k1 + ll] += sa.individuals[jj];
+                        if (uu[k1 + ll] < 0) {
+                            sa.errcode = SIMINF_ERR_NEGATIVE_STATE;
+                            break;
                         }
 
-                        /* Indicate node and dest for update */
-                        update_node[e2.node[sa.E2_index]] = 1;
-                        update_node[e2.dest[sa.E2_index]] = 1;
-                        sa.E2_index++;
+                        /* Remove individuals from node */
+                        uu[k2] -= sa.individuals[jj];
+                        if (uu[k2] < 0) {
+                            sa.errcode = SIMINF_ERR_NEGATIVE_STATE;
+                            break;
+                        }
                     }
+
+                    /* Indicate node and dest for update */
+                    update_node[e2.node[sa.E2_index]] = 1;
+                    update_node[e2.dest[sa.E2_index]] = 1;
+                    sa.E2_index++;
                 }
 
                 *&sim_args[0] = sa;
@@ -782,21 +790,25 @@ static int siminf_solver()
                  * variable. Moreover, update transition rates in
                  * nodes that are indicated for update */
                 for (node = 0; node < sa.Nn; node++) {
-                    if (sa.pts_fun(&sa.u[node * sa.Nc], &sa.v[node * sa.Nd],
-                                   &sa.ldata[node * sa.Nld], sa.gdata,
-                                   sa.Ni + node, sa.tt, sa.sd[node]) ||
-                        sa.update_node[node])
-                    {
+                    const int rc = sa.pts_fun(
+                        &sa.v_new[node * sa.Nd], &sa.u[node * sa.Nc],
+                        &sa.v[node * sa.Nd], &sa.ldata[node * sa.Nld],
+                        sa.gdata, sa.Ni + node, sa.tt, sa.sd[node]);
+
+                    if (rc < 0) {
+                        sa.errcode = rc;
+                        break;
+                    } else if (rc > 0 || sa.update_node[node]) {
                         /* Update transition rates */
                         int j = 0;
                         double delta = 0.0, old_t_rate = sa.sum_t_rate[node];
 
                         for (; j < sa.Nt; j++) {
-                            double old = sa.t_rate[node * sa.Nt + j];
+                            const double old = sa.t_rate[node * sa.Nt + j];
                             delta += (sa.t_rate[node * sa.Nt + j] =
-                                      (*sa.t_fun[j])(
+                                      (*sa.tr_fun[j])(
                                           &sa.u[node * sa.Nc],
-                                          &sa.v[node * sa.Nd],
+                                          &sa.v_new[node * sa.Nd],
                                           &sa.ldata[node * sa.Nld],
                                           sa.gdata, sa.tt, sa.sd[node])) - old;
                         }
@@ -835,7 +847,7 @@ static int siminf_solver()
 
                         /* Copy continuous state to V */
                         memcpy(&sa.V[sa.Nd * ((sa.Ntot * sa.it++) + sa.Ni)],
-                               sa.v, sa.Nn * sa.Nd * sizeof(double));
+                               sa.v_new, sa.Nn * sa.Nd * sizeof(double));
                     }
                 }
 
@@ -843,8 +855,12 @@ static int siminf_solver()
             }
         }
 
-        /* Check for error. */
+        /* Swap the pointers to the continuous state variable so that
+         * 'v' equals 'v_new'. Moreover, check for error. */
         for (k = 0; k < n_thread; k++) {
+            double *v_tmp = sim_args[k].v;
+            sim_args[k].v = sim_args[k].v_new;
+            sim_args[k].v_new = v_tmp;
             if (sim_args[k].errcode)
                 return sim_args[k].errcode;
         }
@@ -860,15 +876,15 @@ static int siminf_solver()
 /**
  * Initialize and run siminf solver
  *
- * G is a sparse matrix dependency graph (Nt X Nt) in
- * compressed column format (CCS). A non-zeros entry in element i of
- * column j indicates that propensity i needs to be recalculated if
- * the event j occurs.
+ * G is a sparse matrix dependency graph (Nt X Nt) in compressed
+ * column format (CCS). A non-zeros entry in element i of column j
+ * indicates that transition rate i needs to be recalculated if the
+ * transition j occurs.
  *
- * N is a stoichiometry sparse matrix (Nc X Nt) in
- * compressed column format (CCS). Each column corresponds to a
- * transition, and execution of transition j amounts to adding the
- * j'th column to the state vector.
+ * S is the state-changing sparse matrix (Nc X Nt) in compressed
+ * column format (CCS). Each column corresponds to a transition, and
+ * execution of transition j amounts to adding the j'th column to the
+ * state vector.
  *
  * @param u0 Initial state vector u0. Integer (Nc X Nn). Gives the
  *        initial number of individuals in each compartment in every
@@ -879,10 +895,10 @@ static int siminf_solver()
  * @param irG Dependency graph. irG[k] is the row of G[k].
  * @param jcG Dependency graph. Index to data of first non-zero
  *        element in row k.
- * @param irS Stoichiometric matrix. irS[k] is the row of S[k].
- * @param jcS Stoichiometric matrix. Index to data of first non-zero
+ * @param irS State-change matrix. irS[k] is the row of S[k].
+ * @param jcS State-change matrix. Index to data of first non-zero
  *        element in row k.
- * @param prS Stoichiometric matrix. Value of item (i, j) in S.
+ * @param prS State-change matrix. Value of item (i, j) in S.
  * @param tspan Double vector. Output times. tspan[0] is the start
  *        time and tspan[length(tspan)-1] is the stop time.
  * @param tlen Number of sampling points in time.
@@ -906,10 +922,7 @@ static int siminf_solver()
  * @param irE Select matrix for events. irE[k] is the row of E[k].
  * @param jcE Select matrix for events. Index to data of first
  *        non-zero element in row k.
- * @param jcN Shift matrix for internal transfer events. Index to data
- *        of first non-zero element in row k.
- * @param prN Shift matrix for internal transfer events. Value of item
- *        (i, j) in N.
+ * @param N Shift matrix for internal transfer events.
  * @param len Number of events.
  * @param event The type of event i.
  * @param time The time of event i.
@@ -923,12 +936,12 @@ static int siminf_solver()
  * @param select Column j in the event matrix E that determines the
  *        states to sample from.
  * @param shift Column j in the shift matrix S that determines the
- *        shift of the internal transfer event.
+ *        shift of the internal and external transfer event.
  * @param Nthread Number of threads to use during simulation.
  * @param seed Random number seed.
- * @param t_fun Vector of function pointers to transition functions.
+ * @param tr_fun Vector of function pointers to transition rate functions.
  * @param pts_fun Function pointer to callback after each time step
- *        e.g. update infectious pressure.
+ *        e.g. to update the infectious pressure.
  * @return 0 if Ok, else error code.
  */
 int siminf_run_solver(
@@ -936,11 +949,10 @@ int siminf_run_solver(
     const int *irS, const int *jcS, const int *prS, const double *tspan,
     int tlen, int *U, double *V, const double *ldata, const double *gdata,
     const int *sd, int Nn, int Nc, int Nt, int Nd, int Nld, const int *irE,
-    const int *jcE, const int *jcN, const int *prN, int len, const int *event,
+    const int *jcE, const int *N, int len, const int *event,
     const int *time, const int *node, const int *dest, const int *n,
     const double *proportion, const int *select, const int *shift,
-    int Nthread, unsigned long int seed, PropensityFun *t_fun,
-    PostTimeStepFun pts_fun)
+    int Nthread, unsigned long int seed, TRFun *tr_fun, PTSFun pts_fun)
 {
     int i, errcode;
     gsl_rng *rng = NULL;
@@ -968,12 +980,13 @@ int siminf_run_solver(
     memcpy(uu, u0, Nn * Nc * sizeof(int));
 
     /* Set continuous state to the initial state in each node. */
-    vv = malloc(Nn * Nd * sizeof(double));
-    if (!vv) {
+    vv_1 = malloc(Nn * Nd * sizeof(double));
+    vv_2 = malloc(Nn * Nd * sizeof(double));
+    if (!vv_1 || !vv_2) {
         errcode = SIMINF_ERR_ALLOC_MEMORY_BUFFER;
         goto cleanup;
     }
-    memcpy(vv, v0, Nn * Nd * sizeof(double));
+    memcpy(vv_1, v0, Nn * Nd * sizeof(double));
 
     /* Setup vector to keep track of nodes that must be updated due to
      * scheduled events */
@@ -1024,11 +1037,9 @@ int siminf_run_solver(
         sim_args[i].prS = prS;
         sim_args[i].irE = irE;
         sim_args[i].jcE = jcE;
-        sim_args[i].jcN = jcN;
-        sim_args[i].prN = prN;
 
         /* Callbacks */
-        sim_args[i].t_fun = t_fun;
+        sim_args[i].tr_fun = tr_fun;
         sim_args[i].pts_fun = pts_fun;
 
         /* Keep track of time */
@@ -1038,10 +1049,12 @@ int siminf_run_solver(
         sim_args[i].tlen = tlen;
 
         /* Data vectors */
+        sim_args[i].N = N;
         sim_args[i].U = U;
         sim_args[i].u = &uu[sim_args[i].Ni * Nc];
         sim_args[i].V = V;
-        sim_args[i].v = &vv[sim_args[i].Ni * Nd];
+        sim_args[i].v = &vv_1[sim_args[i].Ni * Nd];
+        sim_args[i].v_new = &vv_2[sim_args[i].Ni * Nd];
         sim_args[i].ldata = &ldata[sim_args[i].Ni * sim_args[i].Nld];
         sim_args[i].gdata = gdata;
         sim_args[i].sd = &sd[sim_args[i].Ni];
@@ -1103,9 +1116,14 @@ cleanup:
         uu = NULL;
     }
 
-    if (vv) {
-        free(vv);
-        vv = NULL;
+    if (vv_1) {
+        free(vv_1);
+        vv_1 = NULL;
+    }
+
+    if (vv_2) {
+        free(vv_2);
+        vv_2 = NULL;
     }
 
     if (update_node) {

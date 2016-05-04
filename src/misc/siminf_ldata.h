@@ -1,6 +1,5 @@
 /*
  *  siminf, a framework for stochastic disease spread simulations
- *  Copyright (C) 2015  Pavol Bauer
  *  Copyright (C) 2015  Stefan Engblom
  *  Copyright (C) 2015  Stefan Widgren
  *
@@ -18,32 +17,11 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "siminf.h"
+#ifndef INCLUDE_SIMINF_LDATA_H
+#define INCLUDE_SIMINF_LDATA_H
 
-/**
- * Report error
- *
- * @param err The error code.
- */
-void siminf_error(int err)
-{
-    switch (err) {
-    case SIMINF_ERR_NEGATIVE_STATE:
-        Rf_error("Negative state detected.");
-        break;
-    case SIMINF_ERR_ALLOC_MEMORY_BUFFER:
-        Rf_error("Unable to allocate memory buffer");
-        break;
-    case SIMINF_INVALID_EDGE_PROBABILITY:
-        Rf_error("Invalid 'p_edge': Must be in interval 0 < p_edge < 1");
-        break;
-    case SIMINF_INVALID_SEED_VALUE:
-        Rf_error("Invalid 'seed' value");
-        break;
-    case SIMINF_INVALID_THREADS_VALUE:
-        Rf_error("Invalid 'threads' value");
-        break;
-    default:
-        Rf_error("Unknown error code.");
-    }
-}
+#include <Rdefines.h>
+
+SEXP siminf_ldata_sp(SEXP data, SEXP distance);
+
+#endif
