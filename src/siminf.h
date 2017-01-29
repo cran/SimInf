@@ -21,6 +21,7 @@
 #ifndef INCLUDE_SIMINF_H
 #define INCLUDE_SIMINF_H
 
+#include <gsl/gsl_rng.h>
 #include <R.h>
 #include <Rinternals.h>
 
@@ -35,7 +36,8 @@ typedef enum {
     SIMINF_INVALID_THREADS_VALUE    = -7,
     SIMINF_ERR_V_IS_NOT_FINITE      = -8,
     SIMINF_ERR_SAMPLE_SELECT        = -9,
-    SIMINF_ERR_INVALID_MODEL        = -10
+    SIMINF_ERR_INVALID_MODEL        = -10,
+    SIMINF_ERR_V_IS_NEGATIVE        = -11
 } siminf_error_code;
 
 /* Definition of the transition rate function. */
@@ -44,8 +46,7 @@ typedef double (*TRFun)(
     const double *v,
     const double *ldata,
     const double *gdata,
-    double t,
-    int sd);
+    double t);
 
 /* Definition of the callback function post time step. */
 typedef int (*PTSFun)(
@@ -56,7 +57,7 @@ typedef int (*PTSFun)(
     const double *gdata,
     int node,
     double t,
-    int sd);
+    gsl_rng *rng);
 
 /* Definition of the function to initiate and run the simulation */
 SEXP siminf_run(

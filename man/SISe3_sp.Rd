@@ -8,8 +8,7 @@ SISe3_sp(u0, tspan, events = NULL, phi = NULL, upsilon_1 = NULL,
   upsilon_2 = NULL, upsilon_3 = NULL, gamma_1 = NULL, gamma_2 = NULL,
   gamma_3 = NULL, alpha = NULL, beta_t1 = NULL, beta_t2 = NULL,
   beta_t3 = NULL, beta_t4 = NULL, end_t1 = NULL, end_t2 = NULL,
-  end_t3 = NULL, end_t4 = NULL, epsilon = NULL, distance = NULL,
-  coupling = NULL)
+  end_t3 = NULL, end_t4 = NULL, distance = NULL, coupling = NULL)
 }
 \arguments{
 \item{u0}{A \code{data.frame} with the initial state in each
@@ -46,16 +45,16 @@ age category 3}
 \item{alpha}{Shed rate from infected individuals}
 
 \item{beta_t1}{The decay of the environmental infectious pressure
-in the first interval of the year.}
+in interval 1.}
 
 \item{beta_t2}{The decay of the environmental infectious pressure
-in the second interval of the year.}
+in interval 2.}
 
 \item{beta_t3}{The decay of the environmental infectious pressure
-in the third interval of the year.}
+in interval 3.}
 
 \item{beta_t4}{The decay of the environmental infectious pressure
-in the fourth interval of the year.}
+in interval 4.}
 
 \item{end_t1}{The non-inclusive day that ends interval 1.}
 
@@ -64,8 +63,6 @@ in the fourth interval of the year.}
 \item{end_t3}{The non-inclusive day that ends interval 3.}
 
 \item{end_t4}{The non-inclusive day that ends interval 4.}
-
-\item{epsilon}{The background infectious pressure}
 
 \item{distance}{The distance matrix between neighboring nodes}
 
@@ -93,18 +90,19 @@ each node with the following columns:
 
 The time dependent beta is divided into four intervals of the year
 \preformatted{
-where 0 <= day < 365 and
-0 <= end_t1 < end_t2 < end_t3 < end_t4 <= 365
-or
-0 <= end_t4 < end_t1 < end_t2 < end_t3 < 364
+where 0 <= day < 365
 
-Case 1: end_t1 < end_t4
-INTERVAL_1  INTERVAL_2       INTERVAL_3       INTERVAL_4       INTERVAL_1
-[0, end_t1) [end_t1, end_t2) [end_t2, end_t3) [end_t3, end_t4) [end_t4, 365]
+Case 1: END_1 < END_2 < END_3 < END_4
+INTERVAL_1 INTERVAL_2     INTERVAL_3     INTERVAL_4     INTERVAL_1
+[0, END_1) [END_1, END_2) [END_2, END_3) [END_3, END_4) [END_4, 365)
 
-Case 2: end_t4 < end_t1
-INTERVAL_4  INTERVAL_1       INTERVAL_2       INTERVAL_3       INTERVAL_4
-[0, end_t4) [end_t4, end_t1) [end_t1, end_t2) [end_t2, end_t3) [end_t3, 365)
+Case 2: END_3 < END_4 < END_1 < END_2
+INTERVAL_3 INTERVAL_4     INTERVAL_1     INTERVAL_2     INTERVAL_3
+[0, END_3) [END_3, END_4) [END_4, END_1) [END_1, END_2) [END_2, 365)
+
+Case 3: END_4 < END_1 < END_2 < END_3
+INTERVAL_4 INTERVAL_1     INTERVAL_2     INTERVAL_3     INTERVAL_4
+[0, END_4) [END_4, END_1) [END_1, END_2) [END_2, END_3) [END_3, 365)
 }
 }
 

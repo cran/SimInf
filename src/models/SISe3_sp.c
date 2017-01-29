@@ -19,6 +19,7 @@
 
 #include "siminf.h"
 #include "siminf_forward_euler_linear_decay.h"
+#include "siminf_local_spread.h"
 
 /* Offset in integer compartment state vector */
 enum {S_1, I_1, S_2, I_2, S_3, I_3};
@@ -31,7 +32,7 @@ enum {END_T1, END_T2, END_T3, END_T4, NEIGHBOR};
 
 /* Offsets in global data (gdata) to parameters in the model */
 enum {UPSILON_1, UPSILON_2, UPSILON_3, GAMMA_1, GAMMA_2, GAMMA_3,
-      ALPHA, BETA_T1, BETA_T2, BETA_T3, BETA_T4, EPSILON, COUPLING};
+      ALPHA, BETA_T1, BETA_T2, BETA_T3, BETA_T4, COUPLING};
 
 /**
  * In age category 1; susceptible to infected: S -> I
@@ -41,7 +42,6 @@ enum {UPSILON_1, UPSILON_2, UPSILON_3, GAMMA_1, GAMMA_2, GAMMA_3,
  * @param ldata The local data vector for the node.
  * @param gdata The global data vector.
  * @param t Current time.
- * @param sd The sub-domain of node.
  * @return propensity.
  */
 double SISe3_sp_S_1_to_I_1(
@@ -49,8 +49,7 @@ double SISe3_sp_S_1_to_I_1(
     const double *v,
     const double *ldata,
     const double *gdata,
-    double t,
-    int sd)
+    double t)
 {
     return gdata[UPSILON_1] * v[PHI] * u[S_1];
 }
@@ -63,7 +62,6 @@ double SISe3_sp_S_1_to_I_1(
  * @param ldata The local data vector for the node.
  * @param gdata The global data vector.
  * @param t Current time.
- * @param sd The sub-domain of node.
  * @return propensity.
  */
 double SISe3_sp_S_2_to_I_2(
@@ -71,8 +69,7 @@ double SISe3_sp_S_2_to_I_2(
     const double *v,
     const double *ldata,
     const double *gdata,
-    double t,
-    int sd)
+    double t)
 {
     return gdata[UPSILON_2] * v[PHI] * u[S_2];
 }
@@ -85,7 +82,6 @@ double SISe3_sp_S_2_to_I_2(
  * @param ldata The local data vector for the node.
  * @param gdata The global data vector.
  * @param t Current time.
- * @param sd The sub-domain of node.
  * @return propensity.
  */
 double SISe3_sp_S_3_to_I_3(
@@ -93,8 +89,7 @@ double SISe3_sp_S_3_to_I_3(
     const double *v,
     const double *ldata,
     const double *gdata,
-    double t,
-    int sd)
+    double t)
 {
     return gdata[UPSILON_3] * v[PHI] * u[S_3];
 }
@@ -107,7 +102,6 @@ double SISe3_sp_S_3_to_I_3(
  * @param ldata The local data vector for the node.
  * @param gdata The global data vector.
  * @param t Current time.
- * @param sd The sub-domain of node.
  * @return propensity.
  */
 double SISe3_sp_I_1_to_S_1(
@@ -115,8 +109,7 @@ double SISe3_sp_I_1_to_S_1(
     const double *v,
     const double *ldata,
     const double *gdata,
-    double t,
-    int sd)
+    double t)
 {
     return gdata[GAMMA_1] * u[I_1];
 }
@@ -129,7 +122,6 @@ double SISe3_sp_I_1_to_S_1(
  * @param ldata The local data vector for the node.
  * @param gdata The global data vector.
  * @param t Current time.
- * @param sd The sub-domain of node.
  * @return propensity.
  */
 double SISe3_sp_I_2_to_S_2(
@@ -137,8 +129,7 @@ double SISe3_sp_I_2_to_S_2(
     const double *v,
     const double *ldata,
     const double *gdata,
-    double t,
-    int sd)
+    double t)
 {
     return gdata[GAMMA_2] * u[I_2];
 }
@@ -151,7 +142,6 @@ double SISe3_sp_I_2_to_S_2(
  * @param ldata The local data vector for the node.
  * @param gdata The global data vector.
  * @param t Current time.
- * @param sd The sub-domain of node.
  * @return propensity
  */
 double SISe3_sp_I_3_to_S_3(
@@ -159,8 +149,7 @@ double SISe3_sp_I_3_to_S_3(
     const double *v,
     const double *ldata,
     const double *gdata,
-    double t,
-    int sd)
+    double t)
 {
     return gdata[GAMMA_3] * u[I_3];
 }
@@ -177,8 +166,8 @@ double SISe3_sp_I_3_to_S_3(
  * @param ldata The local data vector for the node.
  * @param gdata The global data vector.
  * @param node The node.
- * @param t Current time.
- * @param sd The sub-domain of the node.
+ * @param t The current time.
+ * @param rng The random number generator.
  * @return error code (<0), or 1 if node needs to update the
  * transition rates, or 0 when it doesn't need to update the
  * transition rates.
@@ -191,19 +180,23 @@ int SISe3_sp_post_time_step(
     const double *gdata,
     int node,
     double t,
-    int sd)
+    gsl_rng *rng)
 {
-    int i, j;
     const int day = (int)t % 365;
-    const double I_n = u[I_1] + u[I_2] + u[I_3];
-    const double n = u[S_1] + u[S_2] + u[S_3] + I_n;
+    const double I_i = u[I_1] + u[I_2] + u[I_3];
+    const double N_i = u[S_1] + u[S_2] + u[S_3] + I_i;
     const double phi = v[PHI];
-    const double coupling = gdata[COUPLING];
+    const int Nc = 6;
 
     /* Deterimine the pointer to the continuous state vector in the
      * first node. Use this to find phi at neighbours to the current
      * node. */
     const double *phi_0 = &v[-node];
+
+    /* Deterimine the pointer to the compartment state vector in the
+     * first node. Use this to find the number of individuals at
+     * neighbours to the current node. */
+    const int *u_0 = &u[-Nc*node];
 
     /* Time dependent beta in each of the four intervals of the
      * year. Forward Euler step. */
@@ -212,27 +205,18 @@ int SISe3_sp_post_time_step(
         ldata[END_T1], ldata[END_T2], ldata[END_T3], ldata[END_T4],
         gdata[BETA_T1], gdata[BETA_T2], gdata[BETA_T3], gdata[BETA_T4]);
 
-    if (n > 0.0)
-        v_new[PHI] += gdata[ALPHA] * I_n / n + gdata[EPSILON];
-    else
-        v_new[PHI] += gdata[EPSILON];
-
-    /* Coupling between neighboring farms. */
-    /* i is the offset in local data to the first neighbor. */
-    /* j is the neighbor node or -1 to stop.  */
-    i = NEIGHBOR;
-    j = (int)ldata[i];
-    while (j >= 0) {
-        v_new[PHI] += (phi_0[j] - phi) * coupling * ldata[i + 1];
-
-        /* Move to next neighbor pair (index, value) */
-        i += 2;
-        j = (int)ldata[i];
+    /* Local spread among proximal nodes. */
+    if (N_i > 0.0) {
+        v_new[PHI] += gdata[ALPHA] * I_i / N_i +
+            siminf_local_spread(&ldata[NEIGHBOR], phi_0, u_0,
+                                N_i, phi, Nc, gdata[COUPLING]);
     }
 
-    if (isfinite(v_new[PHI]))
-        return phi != v_new[PHI]; /* 1 if needs update */
-    return SIMINF_ERR_V_IS_NOT_FINITE;
+    if (!isfinite(v_new[PHI]))
+        return SIMINF_ERR_V_IS_NOT_FINITE;
+    if (v_new[PHI] < 0.0)
+        return SIMINF_ERR_V_IS_NEGATIVE;
+    return phi != v_new[PHI]; /* 1 if needs update */
 }
 
 /**

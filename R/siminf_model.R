@@ -64,10 +64,6 @@
 ##'     The global data vector is passed as an argument to the
 ##'     transition rate functions and the post time step function.
 ##'   }
-##'   \item{sd}{
-##'     Each node can be assigned to a sub-domain.
-##'     Integer vector of length \code{Nn}.
-##'   }
 ##'   \item{tspan}{
 ##'     A vector of increasing time points where the state of each node is
 ##'     to be returned.
@@ -94,7 +90,6 @@ setClass("siminf_model",
                    U      = "matrix",
                    ldata  = "matrix",
                    gdata  = "numeric",
-                   sd     = "integer",
                    tspan  = "numeric",
                    u0     = "matrix",
                    V      = "matrix",
@@ -158,18 +153,12 @@ setClass("siminf_model",
                              "Wrong size of dependency graph.")
              }
 
-             ## Check sd.
-             Nn <- dim(object@u0)[2]
-             if (!identical(length(object@sd), Nn)) {
-                 errors <- c(errors,
-                             "Wrong size of subdomain vector.")
-             }
-
              ## Check ldata.
              if (!is.double(object@ldata)) {
                  errors <- c(errors,
                              "'ldata' matrix must be a double matrix.")
              }
+             Nn <- dim(object@u0)[2]
              if (!identical(dim(object@ldata)[2], Nn)) {
                  errors <- c(errors,
                              "Wrong size of 'ldata' matrix.")
@@ -212,8 +201,6 @@ setClass("siminf_model",
 ##' @param gdata A numeric vector with global data that is common to
 ##'     all nodes. The global data vector is passed as an argument to
 ##'     the transition rate functions and the post time step function.
-##' @param sd Each node can be assigned to a sub-domain.  Integer
-##'     vector of length \code{Nn}.
 ##' @param tspan A vector of increasing time points where the state of
 ##'     each node is to be returned.
 ##' @param u0 The initial state vector. Either a matrix (\eqn{N_c
@@ -238,7 +225,6 @@ siminf_model <- function(G,
                          S,
                          tspan,
                          events = NULL,
-                         sd     = NULL,
                          ldata  = NULL,
                          gdata  = NULL,
                          U      = NULL,
@@ -328,10 +314,6 @@ siminf_model <- function(G,
         }
     }
 
-    ## Check sd
-    if (is.null(sd))
-        sd <- rep(0L, ncol(u0))
-
     ## Check events
     if (any(is.null(events), is.data.frame(events)))
         events <- scheduled_events(E = E, N = N, events = events)
@@ -342,7 +324,6 @@ siminf_model <- function(G,
                U      = U,
                ldata  = ldata,
                gdata  = gdata,
-               sd     = sd,
                tspan  = as.numeric(tspan),
                u0     = u0,
                v0     = v0,
@@ -389,6 +370,9 @@ siminf_error <- function(err)
 
     if (identical(err, -10L))
         stop("Invalid model.")
+
+    if (identical(err, -11L))
+        stop("The continuous state 'v' is negative.")
 
     stop("Unknown error code.")
 }
@@ -475,7 +459,7 @@ setMethod("plot",
           }))
 
           ## Calculate proportion
-          m <- m / colSums(m)
+          m <- apply(m, 2, function(x) x / sum(x))
 
           ## Default color is black
           if (is.null(col))
@@ -487,10 +471,10 @@ setMethod("plot",
 
           ## Plot
           if (is.null(t0)) {
-              plot(m[1,], type = "l", ylab = "Proportion", ylim = c(0, max(m)),
+              plot(m[1,], type = "l", ylab = "Proportion", ylim = c(0, 1),
                    col = col[1], lty = lty[1], ...)
           } else {
-              plot(m[1,], type = "l", ylab = "Proportion", ylim = c(0, max(m)),
+              plot(m[1,], type = "l", ylab = "Proportion", ylim = c(0, 1),
                    col = col[1], lty = lty[1], xaxt = "n")
           }
           title(xlab = "Day", outer = TRUE, line = 0)

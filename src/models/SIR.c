@@ -1,6 +1,5 @@
 /*
  *  SimInf, a framework for stochastic disease spread simulations
- *  Copyright (C) 2015 - 2016  Stefan Engblom
  *  Copyright (C) 2015 - 2016  Stefan Widgren
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -18,20 +17,12 @@
  */
 
 #include "siminf.h"
-#include "siminf_forward_euler_linear_decay.h"
-#include "siminf_local_spread.h"
 
 /* Offset in integer compartment state vector */
-enum {S, I};
-
-/* Offset in real-valued continuous state vector */
-enum {PHI};
-
-/* Offsets in node local data (ldata) to parameters in the model */
-enum {END_T1, END_T2, END_T3, END_T4, NEIGHBOR};
+enum {S, I, R};
 
 /* Offsets in global data (gdata) to parameters in the model */
-enum {UPSILON, GAMMA, ALPHA, BETA_T1, BETA_T2, BETA_T3, BETA_T4, COUPLING};
+enum {BETA, GAMMA};
 
 /**
  * susceptible to infected: S -> I
@@ -43,18 +34,21 @@ enum {UPSILON, GAMMA, ALPHA, BETA_T1, BETA_T2, BETA_T3, BETA_T4, COUPLING};
  * @param t Current time.
  * @return propensity.
  */
-double SISe_sp_S_to_I(
+double SIR_S_to_I(
     const int *u,
     const double *v,
     const double *ldata,
     const double *gdata,
     double t)
 {
-    return gdata[UPSILON] * v[PHI] * u[S];
+    const double S_n = u[S];
+    const double I_n = u[I];
+
+    return (gdata[BETA] * S_n * I_n) / (S_n + I_n + u[R]);
 }
 
 /**
- *  infected to susceptible: I -> S
+ *  infected to recovered: I -> R
  *
  * @param u The compartment state vector in node.
  * @param v The continuous state vector in node.
@@ -63,7 +57,7 @@ double SISe_sp_S_to_I(
  * @param t Current time.
  * @return propensity.
  */
-double SISe_sp_I_to_S(
+double SIR_I_to_R(
     const int *u,
     const double *v,
     const double *ldata,
@@ -74,10 +68,8 @@ double SISe_sp_I_to_S(
 }
 
 /**
- * Update environmental infectious pressure phi
+ * SIR post time step
  *
- * Decay environmental infectious pressure phi, add contribution from
- * infected individuals and proximity coupling.
  * @param v_new The continuous state vector in the node after the post
  * time step
  * @param u The compartment state vector in the node.
@@ -91,7 +83,7 @@ double SISe_sp_I_to_S(
  * transition rates, or 0 when it doesn't need to update the
  * transition rates.
  */
-int SISe_sp_post_time_step(
+int SIR_post_time_step(
     double *v_new,
     const int *u,
     const double *v,
@@ -101,55 +93,20 @@ int SISe_sp_post_time_step(
     double t,
     gsl_rng *rng)
 {
-    const int day = (int)t % 365;
-    const double I_i = u[I];
-    const double N_i = u[S] + I_i;
-    const double phi = v[PHI];
-    const int Nc = 2;
-
-    /* Deterimine the pointer to the continuous state vector in the
-     * first node. Use this to find phi at neighbours to the current
-     * node. */
-    const double *phi_0 = &v[-node];
-
-    /* Deterimine the pointer to the compartment state vector in the
-     * first node. Use this to find the number of individuals at
-     * neighbours to the current node. */
-    const int *u_0 = &u[-Nc*node];
-
-    /* Time dependent decay (beta) of the environmental infectious
-     * pressure in each of the four intervals of the year. Forward
-     * Euler step. */
-    v_new[PHI] = siminf_forward_euler_linear_decay(
-        phi, day,
-        ldata[END_T1], ldata[END_T2], ldata[END_T3], ldata[END_T4],
-        gdata[BETA_T1], gdata[BETA_T2], gdata[BETA_T3], gdata[BETA_T4]);
-
-    /* Local spread among proximal nodes. */
-    if (N_i > 0.0) {
-        v_new[PHI] += gdata[ALPHA] * I_i / N_i +
-            siminf_local_spread(&ldata[NEIGHBOR], phi_0, u_0,
-                                N_i, phi, Nc, gdata[COUPLING]);
-    }
-
-    if (!isfinite(v_new[PHI]))
-        return SIMINF_ERR_V_IS_NOT_FINITE;
-    if (v_new[PHI] < 0.0)
-        return SIMINF_ERR_V_IS_NEGATIVE;
-    return phi != v_new[PHI]; /* 1 if needs update */
+    return 0;
 }
 
 /**
- * Run simulation with the SISe_sp model
+ * Run simulation with the SIR model
  *
- * @param model The SISe_sp model.
+ * @param model The SIR model.
  * @param threads Number of threads.
  * @param seed Random number seed.
  * @return The simulated trajectory.
  */
-SEXP SISe_sp_run(SEXP model, SEXP threads, SEXP seed)
+SEXP SIR_run(SEXP model, SEXP threads, SEXP seed)
 {
-    TRFun tr_fun[] = {&SISe_sp_S_to_I, &SISe_sp_I_to_S};
+    TRFun tr_fun[] = {&SIR_S_to_I, &SIR_I_to_R};
 
-    return siminf_run(model, threads, seed, tr_fun, &SISe_sp_post_time_step);
+    return siminf_run(model, threads, seed, tr_fun, &SIR_post_time_step);
 }
