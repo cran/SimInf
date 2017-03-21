@@ -1,7 +1,7 @@
 ## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015 - 2016  Stefan Engblom
-## Copyright (C) 2015 - 2016  Stefan Widgren
+## Copyright (C) 2015 - 2017  Stefan Engblom
+## Copyright (C) 2015 - 2017  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ sessionInfo()
 tol = 1e-8
 
 ## Expected phi
-phi_exp <- structure( c(0.810011, 0.185349185610407,
+phi_exp <- structure( c(1.0, 0.185349185610407,
 0.0424465987871056, 0.00975507058676853, 0.00227629753002237,
 0.000565394139653014, 0.000173994321933323, 8.44545979644941e-05,
 6.39707811474e-05, 5.9284740887299e-05, 5.82127251826398e-05,
@@ -79,8 +79,20 @@ sis_e <- SISe(u0      = data.frame(S = 100, I = 0),
               epsilon = 0.000011)
 
 sis_e <- run(sis_e, threads = 1)
-sis_e_phi_obs <- sis_e@V[1,]
+sis_e_phi_obs <- V(sis_e)[1,]
 stopifnot(all(abs(sis_e_phi_obs - phi_exp) < tol))
+
+## Run with sparse V
+V(sis_e) <- as(phi_exp, "dgCMatrix")
+sis_e <- run(sis_e, threads = 1)
+sis_e_phi_obs <- V(sis_e)[1,]
+stopifnot(all(abs(sis_e_phi_obs - phi_exp) < tol))
+
+if (SimInf:::have_openmp()) {
+    sis_e <- run(sis_e, threads = 2)
+    sis_e_phi_obs <- V(sis_e)[1,]
+    stopifnot(all(abs(sis_e_phi_obs - phi_exp) < tol))
+}
 
 ## Check phi from the SISe3 model
 sis_e3 <- SISe3(u0      = data.frame(S_1 = 10, I_1 = 0,
@@ -107,5 +119,17 @@ sis_e3 <- SISe3(u0      = data.frame(S_1 = 10, I_1 = 0,
                 epsilon   = 0.000011)
 
 sis_e3 <- run(sis_e3, threads = 1)
-sis_e3_phi_obs <- sis_e3@V[1,]
+sis_e3_phi_obs <- V(sis_e3)[1,]
 stopifnot(all(abs(sis_e3_phi_obs - phi_exp) < tol))
+
+## Run with sparse V
+V(sis_e3) <- as(phi_exp, "dgCMatrix")
+sis_e3 <- run(sis_e3, threads = 1)
+sis_e3_phi_obs <- V(sis_e3)[1,]
+stopifnot(all(abs(sis_e3_phi_obs - phi_exp) < tol))
+
+if (SimInf:::have_openmp()) {
+    sis_e3 <- run(sis_e3, threads = 2)
+    sis_e3_phi_obs <- V(sis_e3)[1,]
+    stopifnot(all(abs(sis_e3_phi_obs - phi_exp) < tol))
+}

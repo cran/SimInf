@@ -1,7 +1,7 @@
 ## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015 - 2016  Stefan Engblom
-## Copyright (C) 2015 - 2016  Stefan Widgren
+## Copyright (C) 2015 - 2017  Stefan Engblom
+## Copyright (C) 2015 - 2017  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -16,16 +16,29 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-##' Run siminf stochastic simulation algorithm
+##' Init a \code{SimInf_mparse} object
+##'
+##' @rdname init-methods
+##' @param model The \code{SimInf_mparse} object to initialize.
+##' @param u0 A \code{data.frame} with the initial state in each node.
+##' @template tspan-param
+##' @return a \code{SimInf_model} object
+setGeneric("init",
+           signature = "model",
+           function(model,
+                    u0    = NULL,
+                    tspan = NULL)
+               standardGeneric("init"))
+
+##' Run the SimInf stochastic simulation algorithm
 ##'
 ##' @rdname run-methods
-##' @docType methods
 ##' @param model The siminf model to run.
 ##' @param threads Number of threads. Default is NULL, i.e. to use the
-##' number of available processors.
+##'     number of available processors.
 ##' @param seed Random number seed. Default is NULL, i.e. to use a
-##' time-seed.
-##' @return \code{siminf_model} with result from simulation.
+##'     time-seed.
+##' @return \code{SimInf_model} with result from simulation.
 ##' @examples
 ##' ## Create a 'SISe' demo model with 1 node and
 ##' ## initialize it to run over 1000 days.
@@ -34,24 +47,176 @@
 setGeneric("run",
            signature = "model",
            function(model,
-                    threads  = NULL,
-                    seed     = NULL) standardGeneric("run"))
+                    threads = NULL,
+                    seed    = NULL)
+               standardGeneric("run"))
+
+##' Extract the number of individuals in each compartment
+##'
+##' The result matrix with the number of individuals in each
+##' compartment in every node after running a trajectory with
+##' \code{\link{run}}. \code{U[, j]} contains the number of
+##' individuals in each compartment at \code{tspan[j]}. \code{U[1:Nc,
+##' j]} contains the number of individuals in node 1 at
+##' \code{tspan[j]}. \code{U[(Nc + 1):(2 * Nc), j]} contains the
+##' number of individuals in node 2 at \code{tspan[j]} etc, where
+##' \code{Nc} is the number of compartments in the model. The
+##' dimension of the matrix is \eqn{N_n N_c \times}
+##' \code{length(tspan)} where \eqn{N_n} is the number of nodes.
+##' @rdname U-methods
+##' @param model The \code{model} to extract the result matrix from.
+##' @return The number of individuals in each compartment
+##' @keywords methods
+##' @export
+##' @examples
+##' ## Create an 'SIR' model with 6 nodes and initialize
+##' ## it to run over 10 days.
+##' u0 <- data.frame(S = 100:105, I = 1:6, R = rep(0, 6))
+##' model <- SIR(u0 = u0, tspan = 1:10, beta = 0.16, gamma = 0.077)
+##'
+##' ## Run the model
+##' result <- run(model, seed = 123)
+##'
+##' ## Extract the number of individuals in each compartment at the
+##' ## time-points in tspan.
+##' U(result)
+setGeneric("U", function(model) standardGeneric("U"))
+
+##' Set a template for where to write the U result matrix
+##'
+##' @rdname U_set-methods
+##' @param model The \code{model} to set a template for the result
+##'     matrix \code{U}.
+##' @param value Write the number of individuals in each compartment
+##'     at \code{tspan} to the non-zero elements in \code{value},
+##'     where \code{value} is a sparse matrix, \code{dgCMatrix}, with
+##'     dimension \eqn{N_n N_c \times} \code{length(tspan)}. Default
+##'     is \code{NULL} i.e. to write the number of inidividuals in
+##'     each compartment in every node to a dense matrix.
+##' @keywords methods
+##' @export
+##' @examples
+##' ## Create an 'SIR' model with 6 nodes and initialize
+##' ## it to run over 10 days.
+##' u0 <- data.frame(S = 100:105, I = 1:6, R = rep(0, 6))
+##' model <- SIR(u0 = u0, tspan = 1:10, beta = 0.16, gamma = 0.077)
+##'
+##' ## An example with a sparse U result matrix, which can save a lot
+##' ## of memory if the model contains many nodes and time-points, but
+##' ## where only a few of the data points are of interest. First
+##' ## create a sparse matrix with non-zero entries at the locations
+##' ## in U where the number of individuals should be written. Then
+##' ## run the model with the sparse matrix as a template for U where
+##' ## to write data.
+##' m <- Matrix::sparseMatrix(1:18, rep(5:10, each = 3))
+##' U(model) <- m
+##' result <- run(model, seed = 123)
+##'
+##' ## Extract the number of individuals in each compartment at the
+##' ## time-points in tspan.
+##' U(result)
+setGeneric("U<-", function(model, value) standardGeneric("U<-"))
+
+##' Extract the continuous state variables
+##'
+##' The result matrix for the real-valued continuous state. \code{V[,
+##' j]} contains the real-valued state of the system at
+##' \code{tspan[j]}. The dimension of the matrix is
+##' \eqn{N_n}\code{dim(ldata)[1]} \eqn{\times} \code{length(tspan)}.
+##' @rdname V-methods
+##' @param model The \code{model} to extract the result matrix from.
+##' @return The continuous state variables
+##' @keywords methods
+##' @export
+##' @examples
+##' ## Create an 'SISe' model with 6 nodes and initialize
+##' ## it to run over 10 days.
+##' u0 <- data.frame(S = 100:105, I = 1:6)
+##' model <- SISe(u0 = u0, tspan = 1:10,
+##'               phi = rep(0, 6),
+##'               upsilon = 0.017,
+##'               gamma   = 0.1,
+##'               alpha   = 1,
+##'               beta_t1 = 0.19,
+##'               beta_t2 = 0.085,
+##'               beta_t3 = 0.075,
+##'               beta_t4 = 0.185,
+##'               end_t1  = 91,
+##'               end_t2  = 182,
+##'               end_t3  = 273,
+##'               end_t4  = 365,
+##'               epsilon = 0.000011)
+##'
+##' ## Run the model
+##' result <- run(model, seed = 123)
+##'
+##' ## Extract the continuous state variables in each node at the
+##' ## time-points in tspan. In the 'SISe' model, V represent the
+##' ## environmental infectious pressure phi.
+##' V(result)
+setGeneric("V", function(model) standardGeneric("V"))
+
+##' Set a template for where to write the V result matrix
+##'
+##' @rdname V_set-methods
+##' @param model The \code{model} to set a template for the result
+##'     matrix \code{V}.
+##' @param value Write the real-valued continuous state at
+##'     \code{tspan} to the non-zero elements in \code{value}, where
+##'     \code{value} is a sparse matrix, \code{dgCMatrix}, with
+##'     dimension \eqn{N_n}\code{dim(ldata)[1]} \eqn{\times}
+##'     \code{length(tspan)}. Default is \code{NULL} i.e. to write the
+##'     real-valued continuous state to a dense matrix.
+##' @keywords methods
+##' @export
+##' @examples
+##' ## Create an 'SISe' model with 6 nodes and initialize
+##' ## it to run over 10 days.
+##' u0 <- data.frame(S = 100:105, I = 1:6)
+##' model <- SISe(u0 = u0, tspan = 1:10,
+##'               phi = rep(0, 6),
+##'               upsilon = 0.017,
+##'               gamma   = 0.1,
+##'               alpha   = 1,
+##'               beta_t1 = 0.19,
+##'               beta_t2 = 0.085,
+##'               beta_t3 = 0.075,
+##'               beta_t4 = 0.185,
+##'               end_t1  = 91,
+##'               end_t2  = 182,
+##'               end_t3  = 273,
+##'               end_t4  = 365,
+##'               epsilon = 0.000011)
+##'
+##' ## An example with a sparse V result matrix, which can save a lot
+##' ## of memory if the model contains many nodes and time-points, but
+##' ## where only a few of the data points are of interest. First
+##' ## create a sparse matrix with non-zero entries at the locations
+##' ## in V where the continuous state variables should be written. Then
+##' ## run the model with the sparse matrix as a template for V where
+##' ## to write data.
+##' m <- Matrix::sparseMatrix(1:6, 5:10)
+##' V(model) <- m
+##' result <- run(model, seed = 123)
+##'
+##' ## Extract the continuous state variables at the time-points in tspan.
+##' V(result)
+setGeneric("V<-", function(model, value) standardGeneric("V<-"))
 
 ##' Susceptible
 ##'
-##' Extracts the number of susceptible
+##' Extracts the number of susceptible.
 ##' @rdname susceptible-methods
-##' @docType methods
 ##' @param model The \code{model} to extract the susceptible from
 ##' @param ... Additional arguments affecting the measure
 ##' @param age For models with age categories, the age category to
-##' extract.
+##'     extract.
 ##' @param i Indices specifying the nodes to include when extracting
-##' the number of susceptible. Default is NULL, which includes all
-##' nodes.
+##'     the number of susceptible. Default is NULL, which includes all
+##'     nodes.
 ##' @param by The number to increment the sequence of time points
-##' starting from 1. Default is 1, which gives the number of
-##' susceptible at every time point.
+##'     starting from 1. Default is 1, which gives the number of
+##'     susceptible at every time point.
 ##' @keywords methods
 ##' @export
 ##' @examples
@@ -109,7 +274,6 @@ setGeneric("susceptible",
 ##'
 ##' Extracts the number of infected
 ##' @rdname infected-methods
-##' @docType methods
 ##' @param model The \code{model} to extract the infected from
 ##' @param ... Additional arguments affecting the measure
 ##' @param age For models with age categories, the age category to
@@ -176,7 +340,6 @@ setGeneric("infected",
 ##'
 ##' Extracts the number of recovered
 ##' @rdname recovered-methods
-##' @docType methods
 ##' @param model The \code{model} to extract the recovered from
 ##' @param ... Additional arguments affecting the measure
 ##' @param i Indices specifying the nodes to include when extracting
@@ -216,7 +379,6 @@ setGeneric("recovered",
 ##'
 ##' Calculate the proportion infected individuals
 ##' @rdname prevalence-methods
-##' @docType methods
 ##' @param model The \code{model} to calculated the prevalence from
 ##' @param ... Additional arguments affecting the measure
 ##' @param i Indices specifying the nodes to include in the

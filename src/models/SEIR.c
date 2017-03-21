@@ -1,6 +1,6 @@
 /*
  *  SimInf, a framework for stochastic disease spread simulations
- *  Copyright (C) 2015 - 2016  Stefan Widgren
+ *  Copyright (C) 2015 - 2017  Stefan Widgren
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "siminf.h"
+#include "SimInf.h"
 
 /* Offset in integer compartment state vector */
 enum {S, E, I, R};
@@ -110,8 +110,7 @@ int SEIR_post_time_step(
     const double *ldata,
     const double *gdata,
     int node,
-    double t,
-    gsl_rng *rng)
+    double t)
 {
     return 0;
 }
@@ -128,5 +127,5 @@ SEXP SEIR_run(SEXP model, SEXP threads, SEXP seed)
 {
     TRFun tr_fun[] = {&SEIR_S_to_E, &SEIR_E_to_I, &SEIR_I_to_R};
 
-    return siminf_run(model, threads, seed, tr_fun, &SEIR_post_time_step);
+    return SimInf_run(model, threads, seed, tr_fun, &SEIR_post_time_step);
 }

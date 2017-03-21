@@ -16,11 +16,11 @@
 
 ##' Class \code{"SEIR"}
 ##'
-##' Class to handle the SEIR \code{\link{siminf_model}}.
-##' @include siminf_model.R
+##' Class to handle the SEIR \code{\link{SimInf_model}}.
+##' @include SimInf_model.R
 ##' @include AllGenerics.R
 ##' @export
-setClass("SEIR", contains = c("siminf_model"))
+setClass("SEIR", contains = c("SimInf_model"))
 
 ##' Create a SEIR model
 ##'
@@ -37,10 +37,9 @@ setClass("SEIR", contains = c("siminf_model"))
 ##'
 ##' @param u0 A \code{data.frame} with the initial state in each node,
 ##'     see details.
-##' @param tspan An increasing sequence of points in time where the
-##'     state of the system is to be returned.
+##' @template tspan-param
 ##' @param events a \code{data.frame} with the scheduled events, see
-##'     \code{\link{siminf_model}}.
+##'     \code{\link{SimInf_model}}.
 ##' @param beta The transmission rate from susceptible to exposed.
 ##' @param epsilon The incubation rate from exposed to infected.
 ##' @param gamma The recovery rate from infected to recovered.
@@ -128,7 +127,7 @@ SEIR <- function(u0,
     storage.mode(gdata) <- "double"
     names(gdata) <- c("beta", "epsilon", "gamma")
 
-    model <- siminf_model(G      = G,
+    model <- SimInf_model(G      = G,
                           S      = S,
                           E      = E,
                           N      = N,
@@ -154,7 +153,9 @@ setMethod("susceptible",
               if (!is.null(i))
                   ii <- ii[i]
               j <- seq(from = 1, to = dim(model@U)[2], by = by)
-              as.matrix(model@U[ii, j, drop = FALSE])
+              result <- as.matrix(model@U[ii, j, drop = FALSE])
+              rownames(result) <- NULL
+              result
           }
 )
 
@@ -170,7 +171,9 @@ setMethod("infected",
               if (!is.null(i))
                   ii <- ii[i]
               j <- seq(from = 1, to = dim(model@U)[2], by = by)
-              as.matrix(model@U[ii, j, drop = FALSE])
+              result <- as.matrix(model@U[ii, j, drop = FALSE])
+              rownames(result) <- NULL
+              result
           }
 )
 
@@ -186,7 +189,9 @@ setMethod("recovered",
               if (!is.null(i))
                   ii <- ii[i]
               j <- seq(from = 1, to = dim(model@U)[2], by = by)
-              as.matrix(model@U[ii, j, drop = FALSE])
+              result <- as.matrix(model@U[ii, j, drop = FALSE])
+              rownames(result) <- NULL
+              result
           }
 )
 
@@ -196,10 +201,14 @@ setMethod("recovered",
 ##' @export
 setMethod("plot",
           signature(x = "SEIR"),
-          function(x, t0 = NULL, ...)
-      {
-          callNextMethod(x, t0 = t0, legend = c("S", "E", "I", "R"), ...)
-      }
+          function(x,
+                   col = c("blue", "orange", "red", "darkgreen"),
+                   lty = rep(1, 4),
+                   lwd = 2,
+                   ...)
+          {
+              callNextMethod(x, col = col, lty = lty, lwd = lwd, ...)
+          }
 )
 
 ##' Scheduled events example data for the \code{SEIR} model

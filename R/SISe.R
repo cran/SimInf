@@ -1,7 +1,7 @@
 ## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015 - 2016  Stefan Engblom
-## Copyright (C) 2015 - 2016  Stefan Widgren
+## Copyright (C) 2015 - 2017  Stefan Engblom
+## Copyright (C) 2015 - 2017  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -18,11 +18,11 @@
 
 ##' Class \code{"SISe"}
 ##'
-##' Class to handle the SISe \code{\link{siminf_model}}.
-##' @include siminf_model.R
+##' Class to handle the SISe \code{\link{SimInf_model}}.
+##' @include SimInf_model.R
 ##' @include AllGenerics.R
 ##' @export
-setClass("SISe", contains = c("siminf_model"))
+setClass("SISe", contains = c("SimInf_model"))
 
 ##' Create a SISe model
 ##'
@@ -39,10 +39,9 @@ setClass("SISe", contains = c("siminf_model"))
 ##' @template beta-section
 ##' @param u0 A \code{data.frame} with the initial state in each node,
 ##'     see details.
-##' @param tspan An increasing sequence of points in time where the
-##'     state of the system is to be returned.
+##' @template tspan-param
 ##' @param events a \code{data.frame} with the scheduled events, see
-##'     \code{\link{siminf_model}}.
+##'     \code{\link{SimInf_model}}.
 ##' @param phi A numeric vector with the initial environmental
 ##'     infectious pressure in each node. Default NULL which gives 0
 ##'     in each node.
@@ -55,6 +54,27 @@ setClass("SISe", contains = c("siminf_model"))
 ##' @return \code{SISe}
 ##' @include check_arguments.R
 ##' @export
+##' @examples
+##' ## Create an SISe model object.
+##' model <- SISe(u0 = data.frame(S = 99, I = 1),
+##'               tspan = 1:1000,
+##'               phi = 0,
+##'               upsilon = 0.017,
+##'               gamma   = 0.1,
+##'               alpha   = 1,
+##'               beta_t1 = 0.19,
+##'               beta_t2 = 0.085,
+##'               beta_t3 = 0.075,
+##'               beta_t4 = 0.185,
+##'               end_t1  = 91,
+##'               end_t2  = 182,
+##'               end_t3  = 273,
+##'               end_t4  = 365,
+##'               epsilon = 0.000011)
+##'
+##' ## Run the SISe model and plot the result.
+##' result <- run(model, seed = 4)
+##' plot(result)
 SISe <- function(u0,
                  tspan,
                  events  = NULL,
@@ -153,7 +173,7 @@ SISe <- function(u0,
                       "beta_t1", "beta_t2", "beta_t3", "beta_t4",
                       "epsilon")
 
-    model <- siminf_model(G      = G,
+    model <- SimInf_model(G      = G,
                           S      = S,
                           E      = E,
                           N      = N,
@@ -179,7 +199,9 @@ setMethod("susceptible",
               if (!is.null(i))
                   ii <- ii[i]
               j <- seq(from = 1, to = dim(model@U)[2], by = by)
-              as.matrix(model@U[ii, j, drop = FALSE])
+              result <- as.matrix(model@U[ii, j, drop = FALSE])
+              rownames(result) <- NULL
+              result
           }
 )
 
@@ -195,7 +217,9 @@ setMethod("infected",
               if (!is.null(i))
                   ii <- ii[i]
               j <- seq(from = 1, to = dim(model@U)[2], by = by)
-              as.matrix(model@U[ii, j, drop = FALSE])
+              result <- as.matrix(model@U[ii, j, drop = FALSE])
+              rownames(result) <- NULL
+              result
           }
 )
 
@@ -222,8 +246,12 @@ setMethod("prevalence",
 ##' @export
 setMethod("plot",
           signature(x = "SISe"),
-          function(x, t0 = NULL, ...)
-      {
-          callNextMethod(x, t0 = t0, legend = c("S", "I"), ...)
-      }
+          function(x,
+                   col = c("blue", "red"),
+                   lty = rep(1, 2),
+                   lwd = 2,
+                   ...)
+          {
+              callNextMethod(x, col = col, lty = lty, lwd = lwd, ...)
+          }
 )

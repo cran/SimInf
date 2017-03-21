@@ -1,7 +1,7 @@
 ## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015 - 2016  Stefan Engblom
-## Copyright (C) 2015 - 2016  Stefan Widgren
+## Copyright (C) 2015 - 2017  Stefan Engblom
+## Copyright (C) 2015 - 2017  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -172,7 +172,11 @@ setClass("scheduled_events",
 ##'     supported by the current default core solver.
 ##'   }
 ##'   \item{time}{
-##'     Time for the event. Integer vector of length \code{len}.
+##'     Time for the event. Can be either an \code{integer} or a
+##'     \code{Date} vector.  A \code{Date} vector is coerced to a
+##'     numeric vector as days, where \code{t0} determines the offset
+##'     to match the time of the events to the model \code{tspan}
+##'     vector.
 ##'   }
 ##'   \item{node}{
 ##'     The node that the event operates on. Also the source node for
@@ -204,17 +208,24 @@ setClass("scheduled_events",
 ##'   }
 ##' }
 ##'
-##' @param E Sparse matrix of object class \code{"\linkS4class{dgCMatrix}"}
-##'        that selects the states to include for sampling in an event.
-##' @param N Sparse matrix of object class \code{"\linkS4class{dgCMatrix}"}
-##'        that determines how to shift the states in an
-##'        \code{INTERNAL_TRANSFER_EVENT}.
+##' @param E Sparse matrix of object class
+##'     \code{"\linkS4class{dgCMatrix}"} that selects the states to
+##'     include for sampling in an event.
+##' @param N Sparse matrix of object class
+##'     \code{"\linkS4class{dgCMatrix}"} that determines how to shift
+##'     the states in an \code{INTERNAL_TRANSFER_EVENT}.
 ##' @param events A \code{data.frame} with events.
+##' @param t0 If \code{events$time} is a \code{Date} vector, then
+##'     \code{t0} determines the offset to match the time of the
+##'     events to the model \code{tspan} vector, see details. If
+##'     \code{events$time} is a numeric vector, then \code{t0} must be
+##'     \code{NULL}.
 ##' @return S4 class \code{scheduled_events}
 ##' @export
 scheduled_events <- function(E      = NULL,
                              N      = NULL,
-                             events = NULL)
+                             events = NULL,
+                             t0     = NULL)
 {
     ## Check E
     if (is.null(E)) {
@@ -252,24 +263,31 @@ scheduled_events <- function(E      = NULL,
         stop("events must be a data.frame")
     if (!identical(ncol(events), 8L))
         stop("Wrong dimension of events")
-    if (!all(c("event", "time", "node", "dest", "n", "proportion", "select", "shift") %in% names(events)))
+    if (!all(c("event", "time", "node", "dest",
+               "n", "proportion", "select",
+               "shift") %in% names(events))) {
         stop("Missing columns in events")
-    if (!is.numeric(events$event))
+    }
+
+    ## Check time
+    if (nrow(events)) {
+        if (is(events$time, "Date")) {
+            if (is.null(t0))
+                stop("Missing 't0'")
+            if (!all(identical(length(t0), 1L), is.numeric(t0)))
+                stop("Invalid 't0'")
+            events$time <- as.numeric(events$time) - t0
+        } else if (!is.null(t0)) {
+            stop("Invalid 't0'")
+        }
+    }
+
+    if (!all(is.numeric(events$event), is.numeric(events$time),
+             is.numeric(events$node), is.numeric(events$dest),
+             is.numeric(events$n), is.numeric(events$proportion),
+             is.numeric(events$select))) {
         stop("Columns in events must be numeric")
-    if (!is.numeric(events$time))
-        stop("Columns in events must be numeric")
-    if (!is.numeric(events$node))
-        stop("Columns in events must be numeric")
-    if (!is.numeric(events$dest))
-        stop("Columns in events must be numeric")
-    if (!is.numeric(events$n))
-        stop("Columns in events must be numeric")
-    if (!is.numeric(events$proportion))
-        stop("Columns in events must be numeric")
-    if (!is.numeric(events$select))
-        stop("Columns in events must be numeric")
-    if (!is.numeric(events$shift))
-        stop("Columns in events must be numeric")
+    }
 
     if (nrow(events)) {
         if (!all(is_wholenumber(events$event)))
@@ -311,6 +329,8 @@ scheduled_events <- function(E      = NULL,
 ##' @param frame.plot a logical indicating whether a box should be
 ##'     drawn around the plot.
 ##' @param ... additional arguments affecting the plot.
+##' @importFrom graphics plot
+##' @importFrom graphics mtext
 ##' @keywords internal
 plot_scheduled_events <- function(x,
                                   y,
@@ -349,13 +369,13 @@ plot_scheduled_events <- function(x,
     graphics::mtext("Time", side = 1, line = 2)
 }
 
-##' @rdname plot-methods
+##' Plot \code{\linkS4class{scheduled_events}}
+##'
 ##' @param frame.plot Draw a frame around each plot. Default is FALSE.
+##' @name plot-methods
 ##' @aliases plot plot-methods plot,scheduled_events-method
-##' @docType methods
-##' @importFrom graphics par
 ##' @importFrom graphics plot
-##' @importFrom graphics mtext
+##' @importFrom graphics par
 ##' @importFrom stats xtabs
 ##' @export
 setMethod("plot",
@@ -383,7 +403,6 @@ setMethod("plot",
 ##'
 ##' Shows the number of scheduled events.
 ##' @aliases show,scheduled_events-methods
-##' @docType methods
 ##' @param object The scheduled_events \code{object}
 ##' @return None (invisible 'NULL').
 ##' @keywords methods
@@ -402,7 +421,6 @@ setMethod("show",
 ##' Shows the number of scheduled events and the number of scheduled
 ##' events per event type.
 ##' @aliases summary,scheduled_events-methods
-##' @docType methods
 ##' @param object The \code{scheduled_events} object
 ##' @param ... Additional arguments affecting the summary produced.
 ##' @return None (invisible 'NULL').

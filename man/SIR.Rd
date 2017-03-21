@@ -10,11 +10,16 @@ SIR(u0, tspan, events = NULL, beta = NULL, gamma = NULL)
 \item{u0}{A \code{data.frame} with the initial state in each node,
 see details.}
 
-\item{tspan}{An increasing sequence of points in time where the
-state of the system is to be returned.}
+\item{tspan}{A vector (length >= 2) of increasing time points
+where the state of each node is to be returned. Can be either
+an \code{integer} or a \code{Date} vector. A \code{Date}
+vector is coerced to a numeric vector as days, where
+\code{tspan[1]} becomes the day of the year of the first year
+of \code{tspan}. The dates are added as names to the numeric
+vector.}
 
 \item{events}{a \code{data.frame} with the scheduled events, see
-\code{\link{siminf_model}}.}
+\code{\link{SimInf_model}}.}
 
 \item{beta}{The transmission rate from susceptible to infected.}
 
@@ -46,4 +51,3 @@ model <- SIR(u0 = data.frame(S = 99, I = 1, R = 0),
 result <- run(model, seed = 123)
 plot(result)
 }
-

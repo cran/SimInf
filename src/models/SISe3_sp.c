@@ -1,7 +1,7 @@
 /*
  *  SimInf, a framework for stochastic disease spread simulations
- *  Copyright (C) 2015 - 2016  Stefan Engblom
- *  Copyright (C) 2015 - 2016  Stefan Widgren
+ *  Copyright (C) 2015 - 2017  Stefan Engblom
+ *  Copyright (C) 2015 - 2017  Stefan Widgren
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "siminf.h"
+#include "SimInf.h"
 #include "siminf_forward_euler_linear_decay.h"
 #include "siminf_local_spread.h"
 
@@ -179,8 +179,7 @@ int SISe3_sp_post_time_step(
     const double *ldata,
     const double *gdata,
     int node,
-    double t,
-    gsl_rng *rng)
+    double t)
 {
     const int day = (int)t % 365;
     const double I_i = u[I_1] + u[I_2] + u[I_3];
@@ -233,5 +232,5 @@ SEXP SISe3_sp_run(SEXP model, SEXP threads, SEXP seed)
                       &SISe3_sp_S_2_to_I_2, &SISe3_sp_I_2_to_S_2,
                       &SISe3_sp_S_3_to_I_3, &SISe3_sp_I_3_to_S_3};
 
-    return siminf_run(model, threads, seed, tr_fun, &SISe3_sp_post_time_step);
+    return SimInf_run(model, threads, seed, tr_fun, &SISe3_sp_post_time_step);
 }

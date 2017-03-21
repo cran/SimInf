@@ -1,7 +1,7 @@
 ## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015 - 2016  Stefan Engblom
-## Copyright (C) 2015 - 2016  Stefan Widgren
+## Copyright (C) 2015 - 2017  Stefan Engblom
+## Copyright (C) 2015 - 2017  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -1062,7 +1062,7 @@ S_expected <- structure(c(0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L,
                           2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L,
                           3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L,
                           4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L),
-                        .Dim = c(6L, 10L))
+                        .Dim = c(6L, 10L), .Dimnames = list(NULL, NULL))
 
 S_observed <- susceptible(result)
 
@@ -1073,7 +1073,7 @@ I_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L),
-                        .Dim = c(6L, 10L))
+                        .Dim = c(6L, 10L), .Dimnames = list(NULL, NULL))
 
 I_observed <- infected(result)
 
@@ -1088,11 +1088,15 @@ stopifnot(file.exists(pdf_file))
 unlink(pdf_file)
 
 ## Check that C SISe run function fails for misspecified SISe model
-res <- .Call("SISe_run", NULL, NULL, NULL, PACKAGE = "SimInf")
-stopifnot(identical(res$error, -10L))
+res <- tools::assertError(.Call("SISe_run", NULL, NULL, NULL,
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid model.",
+                      res[[1]]$message)) > 0)
 
-res <- .Call("SISe_run", "SISe", NULL, NULL, PACKAGE = "SimInf")
-stopifnot(identical(res$error, -10L))
+res <- tools::assertError(.Call("SISe_run", "SISe", NULL, NULL,
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid model.",
+                      res[[1]]$message)) > 0)
 
 ## Check error non-finite v
 model <- SISe(u0      = u0,

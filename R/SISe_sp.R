@@ -1,6 +1,6 @@
 ## SimInf, a framework for stochastic disease spread simulations
-## Copyright (C) 2015 - 2016  Stefan Engblom
-## Copyright (C) 2015 - 2016  Stefan Widgren
+## Copyright (C) 2015 - 2017  Stefan Engblom
+## Copyright (C) 2015 - 2017  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -17,11 +17,11 @@
 
 ##' Class \code{"SISe_sp"}
 ##'
-##' Class to handle the \code{SISe_sp} \code{\link{siminf_model}}.
-##' @include siminf_model.R
+##' Class to handle the \code{SISe_sp} \code{\link{SimInf_model}}.
+##' @include SimInf_model.R
 ##' @include AllGenerics.R
 ##' @export
-setClass("SISe_sp", contains = c("siminf_model"))
+setClass("SISe_sp", contains = c("SimInf_model"))
 
 ##' Create a \code{SISe_sp} model
 ##'
@@ -39,10 +39,9 @@ setClass("SISe_sp", contains = c("siminf_model"))
 ##' @template beta-section
 ##' @param u0 A \code{data.frame} with the initial state in each node,
 ##'     see details.
-##' @param tspan An increasing sequence of points in time where the
-##'     state of the system is to be returned.
+##' @template tspan-param
 ##' @param events a \code{data.frame} with the scheduled events, see
-##'     \code{\link{siminf_model}}.
+##'     \code{\link{SimInf_model}}.
 ##' @param phi A numeric vector with the initial environmental
 ##'     infectious pressure in each node. Default NULL which gives 0
 ##'     in each node.
@@ -164,7 +163,7 @@ SISe_sp <- function(u0,
                       "beta_t1", "beta_t2", "beta_t3", "beta_t4",
                       "coupling")
 
-    model <- siminf_model(G      = G,
+    model <- SimInf_model(G      = G,
                           S      = S,
                           E      = E,
                           N      = N,
@@ -190,7 +189,9 @@ setMethod("susceptible",
               if (!is.null(i))
                   ii <- ii[i]
               j <- seq(from = 1, to = dim(model@U)[2], by = by)
-              as.matrix(model@U[ii, j, drop = FALSE])
+              result <- as.matrix(model@U[ii, j, drop = FALSE])
+              rownames(result) <- NULL
+              result
           }
 )
 
@@ -206,7 +207,9 @@ setMethod("infected",
               if (!is.null(i))
                   ii <- ii[i]
               j <- seq(from = 1, to = dim(model@U)[2], by = by)
-              as.matrix(model@U[ii, j, drop = FALSE])
+              result <- as.matrix(model@U[ii, j, drop = FALSE])
+              rownames(result) <- NULL
+              result
           }
 )
 
@@ -233,8 +236,12 @@ setMethod("prevalence",
 ##' @export
 setMethod("plot",
           signature(x = "SISe_sp"),
-          function(x, t0 = NULL, ...)
-      {
-          callNextMethod(x, t0 = t0, legend = c("S", "I"), ...)
-      }
+          function(x,
+                   col = c("blue", "red"),
+                   lty = rep(1, 2),
+                   lwd = 2,
+                   ...)
+          {
+              callNextMethod(x, col = col, lty = lty, lwd = lwd, ...)
+          }
 )

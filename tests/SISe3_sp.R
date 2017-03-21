@@ -1,6 +1,6 @@
 ## SimInf, a framework for stochastic disease spread simulations
-## Copyright (C) 2015 - 2016  Stefan Engblom
-## Copyright (C) 2015 - 2016  Stefan Widgren
+## Copyright (C) 2015 - 2017  Stefan Engblom
+## Copyright (C) 2015 - 2017  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -1604,7 +1604,7 @@ S_expected <- structure(c(0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L,
                           0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L,
                           0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L,
                           0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L),
-                        .Dim = 9:10)
+                        .Dim = 9:10, .Dimnames = list(NULL, NULL))
 
 S_observed <- susceptible(result, age = 1)
 
@@ -1620,7 +1620,7 @@ I_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L),
-                        .Dim = 9:10)
+                        .Dim = 9:10, .Dimnames = list(NULL, NULL))
 
 I_observed <- infected(result, age = 1)
 
@@ -1629,17 +1629,21 @@ stopifnot(identical(I_observed, I_expected))
 ## Check SISe3_sp plot method
 pdf_file <- tempfile(fileext = ".pdf")
 pdf(pdf_file)
-plot(result, t0 = "2015-01-01")
+plot(result)
 dev.off()
 stopifnot(file.exists(pdf_file))
 unlink(pdf_file)
 
 ## Check that C SISe3_sp run function fails for misspecified SISe3_sp model
-res <- .Call("SISe3_sp_run", NULL, NULL, NULL, PACKAGE = "SimInf")
-stopifnot(identical(res$error, -10L))
+res <- tools::assertError(.Call("SISe3_sp_run", NULL, NULL, NULL,
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid model.",
+                      res[[1]]$message)) > 0)
 
-res <- .Call("SISe3_sp_run", "SISe3_sp", NULL, NULL, PACKAGE = "SimInf")
-stopifnot(identical(res$error, -10L))
+res <- tools::assertError(.Call("SISe3_sp_run", "SISe3_sp", NULL, NULL,
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid model.",
+                      res[[1]]$message)) > 0)
 
 ## Check error non-finite v
 model <- SISe3_sp(u0        = u0,

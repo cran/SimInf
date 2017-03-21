@@ -1,5 +1,5 @@
 ## SimInf, a framework for stochastic disease spread simulations
-## Copyright (C) 2015 - 2016  Stefan Widgren
+## Copyright (C) 2015 - 2017  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -107,7 +107,7 @@ S_expected <- structure(c(0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L,
                           2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L,
                           3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L,
                           4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L),
-                        .Dim = c(6L, 10L))
+                        .Dim = c(6L, 10L), .Dimnames = list(NULL, NULL))
 
 S_observed <- susceptible(result)
 
@@ -118,7 +118,7 @@ I_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L),
-                        .Dim = c(6L, 10L))
+                        .Dim = c(6L, 10L), .Dimnames = list(NULL, NULL))
 
 I_observed <- infected(result)
 
@@ -129,7 +129,7 @@ R_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L),
-                        .Dim = c(6L, 10L))
+                        .Dim = c(6L, 10L), .Dimnames = list(NULL, NULL))
 
 R_observed <- recovered(result)
 
@@ -160,6 +160,19 @@ dev.off()
 stopifnot(file.exists(pdf_file))
 unlink(pdf_file)
 
+## Check SIR plot with tspan as Date vector
+model <- SIR(u0     = u0,
+             tspan  = as.Date(seq_len(10), origin = "2016-12-31"),
+             events = NULL,
+             beta   = 0,
+             gamma  = 0)
+pdf_file <- tempfile(fileext = ".pdf")
+pdf(pdf_file)
+plot(run(model))
+dev.off()
+stopifnot(file.exists(pdf_file))
+unlink(pdf_file)
+
 ## Check SIR events plot method
 model <- SIR(u0     = u0_SIR(),
              tspan  = seq_len(365 * 4),
@@ -174,8 +187,12 @@ stopifnot(file.exists(pdf_file))
 unlink(pdf_file)
 
 ## Check that C SIR run function fails for misspecified SIR model
-res <- .Call("SIR_run", NULL, NULL, NULL, PACKAGE = "SimInf")
-stopifnot(identical(res$error, -10L))
+res <- tools::assertError(.Call("SIR_run", NULL, NULL, NULL,
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid model.",
+                      res[[1]]$message)) > 0)
 
-res <- .Call("SIR_run", "SIR", NULL, NULL, PACKAGE = "SimInf")
-stopifnot(identical(res$error, -10L))
+res <- tools::assertError(.Call("SIR_run", "SIR", NULL, NULL,
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid model.",
+                      res[[1]]$message)) > 0)

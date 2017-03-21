@@ -1,6 +1,6 @@
 ## SimInf, a framework for stochastic disease spread simulations
-## Copyright (C) 2015 - 2016  Stefan Engblom
-## Copyright (C) 2015 - 2016  Stefan Widgren
+## Copyright (C) 2015 - 2017  Stefan Engblom
+## Copyright (C) 2015 - 2017  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -15,10 +15,9 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-##' Run \code{siminf_model} on scaled parameters
+##' Run \code{SimInf_model} on scaled parameters
 ##'
 ##' @rdname run_outer-methods
-##' @docType methods
 ##' @param x Scale the model \code{gdata} parameter values on the
 ##'     right hand side of the formula with \code{x} before calling
 ##'     \code{FUN} with the scaled model as argument.
@@ -34,7 +33,7 @@
 ##' @param FUN A function to use on the scaled model 'gdata' parameters.
 ##' @param ... Optional arguments to be passed to \code{FUN}.
 ##' @return Array with dimension \code{c(dim(x), dim(y))}.
-##' @include siminf_model.R
+##' @include SimInf_model.R
 ##' @importFrom stats terms
 ##' @examples
 ##' \dontrun{
@@ -66,7 +65,7 @@ setGeneric("run_outer",
 ##' @rdname run_outer-methods
 ##' @export
 setMethod("run_outer",
-          signature(x = "numeric", y = "numeric", model = "siminf_model"),
+          signature(x = "numeric", y = "numeric", model = "SimInf_model"),
           function(x, y, model, formula, FUN, ...)
           {
               if (is.null(names(model@gdata)))

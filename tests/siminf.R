@@ -1,7 +1,7 @@
 ## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015 - 2016  Stefan Engblom
-## Copyright (C) 2015 - 2016  Stefan Widgren
+## Copyright (C) 2015 - 2017  Stefan Engblom
+## Copyright (C) 2015 - 2017  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -52,9 +52,9 @@ model <- SISe(u0      = u0,
 result <- run(model, threads = 1, seed = 123L)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(identical(sum(result@U), 1001L))
-stopifnot(any(result@U[1,]))
-stopifnot(any(result@U[2,]))
+stopifnot(identical(sum(U(result)), 1001L))
+stopifnot(any(U(result)[1,]))
+stopifnot(any(U(result)[2,]))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
@@ -128,9 +128,9 @@ model <- SISe3(u0        = u0,
 result <- run(model, threads = 1, seed = 123L)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(all(apply(result@U[1:6,], 1, any)))
-stopifnot(identical(sum(result@U[1:6,11]), 45L))
-stopifnot(identical(sum(result@U[,1]), 45L))
+stopifnot(all(apply(U(result)[1:6,], 1, any)))
+stopifnot(identical(sum(U(result)[1:6,11]), 45L))
+stopifnot(identical(sum(U(result)[,1]), 45L))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
@@ -208,12 +208,12 @@ stopifnot(identical(model@S, result@S))
 stopifnot(identical(
     susceptible(result, age = 2, i = 1) + infected(result, age = 2, i = 1),
     structure(c(0L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L),
-              .Dim = c(1L, 11L))))
+              .Dim = c(1L, 11L), .Dimnames = list(NULL, NULL))))
 stopifnot(identical(
     susceptible(result, age = 3, i = 1) + infected(result, age = 3, i = 1),
     structure(c(0L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L),
-              .Dim = c(1L, 11L))))
-stopifnot(identical(sum(result@U[,1]), 45L))
+              .Dim = c(1L, 11L), .Dimnames = list(NULL, NULL))))
+stopifnot(identical(sum(U(result)[,1]), 45L))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
@@ -226,11 +226,11 @@ if (SimInf:::have_openmp()) {
     stopifnot(identical(
         susceptible(result, age = 2, i = 1) + infected(result, age = 2, i = 1),
         structure(c(0L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L),
-                  .Dim = c(1L, 11L))))
+                  .Dim = c(1L, 11L), .Dimnames = list(NULL, NULL))))
     stopifnot(identical(
         susceptible(result, age = 3, i = 1) + infected(result, age = 3, i = 1),
         structure(c(0L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L),
-                  .Dim = c(1L, 11L))))
+                  .Dim = c(1L, 11L), .Dimnames = list(NULL, NULL))))
     stopifnot(identical(sum(result_omp@U[,1]), 45L))
     stopifnot(identical(model@ldata, result_omp@ldata))
     stopifnot(identical(model@tspan, result_omp@tspan))
@@ -279,9 +279,9 @@ model <- SISe3(u0        = u0,
 result <- run(model, threads = 1, seed = 123L)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(all(result@U[1:6,] == 0))
-stopifnot(all(apply(result@U[seq(from=8, to=36, by=2),], 1, any)))
-stopifnot(identical(sum(result@U[,11]), 45L))
+stopifnot(all(U(result)[1:6,] == 0))
+stopifnot(all(apply(U(result)[seq(from=8, to=36, by=2),], 1, any)))
+stopifnot(identical(sum(U(result)[,11]), 45L))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
@@ -351,38 +351,56 @@ model <- SISe3(u0        = u0,
                end_t4    = 365,
                epsilon   = 0)
 
-U <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L, 0L, 1L, 0L, 2L,
-                 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L, 0L, 3L, 0L, 4L, 0L, 4L, 0L, 4L,
-                 0L, 5L, 0L, 5L, 0L, 5L, 0L, 15L, 0L, 15L, 0L, 15L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 15L, 0L, 15L,
-                 0L, 15L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 15L, 0L, 15L, 0L, 15L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 15L, 0L, 15L, 0L, 15L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 15L, 0L, 15L,
-                 0L, 15L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 15L, 0L, 15L, 0L, 15L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 15L, 0L, 15L, 0L, 15L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 15L, 0L, 15L,
-                 0L, 15L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 15L, 0L, 15L, 0L, 15L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 15L, 0L, 15L, 0L, 15L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L),
-               .Dim = c(36L, 11L))
+U_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L, 0L, 1L,
+                          0L, 2L, 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L, 0L,
+                          3L, 0L, 4L, 0L, 4L, 0L, 4L, 0L, 5L, 0L, 5L,
+                          0L, 5L, 0L, 15L, 0L, 15L, 0L, 15L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 15L, 0L, 15L,
+                          0L, 15L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          15L, 0L, 15L, 0L, 15L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 15L, 0L, 15L, 0L, 15L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 15L, 0L,
+                          15L, 0L, 15L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 15L, 0L, 15L, 0L, 15L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 15L, 0L, 15L, 0L,
+                          15L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 15L,
+                          0L, 15L, 0L, 15L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 15L, 0L, 15L, 0L, 15L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 15L, 0L, 15L,
+                          0L, 15L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L),
+                        .Dim = c(36L, 11L),
+                        .Dimnames = list(c("S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3"),
+                                         NULL))
 
 result <- run(model, threads = 1, seed = 123L)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(identical(result@U, U))
+stopifnot(identical(U(result), U_expected))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
@@ -392,7 +410,7 @@ if (SimInf:::have_openmp()) {
     result_omp <- run(model, threads = 2, seed = 123L)
     stopifnot(identical(model@G, result_omp@G))
     stopifnot(identical(model@S, result_omp@S))
-    stopifnot(identical(result_omp@U, U))
+    stopifnot(identical(result_omp@U, U_expected))
     stopifnot(identical(model@ldata, result_omp@ldata))
     stopifnot(identical(model@tspan, result_omp@tspan))
     stopifnot(identical(model@u0, result_omp@u0))
@@ -450,37 +468,55 @@ model <- SISe3(u0        = u0,
                end_t4    = 365,
                epsilon   = 0)
 
-U <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L,
-                 0L, 1L, 0L, 2L, 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L, 0L, 3L, 0L, 4L,
-                 0L, 4L, 0L, 4L, 0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 1L, 0L, 1L, 0L, 1L, 0L, 2L, 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L,
-                 0L, 3L, 0L, 4L, 0L, 4L, 0L, 4L, 0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L, 0L, 1L, 0L, 2L, 0L, 2L, 0L, 2L,
-                 0L, 3L, 0L, 3L, 0L, 3L, 0L, 4L, 0L, 4L, 0L, 4L, 0L, 5L, 0L, 5L,
-                 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L, 0L, 1L, 0L, 2L,
-                 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L, 0L, 3L, 0L, 4L, 0L, 4L, 0L, 4L,
-                 0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L,
-                 0L, 1L, 0L, 2L, 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L, 0L, 3L, 0L, 4L,
-                 0L, 4L, 0L, 4L, 0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 1L, 0L, 1L, 0L, 1L, 0L, 2L, 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L,
-                 0L, 3L, 0L, 4L, 0L, 4L, 0L, 4L, 0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L, 0L, 1L, 0L, 2L, 0L, 2L, 0L, 2L,
-                 0L, 3L, 0L, 3L, 0L, 3L, 0L, 4L, 0L, 4L, 0L, 4L, 0L, 5L, 0L, 5L,
-                 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L, 0L, 1L, 0L, 2L,
-                 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L, 0L, 3L, 0L, 4L, 0L, 4L, 0L, 4L,
-                 0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L,
-                 0L, 1L, 0L, 2L, 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L, 0L, 3L, 0L, 4L,
-                 0L, 4L, 0L, 4L, 0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 1L, 0L, 1L, 0L, 1L, 0L, 2L, 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L,
-                 0L, 3L, 0L, 4L, 0L, 4L, 0L, 4L, 0L, 5L, 0L, 5L, 0L, 5L, 0L),
-               .Dim = c(36L, 11L))
+U_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L,
+                          1L, 0L, 1L, 0L, 2L, 0L, 2L, 0L, 2L, 0L, 3L,
+                          0L, 3L, 0L, 3L, 0L, 4L, 0L, 4L, 0L, 4L, 0L,
+                          5L, 0L, 5L, 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 1L, 0L, 1L, 0L, 1L, 0L, 2L, 0L, 2L, 0L,
+                          2L, 0L, 3L, 0L, 3L, 0L, 3L, 0L, 4L, 0L, 4L,
+                          0L, 4L, 0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 1L, 0L, 1L, 0L, 1L, 0L, 2L,
+                          0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L, 0L, 3L, 0L,
+                          4L, 0L, 4L, 0L, 4L, 0L, 5L, 0L, 5L, 0L, 5L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L, 0L,
+                          1L, 0L, 2L, 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L,
+                          0L, 3L, 0L, 4L, 0L, 4L, 0L, 4L, 0L, 5L, 0L,
+                          5L, 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 1L,
+                          0L, 1L, 0L, 1L, 0L, 2L, 0L, 2L, 0L, 2L, 0L,
+                          3L, 0L, 3L, 0L, 3L, 0L, 4L, 0L, 4L, 0L, 4L,
+                          0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 1L, 0L, 1L, 0L, 1L, 0L, 2L, 0L, 2L,
+                          0L, 2L, 0L, 3L, 0L, 3L, 0L, 3L, 0L, 4L, 0L,
+                          4L, 0L, 4L, 0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L, 0L, 1L, 0L,
+                          2L, 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L, 0L, 3L,
+                          0L, 4L, 0L, 4L, 0L, 4L, 0L, 5L, 0L, 5L, 0L,
+                          5L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L,
+                          0L, 1L, 0L, 2L, 0L, 2L, 0L, 2L, 0L, 3L, 0L,
+                          3L, 0L, 3L, 0L, 4L, 0L, 4L, 0L, 4L, 0L, 5L,
+                          0L, 5L, 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          1L, 0L, 1L, 0L, 1L, 0L, 2L, 0L, 2L, 0L, 2L,
+                          0L, 3L, 0L, 3L, 0L, 3L, 0L, 4L, 0L, 4L, 0L,
+                          4L, 0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 1L, 0L, 1L, 0L, 1L, 0L, 2L, 0L,
+                          2L, 0L, 2L, 0L, 3L, 0L, 3L, 0L, 3L, 0L, 4L,
+                          0L, 4L, 0L, 4L, 0L, 5L, 0L, 5L, 0L, 5L, 0L),
+                        .Dim = c(36L, 11L),
+                        .Dimnames = list(c("S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3"),
+                                         NULL))
 
 result <- run(model, threads = 1, seed = 123L)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(identical(result@U, U))
+stopifnot(identical(U(result), U_expected))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
@@ -490,7 +526,7 @@ if (SimInf:::have_openmp()) {
     result_omp <- run(model, threads = 2, seed = 123L)
     stopifnot(identical(model@G, result_omp@G))
     stopifnot(identical(model@S, result_omp@S))
-    stopifnot(identical(result_omp@U, U))
+    stopifnot(identical(result_omp@U, U_expected))
     stopifnot(identical(model@ldata, result_omp@ldata))
     stopifnot(identical(model@tspan, result_omp@tspan))
     stopifnot(identical(model@u0, result_omp@u0))
@@ -548,37 +584,55 @@ model <- SISe3(u0        = u0,
                end_t4    = 365,
                epsilon   = 0)
 
-U <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L, 0L, 1L, 0L, 2L,
-                 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L, 0L, 3L, 0L, 4L, 0L, 4L, 0L, 4L,
-                 0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L,
-                 0L, 1L, 0L, 2L, 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L, 0L, 3L, 0L, 4L,
-                 0L, 4L, 0L, 4L, 0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 1L, 0L, 1L, 0L, 1L, 0L, 2L, 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L,
-                 0L, 3L, 0L, 4L, 0L, 4L, 0L, 4L, 0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L),
-               .Dim = c(36L, 11L))
+U_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L, 0L, 1L,
+                          0L, 2L, 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L, 0L,
+                          3L, 0L, 4L, 0L, 4L, 0L, 4L, 0L, 5L, 0L, 5L,
+                          0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L,
+                          1L, 0L, 1L, 0L, 2L, 0L, 2L, 0L, 2L, 0L, 3L,
+                          0L, 3L, 0L, 3L, 0L, 4L, 0L, 4L, 0L, 4L, 0L,
+                          5L, 0L, 5L, 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 1L, 0L, 1L, 0L, 1L, 0L, 2L, 0L, 2L, 0L,
+                          2L, 0L, 3L, 0L, 3L, 0L, 3L, 0L, 4L, 0L, 4L,
+                          0L, 4L, 0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L),
+                        .Dim = c(36L, 11L),
+                        .Dimnames = list(c("S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3"),
+                                         NULL))
 
 result <- run(model, threads = 1, seed = 123L)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(identical(result@U, U))
+stopifnot(identical(U(result), U_expected))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
@@ -588,7 +642,7 @@ if (SimInf:::have_openmp()) {
     result_omp <- run(model, threads = 2, seed = 123L)
     stopifnot(identical(model@G, result_omp@G))
     stopifnot(identical(model@S, result_omp@S))
-    stopifnot(identical(result_omp@U, U))
+    stopifnot(identical(result_omp@U, U_expected))
     stopifnot(identical(model@ldata, result_omp@ldata))
     stopifnot(identical(model@tspan, result_omp@tspan))
     stopifnot(identical(model@u0, result_omp@u0))
@@ -646,38 +700,56 @@ model <- SISe3(u0        = u0,
                end_t4    = 365,
                epsilon   = 0)
 
-U <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L, 0L, 1L, 0L, 2L,
-                 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L, 0L, 3L, 0L, 4L, 0L, 4L, 0L, 4L,
-                 0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L,
-                 0L, 1L, 0L, 2L, 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L, 0L, 3L, 0L, 4L,
-                 0L, 4L, 0L, 4L, 0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 1L, 0L, 1L, 0L, 1L, 0L, 2L, 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L,
-                 0L, 3L, 0L, 4L, 0L, 4L, 0L, 4L, 0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 2L, 0L, 1L, 0L, 0L, 0L, 4L, 0L, 2L,
-                 0L, 0L, 0L, 6L, 0L, 3L, 0L, 0L, 0L, 8L, 0L, 4L, 0L, 0L, 0L, 10L,
-                 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 2L, 0L, 1L, 0L, 0L,
-                 0L, 4L, 0L, 2L, 0L, 0L, 0L, 6L, 0L, 3L, 0L, 0L, 0L, 8L, 0L, 4L,
-                 0L, 0L, 0L, 10L, 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 2L, 0L, 1L, 0L, 0L, 0L, 4L, 0L, 2L, 0L, 0L, 0L, 6L, 0L, 3L, 0L,
-                 0L, 0L, 8L, 0L, 4L, 0L, 0L, 0L, 10L, 0L, 5L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 3L, 0L, 0L, 0L, 0L, 0L, 6L, 0L, 0L,
-                 0L, 0L, 0L, 9L, 0L, 0L, 0L, 0L, 0L, 12L, 0L, 0L, 0L, 0L, 0L,
-                 15L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 3L, 0L, 0L,
-                 0L, 0L, 0L, 6L, 0L, 0L, 0L, 0L, 0L, 9L, 0L, 0L, 0L, 0L, 0L, 12L,
-                 0L, 0L, 0L, 0L, 0L, 15L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 3L, 0L, 0L, 0L, 0L, 0L, 6L, 0L, 0L, 0L, 0L, 0L, 9L, 0L,
-                 0L, 0L, 0L, 0L, 12L, 0L, 0L, 0L, 0L, 0L, 15L, 0L, 0L, 0L, 0L,
-                 0L, 0L, 0L, 0L, 0L, 0L, 0L, 3L, 0L, 0L, 0L, 0L, 0L, 6L, 0L, 0L,
-                 0L, 0L, 0L, 9L, 0L, 0L, 0L, 0L, 0L, 12L, 0L, 0L, 0L, 0L, 0L,
-                 15L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 3L, 0L, 0L,
-                 0L, 0L, 0L, 6L, 0L, 0L, 0L, 0L, 0L, 9L, 0L, 0L, 0L, 0L, 0L, 12L,
-                 0L, 0L, 0L, 0L, 0L, 15L, 0L),
-               .Dim = c(36L, 11L))
+U_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L, 0L, 1L,
+                          0L, 2L, 0L, 2L, 0L, 2L, 0L, 3L, 0L, 3L, 0L,
+                          3L, 0L, 4L, 0L, 4L, 0L, 4L, 0L, 5L, 0L, 5L,
+                          0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L,
+                          1L, 0L, 1L, 0L, 2L, 0L, 2L, 0L, 2L, 0L, 3L,
+                          0L, 3L, 0L, 3L, 0L, 4L, 0L, 4L, 0L, 4L, 0L,
+                          5L, 0L, 5L, 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 1L, 0L, 1L, 0L, 1L, 0L, 2L, 0L, 2L, 0L,
+                          2L, 0L, 3L, 0L, 3L, 0L, 3L, 0L, 4L, 0L, 4L,
+                          0L, 4L, 0L, 5L, 0L, 5L, 0L, 5L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 2L, 0L, 1L, 0L, 0L,
+                          0L, 4L, 0L, 2L, 0L, 0L, 0L, 6L, 0L, 3L, 0L,
+                          0L, 0L, 8L, 0L, 4L, 0L, 0L, 0L, 10L, 0L, 5L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 2L, 0L,
+                          1L, 0L, 0L, 0L, 4L, 0L, 2L, 0L, 0L, 0L, 6L,
+                          0L, 3L, 0L, 0L, 0L, 8L, 0L, 4L, 0L, 0L, 0L,
+                          10L, 0L, 5L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 2L, 0L, 1L, 0L, 0L, 0L, 4L, 0L, 2L, 0L,
+                          0L, 0L, 6L, 0L, 3L, 0L, 0L, 0L, 8L, 0L, 4L,
+                          0L, 0L, 0L, 10L, 0L, 5L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 3L, 0L, 0L, 0L, 0L,
+                          0L, 6L, 0L, 0L, 0L, 0L, 0L, 9L, 0L, 0L, 0L,
+                          0L, 0L, 12L, 0L, 0L, 0L, 0L, 0L, 15L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 3L,
+                          0L, 0L, 0L, 0L, 0L, 6L, 0L, 0L, 0L, 0L, 0L,
+                          9L, 0L, 0L, 0L, 0L, 0L, 12L, 0L, 0L, 0L, 0L,
+                          0L, 15L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 3L, 0L, 0L, 0L, 0L, 0L, 6L, 0L, 0L,
+                          0L, 0L, 0L, 9L, 0L, 0L, 0L, 0L, 0L, 12L, 0L,
+                          0L, 0L, 0L, 0L, 15L, 0L, 0L, 0L, 0L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 3L, 0L, 0L, 0L, 0L, 0L,
+                          6L, 0L, 0L, 0L, 0L, 0L, 9L, 0L, 0L, 0L, 0L,
+                          0L, 12L, 0L, 0L, 0L, 0L, 0L, 15L, 0L, 0L,
+                          0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 3L, 0L,
+                          0L, 0L, 0L, 0L, 6L, 0L, 0L, 0L, 0L, 0L, 9L,
+                          0L, 0L, 0L, 0L, 0L, 12L, 0L, 0L, 0L, 0L, 0L,
+                          15L, 0L),
+                        .Dim = c(36L, 11L),
+                        .Dimnames = list(c("S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3",
+                                           "S_1", "I_1", "S_2", "I_2", "S_3", "I_3"),
+                                         NULL))
 
 result <- run(model, threads = 1, seed = 123L)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(identical(result@U, U))
+stopifnot(identical(U(result), U_expected))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
@@ -687,7 +759,7 @@ if (SimInf:::have_openmp()) {
     result_omp <- run(model, threads = 2, seed = 123L)
     stopifnot(identical(model@G, result_omp@G))
     stopifnot(identical(model@S, result_omp@S))
-    stopifnot(identical(result_omp@U, U))
+    stopifnot(identical(result_omp@U, U_expected))
     stopifnot(identical(model@ldata, result_omp@ldata))
     stopifnot(identical(model@tspan, result_omp@tspan))
     stopifnot(identical(model@u0, result_omp@u0))
@@ -735,8 +807,8 @@ model <- SISe3(u0        = u0,
 result <- run(model, threads = 1, seed = 123L)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(identical(sum(result@U[1:6,]), 0L))
-stopifnot(all(apply(result@U[7:36,], 1, any)))
+stopifnot(identical(sum(U(result)[1:6,]), 0L))
+stopifnot(all(apply(U(result)[7:36,], 1, any)))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
@@ -761,12 +833,13 @@ if (SimInf:::have_openmp()) {
       NULL,
       PACKAGE = "SimInf")
 
-res <- .Call("SISe_run",
-             demo_model(model = "SISe"),
-             NULL,
-             "1",
-             PACKAGE = "SimInf")
-stopifnot(identical(res$error, -6L))
+res <- tools::assertError(.Call("SISe_run",
+                                demo_model(model = "SISe"),
+                                NULL,
+                                "1",
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid 'seed' value",
+                      res[[1]]$message)) > 0)
 
 .Call("SISe_run",
       demo_model(model = "SISe"),
@@ -792,33 +865,37 @@ stopifnot(identical(res$error, -6L))
       1,
       PACKAGE = "SimInf")
 
-res <- .Call("SISe_run",
-             demo_model(model = "SISe"),
-             NULL,
-             NA_integer_,
-             PACKAGE = "SimInf")
-stopifnot(identical(res$error, -6L))
+res <- tools::assertError(.Call("SISe_run",
+                                demo_model(model = "SISe"),
+                                NULL,
+                                NA_integer_,
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid 'seed' value",
+                      res[[1]]$message)) > 0)
 
-res <- .Call("SISe_run",
-             demo_model(model = "SISe"),
-             NULL,
-             NA_real_,
-             PACKAGE = "SimInf")
-stopifnot(identical(res$error, -6L))
+res <- tools::assertError(.Call("SISe_run",
+                                demo_model(model = "SISe"),
+                                NULL,
+                                NA_real_,
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid 'seed' value",
+                      res[[1]]$message)) > 0)
 
-res <- .Call("SISe_run",
-             demo_model(model = "SISe"),
-             NULL,
-             c(1L, 2L),
-             PACKAGE = "SimInf")
-stopifnot(identical(res$error, -6L))
+res <- tools::assertError(.Call("SISe_run",
+                                demo_model(model = "SISe"),
+                                NULL,
+                                c(1L, 2L),
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid 'seed' value",
+                      res[[1]]$message)) > 0)
 
-res <- .Call("SISe_run",
-             demo_model(model = "SISe"),
-             NULL,
-             c(1, 2),
-             PACKAGE = "SimInf")
-stopifnot(identical(res$error, -6L))
+res <- tools::assertError(.Call("SISe_run",
+                                demo_model(model = "SISe"),
+                                NULL,
+                                c(1, 2),
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid 'seed' value",
+                      res[[1]]$message)) > 0)
 
 ## Check extraction of number of threads
 .Call("SISe_run",
@@ -839,72 +916,58 @@ stopifnot(identical(res$error, -6L))
       NULL,
       PACKAGE = "SimInf")
 
-res <- .Call("SISe_run",
-             demo_model(model = "SISe"),
-             -1L,
-             NULL,
-             PACKAGE = "SimInf")
-stopifnot(identical(res$error, -7L))
-
-res <- .Call("SISe_run",
-             demo_model(model = "SISe"),
-             -1,
-             NULL,
-             PACKAGE = "SimInf")
-stopifnot(identical(res$error, -7L))
-
-res <- .Call("SISe_run",
-             demo_model(model = "SISe"),
-             "1",
-             NULL,
-             PACKAGE = "SimInf")
-stopifnot(identical(res$error, -7L))
-
-res <- .Call("SISe_run",
-             demo_model(model = "SISe"),
-             c(1L, 1L),
-             NULL,
-             PACKAGE = "SimInf")
-stopifnot(identical(res$error, -7L))
-
-res <- .Call("SISe_run",
-             demo_model(model = "SISe"),
-             c(1, 1),
-             NULL,
-             PACKAGE = "SimInf")
-stopifnot(identical(res$error, -7L))
-
-res <- .Call("SISe_run",
-             demo_model(model = "SISe"),
-             NA_integer_,
-             NULL,
-             PACKAGE = "SimInf")
-stopifnot(identical(res$error, -7L))
-
-res <- .Call("SISe_run",
-             demo_model(model = "SISe"),
-             NA_real_,
-             NULL,
-             PACKAGE = "SimInf")
-stopifnot(identical(res$error, -7L))
-
-## Check error codes in siminf_error
-res <- tools::assertError(SimInf:::siminf_error("err"))
-stopifnot(length(grep("'err' must be an integer vector of length 1",
+res <- tools::assertError(.Call("SISe_run",
+                                demo_model(model = "SISe"),
+                                -1L,
+                                NULL,
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid 'threads' value",
                       res[[1]]$message)) > 0)
 
-res <- tools::assertError(SimInf:::siminf_error(c(-1L, -1L)))
-stopifnot(length(grep("'err' must be an integer vector of length 1",
+res <- tools::assertError(.Call("SISe_run",
+                                demo_model(model = "SISe"),
+                                -1,
+                                NULL,
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid 'threads' value",
                       res[[1]]$message)) > 0)
 
-res <- tools::assertError(SimInf:::siminf_error(-1.1))
-stopifnot(length(grep("'err' must be an integer vector of length 1",
+res <- tools::assertError(.Call("SISe_run",
+                                demo_model(model = "SISe"),
+                                "1",
+                                NULL,
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid 'threads' value",
                       res[[1]]$message)) > 0)
 
-res <- tools::assertError(SimInf:::siminf_error(-10))
-stopifnot(length(grep("Invalid model",
+res <- tools::assertError(.Call("SISe_run",
+                                demo_model(model = "SISe"),
+                                c(1L, 1L),
+                                NULL,
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid 'threads' value",
                       res[[1]]$message)) > 0)
 
-res <- tools::assertError(SimInf:::siminf_error(-9000))
-stopifnot(length(grep("Unknown error code",
+res <- tools::assertError(.Call("SISe_run",
+                                demo_model(model = "SISe"),
+                                c(1, 1),
+                                NULL,
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid 'threads' value",
+                      res[[1]]$message)) > 0)
+
+res <- tools::assertError(.Call("SISe_run",
+                                demo_model(model = "SISe"),
+                                NA_integer_,
+                                NULL,
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid 'threads' value",
+                      res[[1]]$message)) > 0)
+
+res <- tools::assertError(.Call("SISe_run",
+                                demo_model(model = "SISe"),
+                                NA_real_,
+                                NULL,
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid 'threads' value",
                       res[[1]]$message)) > 0)

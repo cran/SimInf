@@ -147,7 +147,7 @@ S_expected <- structure(c(0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L,
                           2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L,
                           3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L,
                           4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L),
-                        .Dim = c(6L, 10L))
+                        .Dim = c(6L, 10L), .Dimnames = list(NULL, NULL))
 
 S_observed <- susceptible(result)
 
@@ -158,7 +158,7 @@ I_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L),
-                        .Dim = c(6L, 10L))
+                        .Dim = c(6L, 10L), .Dimnames = list(NULL, NULL))
 
 I_observed <- infected(result)
 
@@ -169,7 +169,7 @@ R_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L),
-                        .Dim = c(6L, 10L))
+                        .Dim = c(6L, 10L), .Dimnames = list(NULL, NULL))
 
 R_observed <- recovered(result)
 
@@ -216,8 +216,12 @@ stopifnot(file.exists(pdf_file))
 unlink(pdf_file)
 
 ## Check that C SEIR run function fails for a misspecified SEIR model
-res <- .Call("SEIR_run", NULL, NULL, NULL, PACKAGE = "SimInf")
-stopifnot(identical(res$error, -10L))
+res <- tools::assertError(.Call("SEIR_run", NULL, NULL, NULL,
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid model.",
+                      res[[1]]$message)) > 0)
 
-res <- .Call("SEIR_run", "SEIR", NULL, NULL, PACKAGE = "SimInf")
-stopifnot(identical(res$error, -10L))
+res <- tools::assertError(.Call("SEIR_run", "SEIR", NULL, NULL,
+                                PACKAGE = "SimInf"))
+stopifnot(length(grep("Invalid model.",
+                      res[[1]]$message)) > 0)

@@ -1,7 +1,7 @@
 ## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015 - 2016  Stefan Engblom
-## Copyright (C) 2015 - 2016  Stefan Widgren
+## Copyright (C) 2015 - 2017  Stefan Engblom
+## Copyright (C) 2015 - 2017  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -18,11 +18,11 @@
 
 ##' Class \code{"SISe3"}
 ##'
-##' Class to handle the SISe3 \code{\link{siminf_model}} model.
-##' @include siminf_model.R
+##' Class to handle the SISe3 \code{\link{SimInf_model}} model.
+##' @include SimInf_model.R
 ##' @include AllGenerics.R
 ##' @export
-setClass("SISe3", contains = c("siminf_model"))
+setClass("SISe3", contains = c("SimInf_model"))
 
 ##' Create a SISe3 model
 ##'
@@ -43,10 +43,9 @@ setClass("SISe3", contains = c("siminf_model"))
 ##' @template beta-section
 ##' @param u0 A \code{data.frame} with the initial state in each
 ##' node, see details.
-##' @param tspan An increasing sequence of points in time where the
-##' state of the system is to be returned.
+##' @template tspan-param
 ##' @param events a \code{data.frame} with the scheduled events, see
-##' \code{\link{siminf_model}}.
+##' \code{\link{SimInf_model}}.
 ##' @param phi A numeric vector with the initial environmental
 ##' infectious pressure in each node. Default NULL which gives 0 in
 ##' each node.
@@ -199,7 +198,7 @@ SISe3 <- function(u0,
                       "beta_t1", "beta_t2", "beta_t3", "beta_t4",
                       "epsilon")
 
-    model <- siminf_model(G      = G,
+    model <- SimInf_model(G      = G,
                           S      = S,
                           E      = E,
                           N      = N,
@@ -248,6 +247,7 @@ setMethod("susceptible",
                   }
               }
 
+              rownames(result) <- NULL
               result
           }
 )
@@ -287,6 +287,7 @@ setMethod("infected",
                   }
               }
 
+              rownames(result) <- NULL
               result
           }
 )
@@ -311,16 +312,18 @@ setMethod("prevalence",
 
 ##' @name plot-methods
 ##' @aliases plot plot-methods plot,SISe3-method
-##' @docType methods
 ##' @importFrom graphics plot
 ##' @export
 setMethod("plot",
           signature(x = "SISe3"),
-          function(x, t0 = NULL, ...)
-      {
-          callNextMethod(x,
-                         t0 = t0,
-                         legend = expression(S[1], I[1], S[2], I[2], S[3], I[3]),
-                         ...)
-      }
+          function(x,
+                   legend = expression(S[1], I[1], S[2], I[2], S[3], I[3]),
+                   col = rep(c("blue", "red"), 3),
+                   lty = rep(1:3, each = 2),
+                   lwd = 2,
+                   ...)
+          {
+              callNextMethod(x, legend = legend, col = col,
+                             lty = lty, lwd = lwd, ...)
+          }
 )
