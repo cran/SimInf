@@ -90,7 +90,7 @@
 ##'      Numeric matrix (\code{dim(ldata)[1]} \eqn{\times N_n}).
 ##'   }
 ##'   \item{events}{
-##'     Scheduled events \code{"\linkS4class{scheduled_events}"}
+##'     Scheduled events \code{"\linkS4class{SimInf_events}"}
 ##'   }
 ##'   \item{C_code}{
 ##'     Character vector with optional model C code. If non-empty, the
@@ -100,10 +100,10 @@
 ##'     the temporary files are removed after running the model.
 ##'   }
 ##' }
-##' @include scheduled_events.R
+##' @include SimInf_events.R
 ##' @keywords methods
 ##' @export
-##' @import Matrix
+##' @importClassesFrom Matrix dgCMatrix
 setClass("SimInf_model",
          slots = c(G        = "dgCMatrix",
                    S        = "dgCMatrix",
@@ -116,11 +116,11 @@ setClass("SimInf_model",
                    V        = "matrix",
                    V_sparse = "dgCMatrix",
                    v0       = "matrix",
-                   events   = "scheduled_events",
+                   events   = "SimInf_events",
                    C_code   = "character"),
          validity = function(object) {
              ## Check events
-             errors <- validObject(object@events)
+             errors <- methods::validObject(object@events)
              if (identical(errors, TRUE))
                  errors <- character()
 
@@ -239,9 +239,9 @@ setClass("SimInf_model",
 ##'     vector is updated by the specific model during the simulation
 ##'     in the post time step function.
 ##' @param E Sparse matrix to handle scheduled events, see
-##'     \code{\linkS4class{scheduled_events}}.
+##'     \code{\linkS4class{SimInf_events}}.
 ##' @param N Sparse matrix to handle scheduled events, see
-##'     \code{\linkS4class{scheduled_events}}.
+##'     \code{\linkS4class{SimInf_events}}.
 ##' @param C_code Character vector with optional model C code. If
 ##'     non-empty, the C code is written to a temporary C-file when
 ##'     the \code{run} method is called.  The temporary C-file is
@@ -286,7 +286,7 @@ SimInf_model <- function(G,
 
     ## Check G
     if (class(G) == "dsCMatrix")
-        G <- as(G, "dgCMatrix")
+        G <- methods::as(G, "dgCMatrix")
 
     ## Check ldata
     if (is.null(ldata))
@@ -345,7 +345,7 @@ SimInf_model <- function(G,
     }
 
     ## Check tspan
-    if (is(tspan, "Date")) {
+    if (methods::is(tspan, "Date")) {
         ## Coerce the date vector to a numeric vector as days, where
         ## tspan[1] becomes the day of the year of the first year of
         ## the tspan date vector. The dates are added as names to the
@@ -362,24 +362,75 @@ SimInf_model <- function(G,
     ## Check events
     if (!any(is.null(events), is.data.frame(events)))
         stop("'events' must be NULL or a data.frame")
-    events <- scheduled_events(E = E, N = N, events = events, t0 = t0)
+    events <- SimInf_events(E = E, N = N, events = events, t0 = t0)
 
     ## Check C code
     if (is.null(C_code))
         C_code <- character(0)
 
-    return(new("SimInf_model",
-               G      = G,
-               S      = S,
-               U      = U,
-               ldata  = ldata,
-               gdata  = gdata,
-               tspan  = tspan,
-               u0     = u0,
-               v0     = v0,
-               V      = V,
-               events = events,
-               C_code = C_code))
+    return(methods::new("SimInf_model",
+                        G      = G,
+                        S      = S,
+                        U      = U,
+                        ldata  = ldata,
+                        gdata  = gdata,
+                        tspan  = tspan,
+                        u0     = u0,
+                        v0     = v0,
+                        V      = V,
+                        events = events,
+                        C_code = C_code))
+}
+
+## Internal function to calculate prevalence from U
+calc_prevalence <- function(model = NULL, numerator = NULL,
+                            denominator = NULL,
+                            type = c("pop", "bnp", "wnp"), i = NULL)
+{
+    numerator <- extract_U(model, numerator, i)
+    denominator <- extract_U(model, denominator, i)
+
+    type <- match.arg(type)
+    if (identical(type, "pop")) {
+        numerator <- colSums(numerator)
+        denominator <- colSums(denominator)
+    } else if (identical(type, "bnp")) {
+        numerator <- colSums(numerator > 0)
+        ## Include only nodes with individuals
+        denominator <- colSums(denominator > 0)
+    }
+
+    numerator / denominator
+}
+
+## Internal function to extract compartments from U
+extract_U <- function(model = NULL, compartments = NULL, i = NULL) {
+    if (is.null(model))
+        stop("Missing 'model' argument")
+    if (is.null(compartments))
+        stop("Missing 'compartments' argument")
+    if (!(all(compartments %in% rownames(model@S))))
+        stop("'compartments' must exist in the model")
+    compartments <- match(compartments, rownames(model@S))
+    if (identical(dim(model@U), c(0L, 0L)))
+        stop("Please run the model first, the 'U' matrix is empty")
+
+    result <- NULL
+    for (k in compartments) {
+        ii <- seq(from = k, to = dim(model@U)[1], by = Nc(model))
+        if (!is.null(i))
+            ii <- ii[i]
+
+        if (is.null(result)) {
+            result <- as.matrix(model@U[ii, , drop = FALSE])
+        } else {
+            result <- result + as.matrix(model@U[ii, , drop = FALSE])
+        }
+    }
+
+    rownames(result) <- NULL
+    colnames(result) <- NULL
+    result
 }
 
 ##' @rdname U-methods
@@ -404,8 +455,8 @@ setMethod("U<-",
           signature("SimInf_model"),
           function(model, value) {
               if (!is.null(value)) {
-                  if (!is(value, "dgCMatrix"))
-                      value <- as(value, "dgCMatrix")
+                  if (!methods::is(value, "dgCMatrix"))
+                      value <- methods::as(value, "dgCMatrix")
 
                   d <- c(Nn(model) * Nc(model), length(model@tspan))
                   if (!identical(dim(value), d))
@@ -419,9 +470,10 @@ setMethod("U<-",
                   model@U_sparse = value
               } else {
                   ## Clear sparse result matrix
-                  model@U_sparse <- as(sparseMatrix(numeric(0), numeric(0),
-                                                    dims = c(0, 0)),
-                                       "dgCMatrix")
+                  model@U_sparse <- methods::as(Matrix::sparseMatrix(numeric(0),
+                                                                     numeric(0),
+                                                                     dims = c(0, 0)),
+                                                "dgCMatrix")
               }
               model
           }
@@ -449,8 +501,8 @@ setMethod("V<-",
           signature("SimInf_model"),
           function(model, value) {
               if (!is.null(value)) {
-                  if (!is(value, "dgCMatrix"))
-                      value <- as(value, "dgCMatrix")
+                  if (!methods::is(value, "dgCMatrix"))
+                      value <- methods::as(value, "dgCMatrix")
 
                   d <- c(Nn(model) * Nd(model), length(model@tspan))
                   if (!identical(dim(value), d))
@@ -464,9 +516,10 @@ setMethod("V<-",
                   model@V_sparse = value
               } else {
                   ## Clear sparse result matrix
-                  model@V_sparse <- as(sparseMatrix(numeric(0), numeric(0),
-                                                    dims = c(0, 0)),
-                                       "dgCMatrix")
+                  model@V_sparse <- methods::as(Matrix::sparseMatrix(numeric(0),
+                                                                     numeric(0),
+                                                                     dims = c(0, 0)),
+                                                "dgCMatrix")
               }
               model
           }
@@ -500,7 +553,7 @@ setMethod("run",
           {
               ## Check that SimInf_model contains all data structures
               ## required by the siminf solver and that they make sense
-              validObject(model);
+              methods::validObject(model);
 
               if (nchar(paste0(model@C_code, collapse = "\n"))) {
                   ## Write the C code to a temporary file
@@ -546,6 +599,88 @@ setMethod("run",
           }
 )
 
+## Create a matrix where each column contains the individuals in one
+## state.
+by_compartment <- function(model) {
+    if (identical(dim(model@U), c(0L, 0L)))
+        stop("Please run the model first, the 'U' matrix is empty")
+
+    m <- do.call(cbind, lapply(seq_len(dim(model@S)[1]), function(from) {
+        i <- seq(from = from, to = dim(model@U)[1], by = dim(model@S)[1])
+        as.numeric(model@U[i, ])
+    }))
+
+    colnames(m) <- rownames(model@S)
+    m
+}
+
+##' Box Plots
+##'
+##' Produce box-and-whisker plot(s) of the number of individuals in
+##' each compartment.
+##' @param x The \code{model} to plot
+##' @param ... Additional arguments affecting the plot produced.
+##' @name boxplot-methods
+##' @aliases boxplot boxplot-methods boxplot,SimInf_model-method
+##' @export
+##' @examples
+##' ## Create an 'SIR' model with 10 nodes and initialise
+##' ## it with 99 susceptible individuals and one infected
+##' ## individual. Let the model run over 100 days.
+##' model <- SIR(u0 = data.frame(S = rep(99, 10),
+##'                              I = rep(1, 10),
+##'                              R = rep(0, 10)),
+##'              tspan = 1:100,
+##'              beta = 0.16,
+##'              gamma = 0.077)
+##'
+##' ## Run the model and save the result.
+##' result <- run(model, threads = 1, seed = 1)
+##'
+##' ## Create a boxplot
+##' boxplot(result)
+setMethod("boxplot",
+          signature(x = "SimInf_model"),
+          function(x, ...)
+          {
+              graphics::boxplot(by_compartment(x), ...)
+          }
+)
+
+##' Scatterplot Matrices
+##'
+##' A matrix of scatterplots with the number of individuals is
+##' produced. The \code{ij}th scatterplot contains \code{x[,i]}
+##' plotted against \code{x[,j]}.
+##' @param x The \code{model} to plot
+##' @param ... Additional arguments affecting the plot produced.
+##' @name pairs-methods
+##' @aliases pairs pairs-methods pairs,SimInf_model-method
+##' @export
+##' @examples
+##' ## Create an 'SIR' model with 10 nodes and initialise
+##' ## it with 99 susceptible individuals and one infected
+##' ## individual. Let the model run over 100 days.
+##' model <- SIR(u0 = data.frame(S = rep(99, 10),
+##'                              I = rep(1, 10),
+##'                              R = rep(0, 10)),
+##'              tspan = 1:100,
+##'              beta = 0.16,
+##'              gamma = 0.077)
+##'
+##' ## Run the model and save the result.
+##' result <- run(model, threads = 1, seed = 1)
+##'
+##' ## Create a scatter plot
+##' pairs(result)
+setMethod("pairs",
+          signature(x = "SimInf_model"),
+          function(x, ...)
+          {
+              graphics::pairs(by_compartment(x), ...)
+          }
+)
+
 ##' Plot \code{\linkS4class{SimInf_model}}
 ##'
 ##' @param x The \code{model} to plot
@@ -557,95 +692,160 @@ setMethod("run",
 ##'     sequence: 1=solid, 2=dashed, 3=dotted, 4=dotdash, 5=longdash,
 ##'     6=twodash.
 ##' @param lwd The line width for each compartment. Default is 2.
+##' @param N if \code{TRUE}, the average number of individuals in each
+##'     compartment, else the proportion of individuals in each
+##'     compartment.  Default is \code{FALSE}.
+##' @param compartments Character vector with the compartments in the
+##'     model to include in the plot. Default is \code{NULL}
+##'     i.e. include all compartments in the model.
+##' @param spaghetti Plot one line for each node. Default is
+##'     \code{FALSE}.
 ##' @param ... Additional arguments affecting the plot produced.
 ##' @name plot-methods
 ##' @aliases plot plot-methods plot,SimInf_model-method
-##' @importFrom graphics axis
-##' @importFrom graphics legend
-##' @importFrom graphics lines
-##' @importFrom graphics par
-##' @importFrom graphics plot
-##' @importFrom graphics title
 ##' @export
 ##' @examples
-##' ## Create a 'SISe' demo model with 1 node and initialize
-##' ## it to run over 1000 days.
-##' model <- demo_model(nodes = 1, days = 1000, model = "SISe")
+##' ## Create an 'SIR' model with 10 nodes and initialise
+##' ## it with 99 susceptible individuals and one infected
+##' ## individual. Let the model run over 100 days.
+##' model <- SIR(u0 = data.frame(S = rep(99, 10),
+##'                              I = rep(1, 10),
+##'                              R = rep(0, 10)),
+##'              tspan = 1:100,
+##'              beta = 0.16,
+##'              gamma = 0.077)
 ##'
-##' ## Run the model and save the result
-##' result <- run(model)
+##' ## Run the model and save the result.
+##' result <- run(model, threads = 1, seed = 1)
 ##'
-##' ## Plot the proportion susceptible and infected individuals
+##' ## Plot the proportion of susceptible, infected and recovered
+##' ## individuals.
 ##' plot(result)
+##'
+##' ## Plot the number of susceptible, infected and recovered
+##' ## individuals.
+##' plot(result, N = TRUE)
+##'
+##' ## Plot the number of infected individuals.
+##' plot(result, compartments = "I", N = TRUE)
 setMethod("plot",
           signature(x = "SimInf_model"),
-          function(x, legend = NULL, col = NULL, lty = NULL,
-                   lwd = NULL, ...)
+          function(x, legend = NULL, col = NULL, lty = NULL, lwd = 2,
+                   N = FALSE, compartments = NULL, spaghetti = FALSE,
+                   ...)
           {
               if (identical(dim(x@U), c(0L, 0L)))
                   stop("Please run the model first, the 'U' matrix is empty")
 
-              savepar <- par(mar = c(2,4,1,1), oma = c(4,1,0,0), xpd = TRUE)
-              on.exit(par(savepar))
+              ## Determine the compartments to include in the plot
+              if (is.null(compartments)) {
+                  compartments <- seq_len(Nc(x))
+              } else {
+                  if (!(all(compartments %in% rownames(x@S))))
+                      stop("'compartments' must exist in the model")
+                  compartments <- match(compartments, rownames(x@S))
+              }
 
-              ## Create matrix where each row is the sum of individuals in
-              ## that state
-              m <- do.call(rbind, lapply(seq_len(dim(x@S)[1]), function(from) {
-                  i <- seq(from = from, to = dim(x@U)[1], by = dim(x@S)[1])
-                  colSums(as.matrix(x@U[i, , drop = FALSE]))
-              }))
+              savepar <- graphics::par(mar = c(2,4,1,1), oma = c(4,1,0,0),
+                                       xpd = TRUE)
+              on.exit(graphics::par(savepar))
 
-              ## Calculate proportion
-              m <- apply(m, 2, function(x) x / sum(x))
+              ## Create a matrix with one row for each line in the
+              ## plot.
+              if (identical(spaghetti, TRUE)) {
+                  i <- sort(as.numeric(sapply(compartments, "+",
+                  (seq_len(Nn(x)) - 1) * Nc(x))))
+                  m <- x@U[i, , drop = FALSE]
+
+                  if (!identical(N, TRUE)) {
+                      ## Calculate the proportion of individuals in
+                      ## each compartment within each node.
+                      for (i in (seq_len(Nn(x)) - 1)) {
+                          n <- colSums(x@U[i * Nc(x) + seq_len(Nc(x)), ,
+                                           drop = FALSE])
+                          j <- i * length(compartments) +
+                              seq_len(length(compartments))
+                          m[j, ] <- m[j, , drop = FALSE] / n
+                      }
+                  }
+              } else {
+                  m <- matrix(0, nrow = length(compartments),
+                              ncol = length(x@tspan))
+                  for (i in seq_len(length(compartments))) {
+                      j <- seq(from = compartments[i], to = dim(x@U)[1],
+                               by = Nc(x))
+                      if (N) {
+                          m[i, ] <- colMeans(as.matrix(x@U[j, , drop = FALSE]))
+                      } else {
+                          m[i, ] <- colSums(as.matrix(x@U[j, , drop = FALSE]))
+                      }
+                  }
+
+                  ## Calculate proportion
+                  if (!identical(N, TRUE))
+                      m <- apply(m, 2, function(x) x / sum(x))
+              }
 
               ## Default line type
               if (is.null(lty)) {
                   if (is.null(col)) {
-                      lty <- seq_len(dim(m)[1])
+                      lty <- seq_len(length(compartments))
                   } else {
-                      lty <- rep(1, dim(m)[1])
+                      lty <- rep(1, length(compartments))
                   }
               }
-
-              ## Default line width
-              if (is.null(lwd))
-                  lwd <- 2
+              lty <- rep(lty, length.out = dim(m)[1])
 
               ## Default color is black
               if (is.null(col)) {
-                  col <- rep("black", dim(x@S)[1])
-              }
-
-              ## Plot
-              if (is.null(names(x@tspan))) {
-                  plot(x = x@tspan, y = m[1,], type = "l", ylab = "Proportion",
-                       ylim = c(0, 1), col = col[1], lty = lty[1], lwd = lwd, ...)
+                  col <- rep("black", length(compartments))
               } else {
-                  plot(x = as.Date(names(x@tspan)), y = m[1,], type = "l",
-                       ylab = "Proportion", ylim = c(0, 1), col = col[1],
-                       lty = lty[1], lwd = lwd, ...)
+                  col <- col[compartments]
               }
-              title(xlab = "Time", outer = TRUE, line = 0)
-              for (i in seq_len(dim(m)[1])[-1]) {
-                  if (is.null(names(x@tspan))) {
-                      lines(x = x@tspan, y = m[i, ], type = "l", lty = lty[i],
-                            col = col[i], lwd = lwd, ...)
-                  } else {
-                      lines(x = as.Date(names(x@tspan)), y = m[i, ],
-                            type = "l", lty = lty[i], col = col[i], lwd = lwd, ...)
-                  }
+              col <- rep(col, length.out = dim(m)[1])
+
+              ## Settings for the y-axis.
+              if (identical(N, TRUE)) {
+                  ylab <- "N"
+                  ylim <- c(0, max(m))
+              } else {
+                  ylab <- "Proportion"
+                  ylim <- c(0, 1)
               }
 
-              ## Add legend below plot. Default legend is the names of
-              ## the compartments.
+              ## Settings for the x-axis
+              if (is.null(names(x@tspan))) {
+                  xx <- x@tspan
+                  xlab <- "Time"
+              } else {
+                  xx <- as.Date(names(x@tspan))
+                  xlab <- "Date"
+              }
+
+              ## Plot first line to get a new plot window
+              graphics::plot(x = xx, y = m[1, ], type = "l",
+                             ylab = ylab, ylim = ylim, col = col[1],
+                             lty = lty[1], lwd = lwd, ...)
+              graphics::title(xlab = xlab, outer = TRUE, line = 0)
+
+              ## Add the rest of the lines to the plot
+              for (i in seq_len(dim(m)[1])[-1]) {
+                  graphics::lines(x = xx, y = m[i, ], type = "l",
+                                  lty = lty[i], col = col[i], lwd = lwd,
+                                  ...)
+              }
+
+              ## Add the legend below plot. The default legend is the
+              ## names of the compartments.
               if (is.null(legend))
-                  legend <- rownames(x@S)
-              par(fig = c(0, 1, 0, 1),
-                  oma = c(0, 0, 0, 0),
-                  mar = c(0, 0, 0, 0), new = TRUE)
-              plot(0, 0, type = "n", bty = "n", xaxt = "n", yaxt = "n")
-              graphics::legend("bottom", inset = c(0, 0), lty = lty,
-                               col = col, bty = "n", horiz = TRUE,
+                  legend <- rownames(x@S)[compartments]
+              graphics::par(fig = c(0, 1, 0, 1), oma = c(0, 0, 0, 0),
+                            mar = c(0, 0, 0, 0), new = TRUE)
+              graphics::plot(0, 0, type = "n", bty = "n", xaxt = "n", yaxt = "n")
+              graphics::legend("bottom", inset = c(0, 0),
+                               lty = lty[seq_len(length(compartments))],
+                               col = col[seq_len(length(compartments))],
+                               bty = "n", horiz = TRUE,
                                legend = legend, lwd = lwd)
           }
 )
@@ -687,18 +887,25 @@ show_V <- function(object) {
 ##' @return None (invisible 'NULL').
 ##' @keywords methods
 ##' @export
+##' @importFrom methods show
 ##' @examples
-##' ## Create a 'SISe' demo model with 1 node and initialize
-##' ## it to run over 1000 days.
-##' model <- demo_model(nodes = 1, days = 1000, model = "SISe")
+##' ## Create an 'SIR' model with 10 nodes and initialise
+##' ## it to run over 100 days.
+##' model <- SIR(u0 = data.frame(S = rep(99, 10),
+##'                              I = rep(1, 10),
+##'                              R = rep(0, 10)),
+##'              tspan = 1:100,
+##'              beta = 0.16,
+##'              gamma = 0.077)
 ##'
 ##' ## Brief summary of the model
 ##' model
 ##'
 ##' ## Run the model and save the result
-##' result <- run(model)
+##' result <- run(model, threads = 1, seed = 1)
 ##'
-##' ## Brief summary of the result.
+##' ## Brief summary of the result. Note that 'U' and 'V' are
+##' ## non-empty after running the model.
 ##' result
 setMethod("show",
           signature(object = "SimInf_model"),
@@ -711,7 +918,7 @@ setMethod("show",
               cat(sprintf("Number of nodes: %i\n", Nn(object)))
               cat(sprintf("Number of compartments: %i\n", Nc(object)))
               cat(sprintf("Number of transitions: %i\n", Nt(object)))
-              show(object@events)
+              methods::show(object@events)
 
               cat("\n")
               show_U(object)
@@ -743,5 +950,14 @@ setMethod("summary",
               cat("\n")
               show_U(object)
               show_V(object)
+          }
+)
+
+##' @rdname events-methods
+##' @export
+setMethod("events",
+          signature("SimInf_model"),
+          function(model) {
+              model@events
           }
 )

@@ -1,7 +1,7 @@
 ## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015 - 2016  Stefan Engblom
-## Copyright (C) 2015 - 2016  Stefan Widgren
+## Copyright (C) 2015 - 2017  Stefan Engblom
+## Copyright (C) 2015 - 2017  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -51,44 +51,21 @@ result <- run(model, threads = 1)
 result
 
 stopifnot(identical(length(susceptible(result)), 1001L))
-i <- seq(from = 1, to = 1001, by = 2)
-stopifnot(identical(
-    susceptible(result)[, i, drop = FALSE],
-    susceptible(result, by = 2)))
-
 stopifnot(identical(length(infected(result)), 1001L))
-stopifnot(identical(
-    infected(result)[, i, drop = FALSE],
-    infected(result, by = 2)))
-
 stopifnot(identical(length(prevalence(result)), 1001L))
 stopifnot(is.null(dim(prevalence(result))))
-stopifnot(identical(dim(prevalence(result, wnp = TRUE)), c(1L, 1001L)))
-stopifnot(identical(
-    prevalence(result)[i],
-    prevalence(result, by = 2)))
+stopifnot(identical(dim(prevalence(result, type = "wnp")),
+                    c(1L, 1001L)))
 
 if (SimInf:::have_openmp()) {
     result_omp <- run(model, threads = 2)
     result_omp
 
     stopifnot(identical(length(susceptible(result_omp)), 1001L))
-    i <- seq(from = 1, to = 1001, by = 2)
-    stopifnot(identical(
-        susceptible(result_omp)[, i, drop = FALSE],
-        susceptible(result_omp, by = 2)))
-
     stopifnot(identical(length(infected(result_omp)), 1001L))
-    stopifnot(identical(
-        infected(result_omp)[, i, drop = FALSE],
-        infected(result_omp, by = 2)))
-
     stopifnot(identical(length(prevalence(result_omp)), 1001L))
     stopifnot(is.null(dim(prevalence(result_omp))))
-    stopifnot(identical(dim(prevalence(result_omp, wnp = TRUE)), c(1L, 1001L)))
-    stopifnot(identical(
-        prevalence(result_omp)[i],
-        prevalence(result_omp, by = 2)))
+    stopifnot(identical(dim(prevalence(result_omp, type = "wnp")), c(1L, 1001L)))
 }
 
 ## Check measures for a SISe_sp model
@@ -122,48 +99,46 @@ result <- run(model, threads = 1)
 result
 
 stopifnot(identical(length(susceptible(result)), 1001L))
-i <- seq(from = 1, to = 1001, by = 2)
-stopifnot(identical(
-    susceptible(result)[, i, drop = FALSE],
-    susceptible(result, by = 2)))
-
 stopifnot(identical(length(infected(result)), 1001L))
-stopifnot(identical(
-    infected(result)[, i, drop = FALSE],
-    infected(result, by = 2)))
-
 stopifnot(identical(length(prevalence(result)), 1001L))
 stopifnot(is.null(dim(prevalence(result))))
-stopifnot(identical(dim(prevalence(result, wnp = TRUE)), c(1L, 1001L)))
-stopifnot(identical(
-    prevalence(result)[i],
-    prevalence(result, by = 2)))
+stopifnot(identical(dim(prevalence(result, type = "wnp")), c(1L, 1001L)))
 
 if (SimInf:::have_openmp()) {
     result_omp <- run(model, threads = 2)
     result_omp
 
     stopifnot(identical(length(susceptible(result_omp)), 1001L))
-    i <- seq(from = 1, to = 1001, by = 2)
-    stopifnot(identical(
-        susceptible(result_omp)[, i, drop = FALSE],
-        susceptible(result_omp, by = 2)))
-
     stopifnot(identical(length(infected(result_omp)), 1001L))
-    stopifnot(identical(
-        infected(result_omp)[, i, drop = FALSE],
-        infected(result_omp, by = 2)))
-
     stopifnot(identical(length(prevalence(result_omp)), 1001L))
     stopifnot(is.null(dim(prevalence(result_omp))))
-    stopifnot(identical(dim(prevalence(result_omp, wnp = TRUE)), c(1L, 1001L)))
-    stopifnot(identical(
-        prevalence(result_omp)[i],
-        prevalence(result_omp, by = 2)))
+    stopifnot(identical(dim(prevalence(result_omp, type = "wnp")), c(1L, 1001L)))
 }
 
-## Check measures for a SISe3 model
-model <- demo_model(model = "SISe3", nodes = 10, days = 1000)
+## Check 'susceptible' and 'infected' methods for a SISe3 model
+u0 <- data.frame(S_1 = rep(10, 10), I_1 = rep( 0, 10),
+                 S_2 = rep(20, 10), I_2 = rep( 0, 10),
+                 S_3 = rep(70, 10), I_3 = rep( 0, 10))
+model <- SISe3(u0        = u0,
+               tspan     = seq_len(1000) - 1,
+               events    = NULL,
+               phi       = rep(1, 10),
+               upsilon_1 = 0.0357,
+               upsilon_2 = 0.0357,
+               upsilon_3 = 0.00935,
+               gamma_1   = 0.1,
+               gamma_2   = 0.1,
+               gamma_3   = 0.1,
+               alpha     = 1.0,
+               beta_t1   = 0.19,
+               beta_t2   = 0.085,
+               beta_t3   = 0.075,
+               beta_t4   = 0.185,
+               end_t1    = 91,
+               end_t2    = 182,
+               end_t3    = 273,
+               end_t4    = 365,
+               epsilon   = 0.000011)
 
 res <- tools::assertError(susceptible(model))
 stopifnot(length(grep("Please run the model first, the 'U' matrix is empty",
@@ -177,44 +152,20 @@ result <- run(model, threads = 1)
 result
 
 stopifnot(identical(length(susceptible(result)), 10000L))
-i <- seq(from = 1, to = 1000, by = 2)
-stopifnot(identical(
-    susceptible(result, age = 1)[, i, drop = FALSE],
-    susceptible(result, age = 1, by = 2)))
-
 stopifnot(identical(length(infected(result)), 10000L))
-stopifnot(identical(
-    infected(result, age = 1)[, i, drop = FALSE],
-    infected(result, age = 1, by = 2)))
-
 stopifnot(identical(length(prevalence(result)), 1000L))
 stopifnot(is.null(dim(prevalence(result))))
-stopifnot(identical(dim(prevalence(result, wnp = TRUE)), c(10L, 1000L)))
-stopifnot(identical(
-    prevalence(result)[i],
-    prevalence(result, by = 2)))
+stopifnot(identical(dim(prevalence(result, type = "wnp")), c(10L, 1000L)))
 
 if (SimInf:::have_openmp()) {
     result_omp <- run(model, threads = 2)
     result_omp
 
     stopifnot(identical(length(susceptible(result_omp)), 10000L))
-    i <- seq(from = 1, to = 1000, by = 2)
-    stopifnot(identical(
-        susceptible(result_omp)[, i, drop = FALSE],
-        susceptible(result_omp, by = 2)))
-
     stopifnot(identical(length(infected(result_omp)), 10000L))
-    stopifnot(identical(
-        infected(result_omp)[, i, drop = FALSE],
-        infected(result_omp, by = 2)))
-
     stopifnot(identical(length(prevalence(result_omp)), 1000L))
     stopifnot(is.null(dim(prevalence(result_omp))))
-    stopifnot(identical(dim(prevalence(result_omp, wnp = TRUE)), c(10L, 1000L)))
-    stopifnot(identical(
-        prevalence(result_omp)[i],
-        prevalence(result_omp, by = 2)))
+    stopifnot(identical(dim(prevalence(result_omp, type = "wnp")), c(10L, 1000L)))
 }
 
 ## Check measures with a SISe3_sp model
@@ -256,42 +207,18 @@ result <- run(model, threads = 1)
 result
 
 stopifnot(identical(length(susceptible(result)), 10000L))
-i <- seq(from = 1, to = 1000, by = 2)
-stopifnot(identical(
-    susceptible(result, age = 1)[, i, drop = FALSE],
-    susceptible(result, age = 1, by = 2)))
-
 stopifnot(identical(length(infected(result)), 10000L))
-stopifnot(identical(
-    infected(result, age = 1)[, i, drop = FALSE],
-    infected(result, age = 1, by = 2)))
-
 stopifnot(identical(length(prevalence(result)), 1000L))
 stopifnot(is.null(dim(prevalence(result))))
-stopifnot(identical(dim(prevalence(result, wnp = TRUE)), c(10L, 1000L)))
-stopifnot(identical(
-    prevalence(result)[i],
-    prevalence(result, by = 2)))
+stopifnot(identical(dim(prevalence(result, type = "wnp")), c(10L, 1000L)))
 
 if (SimInf:::have_openmp()) {
     result_omp <- run(model, threads = 2)
     result_omp
 
     stopifnot(identical(length(susceptible(result_omp)), 10000L))
-    i <- seq(from = 1, to = 1000, by = 2)
-    stopifnot(identical(
-        susceptible(result_omp)[, i, drop = FALSE],
-        susceptible(result_omp, by = 2)))
-
     stopifnot(identical(length(infected(result_omp)), 10000L))
-    stopifnot(identical(
-        infected(result_omp)[, i, drop = FALSE],
-        infected(result_omp, by = 2)))
-
     stopifnot(identical(length(prevalence(result_omp)), 1000L))
     stopifnot(is.null(dim(prevalence(result_omp))))
-    stopifnot(identical(dim(prevalence(result_omp, wnp = TRUE)), c(10L, 1000L)))
-    stopifnot(identical(
-        prevalence(result_omp)[i],
-        prevalence(result_omp, by = 2)))
+    stopifnot(identical(dim(prevalence(result_omp, type = "wnp")), c(10L, 1000L)))
 }

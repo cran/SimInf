@@ -55,14 +55,14 @@ setClass("SEIR", contains = c("SimInf_model"))
 ##'               gamma = 0.077)
 ##'
 ##' ## Run the SEIR model and plot the result.
-##' result <- run(model, seed = 123)
+##' result <- run(model, threads = 1, seed = 3)
 ##' plot(result)
 SEIR <- function(u0,
-                tspan,
-                events  = NULL,
-                beta    = NULL,
-                epsilon = NULL,
-                gamma   = NULL)
+                 tspan,
+                 events  = NULL,
+                 beta    = NULL,
+                 epsilon = NULL,
+                 gamma   = NULL)
 {
     compartments <- c("S", "E", "I", "R")
 
@@ -80,40 +80,40 @@ SEIR <- function(u0,
 
     ## Arguments seems ok...go on
 
-    E <- Matrix(c(1, 1,
-                  0, 1,
-                  0, 1,
-                  0, 1),
-                nrow   = 4,
-                ncol   = 2,
-                byrow  = TRUE,
-                sparse = TRUE)
-    E <- as(E, "dgCMatrix")
+    E <- Matrix::Matrix(c(1, 1,
+                          0, 1,
+                          0, 1,
+                          0, 1),
+                        nrow   = 4,
+                        ncol   = 2,
+                        byrow  = TRUE,
+                        sparse = TRUE)
+    E <- methods::as(E, "dgCMatrix")
     colnames(E) <- as.character(1:2)
     rownames(E) <- compartments
 
     N <- matrix(integer(0), nrow = 0, ncol = 0)
 
-    G <- Matrix(c(1, 1, 1,
-                  1, 1, 1,
-                  1, 1, 1),
-                nrow = 3,
-                ncol = 3,
-                byrow  = TRUE,
-                sparse = TRUE)
-    G <- as(G, "dgCMatrix")
+    G <- Matrix::Matrix(c(1, 1, 1,
+                          1, 1, 1,
+                          1, 1, 1),
+                        nrow = 3,
+                        ncol = 3,
+                        byrow  = TRUE,
+                        sparse = TRUE)
+    G <- methods::as(G, "dgCMatrix")
     colnames(G) <- as.character(1:3)
     rownames(G) <- c("S -> E", "E -> I", "I -> R")
 
-    S <- Matrix(c(-1,  0,  0,
-                   1, -1,  0,
-                   0,  1, -1,
-                   0,  0,  1),
-                nrow   = 4,
-                ncol   = 3,
-                byrow  = TRUE,
-                sparse = TRUE)
-    S <- as(S, "dgCMatrix")
+    S <- Matrix::Matrix(c(-1,  0,  0,
+                           1, -1,  0,
+                           0,  1, -1,
+                           0,  0,  1),
+                        nrow   = 4,
+                        ncol   = 3,
+                        byrow  = TRUE,
+                        sparse = TRUE)
+    S <- methods::as(S, "dgCMatrix")
     colnames(S) <- as.character(1:3)
     rownames(S) <- compartments
 
@@ -138,24 +138,15 @@ SEIR <- function(u0,
                           u0     = u0,
                           v0     = v0)
 
-    return(as(model, "SEIR"))
+    methods::as(model, "SEIR")
 }
 
 ##' @rdname susceptible-methods
 ##' @export
 setMethod("susceptible",
           signature("SEIR"),
-          function(model, i = NULL, by = 1, ...) {
-              if (identical(dim(model@U), c(0L, 0L)))
-                  stop("Please run the model first, the 'U' matrix is empty")
-
-              ii <- seq(from = 1, to = dim(model@U)[1], by = 4)
-              if (!is.null(i))
-                  ii <- ii[i]
-              j <- seq(from = 1, to = dim(model@U)[2], by = by)
-              result <- as.matrix(model@U[ii, j, drop = FALSE])
-              rownames(result) <- NULL
-              result
+          function(model, i = NULL, ...) {
+              extract_U(model, "S", i)
           }
 )
 
@@ -163,17 +154,8 @@ setMethod("susceptible",
 ##' @export
 setMethod("infected",
           signature("SEIR"),
-          function(model, i = NULL, by = 1, ...) {
-              if (identical(dim(model@U), c(0L, 0L)))
-                  stop("Please run the model first, the 'U' matrix is empty")
-
-              ii <- seq(from = 3, to = dim(model@U)[1], by = 4)
-              if (!is.null(i))
-                  ii <- ii[i]
-              j <- seq(from = 1, to = dim(model@U)[2], by = by)
-              result <- as.matrix(model@U[ii, j, drop = FALSE])
-              rownames(result) <- NULL
-              result
+          function(model, i = NULL, ...) {
+              extract_U(model, "I", i)
           }
 )
 
@@ -181,23 +163,13 @@ setMethod("infected",
 ##' @export
 setMethod("recovered",
           signature("SEIR"),
-          function(model, i = NULL, by = 1, ...) {
-              if (identical(dim(model@U), c(0L, 0L)))
-                  stop("Please run the model first, the 'U' matrix is empty")
-
-              ii <- seq(from = 4, to = dim(model@U)[1], by = 4)
-              if (!is.null(i))
-                  ii <- ii[i]
-              j <- seq(from = 1, to = dim(model@U)[2], by = by)
-              result <- as.matrix(model@U[ii, j, drop = FALSE])
-              rownames(result) <- NULL
-              result
+          function(model, i = NULL, ...) {
+              extract_U(model, "R", i)
           }
 )
 
 ##' @name plot-methods
 ##' @aliases plot plot-methods plot,SEIR-method
-##' @importFrom graphics plot
 ##' @export
 setMethod("plot",
           signature(x = "SEIR"),
@@ -207,7 +179,7 @@ setMethod("plot",
                    lwd = 2,
                    ...)
           {
-              callNextMethod(x, col = col, lty = lty, lwd = lwd, ...)
+              methods::callNextMethod(x, col = col, lty = lty, lwd = lwd, ...)
           }
 )
 
@@ -218,7 +190,6 @@ setMethod("plot",
 ##' days.
 ##' @return A \code{data.frame}
 ##' @keywords methods
-##' @importFrom utils data
 ##' @export
 events_SEIR <- function() {
     utils::data(events_SISe3, envir = environment())
@@ -235,7 +206,6 @@ events_SEIR <- function() {
 ##' model.
 ##' @return A \code{data.frame}
 ##' @keywords methods
-##' @importFrom utils data
 ##' @export
 u0_SEIR <- function() {
     utils::data(u0_SISe3, envir = environment())

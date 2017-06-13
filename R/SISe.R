@@ -54,27 +54,6 @@ setClass("SISe", contains = c("SimInf_model"))
 ##' @return \code{SISe}
 ##' @include check_arguments.R
 ##' @export
-##' @examples
-##' ## Create an SISe model object.
-##' model <- SISe(u0 = data.frame(S = 99, I = 1),
-##'               tspan = 1:1000,
-##'               phi = 0,
-##'               upsilon = 0.017,
-##'               gamma   = 0.1,
-##'               alpha   = 1,
-##'               beta_t1 = 0.19,
-##'               beta_t2 = 0.085,
-##'               beta_t3 = 0.075,
-##'               beta_t4 = 0.185,
-##'               end_t1  = 91,
-##'               end_t2  = 182,
-##'               end_t3  = 273,
-##'               end_t4  = 365,
-##'               epsilon = 0.000011)
-##'
-##' ## Run the SISe model and plot the result.
-##' result <- run(model, seed = 4)
-##' plot(result)
 SISe <- function(u0,
                  tspan,
                  events  = NULL,
@@ -126,35 +105,35 @@ SISe <- function(u0,
 
     ## Arguments seems ok...go on
 
-    E <- Matrix(c(1, 1,
-                  0, 1),
-                nrow   = 2,
-                ncol   = 2,
-                byrow  = TRUE,
-                sparse = TRUE)
-    E <- as(E, "dgCMatrix")
+    E <- Matrix::Matrix(c(1, 1,
+                          0, 1),
+                        nrow   = 2,
+                        ncol   = 2,
+                        byrow  = TRUE,
+                        sparse = TRUE)
+    E <- methods::as(E, "dgCMatrix")
     colnames(E) <- as.character(1:2)
     rownames(E) <- compartments
 
     N <- matrix(integer(0), nrow = 0, ncol = 0)
 
-    G <- Matrix(c(1, 1,
-                  1, 1),
-                nrow = 2,
-                ncol = 2,
-                byrow  = TRUE,
-                sparse = TRUE)
-    G <- as(G, "dgCMatrix")
+    G <- Matrix::Matrix(c(1, 1,
+                          1, 1),
+                        nrow = 2,
+                        ncol = 2,
+                        byrow  = TRUE,
+                        sparse = TRUE)
+    G <- methods::as(G, "dgCMatrix")
     colnames(G) <- as.character(1:2)
     rownames(G) <- c("S -> I", "I -> S")
 
-    S <- Matrix(c(-1,  1,
-                   1, -1),
-                nrow   = 2,
-                ncol   = 2,
-                byrow  = TRUE,
-                sparse = TRUE)
-    S <- as(S, "dgCMatrix")
+    S <- Matrix::Matrix(c(-1,  1,
+                           1, -1),
+                        nrow   = 2,
+                        ncol   = 2,
+                        byrow  = TRUE,
+                        sparse = TRUE)
+    S <- methods::as(S, "dgCMatrix")
     colnames(S) <- as.character(1:2)
     rownames(S) <- compartments
 
@@ -184,24 +163,15 @@ SISe <- function(u0,
                           u0     = u0,
                           v0     = v0)
 
-    return(as(model, "SISe"))
+    methods::as(model, "SISe")
 }
 
 ##' @rdname susceptible-methods
 ##' @export
 setMethod("susceptible",
           signature("SISe"),
-          function(model, i = NULL, by = 1, ...) {
-              if (identical(dim(model@U), c(0L, 0L)))
-                  stop("Please run the model first, the 'U' matrix is empty")
-
-              ii <- seq(from = 1, to = dim(model@U)[1], by = 2)
-              if (!is.null(i))
-                  ii <- ii[i]
-              j <- seq(from = 1, to = dim(model@U)[2], by = by)
-              result <- as.matrix(model@U[ii, j, drop = FALSE])
-              rownames(result) <- NULL
-              result
+          function(model, i = NULL, ...) {
+              extract_U(model, "S", i)
           }
 )
 
@@ -209,17 +179,8 @@ setMethod("susceptible",
 ##' @export
 setMethod("infected",
           signature("SISe"),
-          function(model, i = NULL, by = 1, ...) {
-              if (identical(dim(model@U), c(0L, 0L)))
-                  stop("Please run the model first, the 'U' matrix is empty")
-
-              ii <- seq(from = 2, to = dim(model@U)[1], by = 2)
-              if (!is.null(i))
-                  ii <- ii[i]
-              j <- seq(from = 1, to = dim(model@U)[2], by = by)
-              result <- as.matrix(model@U[ii, j, drop = FALSE])
-              rownames(result) <- NULL
-              result
+          function(model, i = NULL, ...) {
+              extract_U(model, "I", i)
           }
 )
 
@@ -227,22 +188,13 @@ setMethod("infected",
 ##' @export
 setMethod("prevalence",
           signature("SISe"),
-          function(model, wnp = FALSE, i = NULL, by = 1, ...) {
-              I <- infected(model = model, i = i, by = by)
-              S <- susceptible(model = model, i = i, by = by)
-
-              if (identical(wnp, FALSE)) {
-                  I <- colSums(I)
-                  S <- colSums(S)
-              }
-
-              I / (S + I)
+          function(model, type, i, ...) {
+              calc_prevalence(model, "I", c("S", "I"), type, i)
           }
 )
 
 ##' @name plot-methods
 ##' @aliases plot plot-methods plot,SISe-method
-##' @importFrom graphics plot
 ##' @export
 setMethod("plot",
           signature(x = "SISe"),
@@ -252,6 +204,38 @@ setMethod("plot",
                    lwd = 2,
                    ...)
           {
-              callNextMethod(x, col = col, lty = lty, lwd = lwd, ...)
+              methods::callNextMethod(x, col = col, lty = lty,
+                                      lwd = lwd, ...)
           }
 )
+
+##' Scheduled events example data for the \code{SISe} model
+##'
+##' Synthetic scheduled events data to demonstrate the \code{SISe}
+##' model. The data contains 466692 events for 1600 nodes over 365 * 4
+##' days.
+##' @return A \code{data.frame}
+##' @keywords methods
+##' @export
+events_SISe <- function() {
+    utils::data(events_SISe3, envir = environment())
+    events_SISe3$select[events_SISe3$event == 0] <- 2
+    events_SISe3$select[events_SISe3$event == 1] <- 1
+    events_SISe3 <- events_SISe3[events_SISe3$event != 2, ]
+    events_SISe3$select[events_SISe3$event == 3] <- 2
+    events_SISe3
+}
+
+##' Example data to initialize the \code{SISe} model
+##'
+##' Synthetic init data for 1600 nodes to demonstrate the \code{SISe}
+##' model.
+##' @return A \code{data.frame}
+##' @keywords methods
+##' @export
+u0_SISe <- function() {
+    utils::data(u0_SISe3, envir = environment())
+    u0_SISe3$S <- u0_SISe3$S_1 + u0_SISe3$S_2 + u0_SISe3$S_3
+    u0_SISe3$I <- u0_SISe3$I_1 + u0_SISe3$I_2 + u0_SISe3$I_3
+    u0_SISe3[, c("S", "I")]
+}

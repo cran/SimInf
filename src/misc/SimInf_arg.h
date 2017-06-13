@@ -1,8 +1,8 @@
 /*
  *  SimInf, a framework for stochastic disease spread simulations
  *  Copyright (C) 2015  Pavol Bauer
- *  Copyright (C) 2015  Stefan Engblom
- *  Copyright (C) 2015  Stefan Widgren
+ *  Copyright (C) 2015 - 2017  Stefan Engblom
+ *  Copyright (C) 2015 - 2017  Stefan Widgren
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,12 +18,16 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INCLUDE_SIMINF_FORWARD_EULER_LINEAR_DECAY_H
-#define INCLUDE_SIMINF_FORWARD_EULER_LINEAR_DECAY_H
+#ifndef INCLUDE_SIMINF_ARGS_H
+#define INCLUDE_SIMINF_ARGS_H
 
-double siminf_forward_euler_linear_decay(
-    double phi, int day,
-    int end_t1, int end_t2, int end_t3, int end_t4,
-    double beta_t1, double beta_t2, double beta_t3, double beta_t4);
+#include <Rdefines.h>
+
+int SimInf_arg_check_dgCMatrix(SEXP arg);
+int SimInf_arg_check_integer(SEXP arg);
+int SimInf_arg_check_matrix(SEXP arg);
+int SimInf_arg_check_model(SEXP arg);
+int SimInf_get_seed(unsigned long int *out, SEXP seed);
+int SimInf_get_threads(int *out, SEXP threads);
 
 #endif

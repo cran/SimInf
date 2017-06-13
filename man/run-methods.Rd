@@ -13,11 +13,11 @@ run(model, threads = NULL, seed = NULL)
 \arguments{
 \item{model}{The siminf model to run.}
 
-\item{threads}{Number of threads. Default is NULL, i.e. to use the
-number of available processors.}
+\item{threads}{Number of threads. Default is NULL, i.e. to use all
+available processors.}
 
-\item{seed}{Random number seed. Default is NULL, i.e. to use a
-time-seed.}
+\item{seed}{Random number seed. Default is NULL, i.e. the
+simulator uses time to seed the random number generator.}
 }
 \value{
 \code{SimInf_model} with result from simulation.
@@ -26,8 +26,19 @@ time-seed.}
 Run the SimInf stochastic simulation algorithm
 }
 \examples{
-## Create a 'SISe' demo model with 1 node and
-## initialize it to run over 1000 days.
-model <- demo_model(nodes = 1, days = 1000, model = "SISe")
-run(model)
+## Create an 'SIR' model with 10 nodes and initialise
+## it to run over 100 days.
+model <- SIR(u0 = data.frame(S = rep(99, 10),
+                             I = rep(1, 10),
+                             R = rep(0, 10)),
+             tspan = 1:100,
+             beta = 0.16,
+             gamma = 0.077)
+
+## Run the model and save the result.
+result <- run(model, threads = 1, seed = 1)
+
+## Plot the proportion of susceptible, infected and recovered
+## individuals.
+plot(result)
 }

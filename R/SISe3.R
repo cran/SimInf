@@ -122,17 +122,17 @@ SISe3 <- function(u0,
 
     ## Arguments seems ok...go on
 
-    E <- Matrix(c(1, 0, 0, 1, 0, 0,
-                  0, 0, 0, 1, 0, 0,
-                  0, 1, 0, 0, 1, 0,
-                  0, 0, 0, 0, 1, 0,
-                  0, 0, 1, 0, 0, 1,
-                  0, 0, 0, 0, 0, 1),
-                nrow   = 6,
-                ncol   = 6,
-                byrow  = TRUE,
-                sparse = TRUE)
-    E <- as(E, "dgCMatrix")
+    E <- Matrix::Matrix(c(1, 0, 0, 1, 0, 0,
+                          0, 0, 0, 1, 0, 0,
+                          0, 1, 0, 0, 1, 0,
+                          0, 0, 0, 0, 1, 0,
+                          0, 0, 1, 0, 0, 1,
+                          0, 0, 0, 0, 0, 1),
+                        nrow   = 6,
+                        ncol   = 6,
+                        byrow  = TRUE,
+                        sparse = TRUE)
+    E <- methods::as(E, "dgCMatrix")
     colnames(E) <- as.character(1:6)
     rownames(E) <- compartments
 
@@ -148,33 +148,33 @@ SISe3 <- function(u0,
     colnames(N) <- as.character(1:2)
     rownames(N) <- compartments
 
-    G <- Matrix(c(1, 1, 0, 0, 0, 0,
-                  1, 1, 0, 0, 0, 0,
-                  0, 0, 1, 1, 0, 0,
-                  0, 0, 1, 1, 0, 0,
-                  0, 0, 0, 0, 1, 1,
-                  0, 0, 0, 0, 1, 1),
-                nrow   = 6,
-                ncol   = 6,
-                byrow  = TRUE,
-                sparse = TRUE)
-    G <- as(G, "dgCMatrix")
+    G <- Matrix::Matrix(c(1, 1, 0, 0, 0, 0,
+                          1, 1, 0, 0, 0, 0,
+                          0, 0, 1, 1, 0, 0,
+                          0, 0, 1, 1, 0, 0,
+                          0, 0, 0, 0, 1, 1,
+                          0, 0, 0, 0, 1, 1),
+                        nrow   = 6,
+                        ncol   = 6,
+                        byrow  = TRUE,
+                        sparse = TRUE)
+    G <- methods::as(G, "dgCMatrix")
     colnames(G) <- as.character(1:6)
     rownames(G) <- c("S_1 -> I_1", "I_1 -> S_1",
                      "S_2 -> I_2", "I_2 -> S_2",
                      "S_3 -> I_3", "I_3 -> S_3")
 
-    S <- Matrix(c(-1,  1,  0,  0,  0,  0,
-                   1, -1,  0,  0,  0,  0,
-                   0,  0, -1,  1,  0,  0,
-                   0,  0,  1, -1,  0,  0,
-                   0,  0,  0,  0, -1,  1,
-                   0,  0,  0,  0,  1, -1),
-                nrow   = 6,
-                ncol   = 6,
-                byrow  = TRUE,
-                sparse = TRUE)
-    S <- as(S, "dgCMatrix")
+    S <- Matrix::Matrix(c(-1,  1,  0,  0,  0,  0,
+                           1, -1,  0,  0,  0,  0,
+                           0,  0, -1,  1,  0,  0,
+                           0,  0,  1, -1,  0,  0,
+                           0,  0,  0,  0, -1,  1,
+                           0,  0,  0,  0,  1, -1),
+                        nrow   = 6,
+                        ncol   = 6,
+                        byrow  = TRUE,
+                        sparse = TRUE)
+    S <- methods::as(S, "dgCMatrix")
     colnames(S) <- as.character(1:6)
     rownames(S) <- compartments
 
@@ -209,46 +209,17 @@ SISe3 <- function(u0,
                           u0     = u0,
                           v0     = v0)
 
-    return(as(model, "SISe3"))
+    methods::as(model, "SISe3")
 }
 
 ##' @rdname susceptible-methods
 ##' @export
 setMethod("susceptible",
           signature("SISe3"),
-          function(model, age = 1:3, i = NULL, by = 1, ...)
+          function(model, age = 1:3, i = NULL, ...)
           {
-              if (identical(dim(model@U), c(0L, 0L)))
-                  stop("Please run the model first, the 'U' matrix is empty")
-
-              age_categories <- 1:3
-              stopifnot(all(age %in% age_categories))
-
-              result <- NULL
-              j <- seq(from = 1, to = dim(model@U)[2], by = by)
-
-              for (k in age_categories) {
-                  ## Are we interested in this age category?
-                  if (k %in% age) {
-                      ## Select rows for the specific age category
-                      ii <- seq(from = 1 + (k - 1) * 2, to = dim(model@U)[1], by = 6)
-
-                      ## Are we only interested in susceptible from
-                      ## specific nodes?
-                      if (!is.null(i))
-                          ii <- ii[i]
-
-                      ## Extract susceptible and add to result
-                      if (is.null(result)) {
-                          result <- as.matrix(model@U[ii, j, drop = FALSE])
-                      } else {
-                          result <- result + as.matrix(model@U[ii, j, drop = FALSE])
-                      }
-                  }
-              }
-
-              rownames(result) <- NULL
-              result
+              stopifnot(all(age %in% 1:3))
+              extract_U(model, paste0("S_", age), i)
           }
 )
 
@@ -256,39 +227,10 @@ setMethod("susceptible",
 ##' @export
 setMethod("infected",
           signature("SISe3"),
-          function(model, age = 1:3, i = NULL, by = 1, ...)
+          function(model, age = 1:3, i = NULL, ...)
           {
-              if (identical(dim(model@U), c(0L, 0L)))
-                  stop("Please run the model first, the 'U' matrix is empty")
-
-              age_categories <- 1:3
-              stopifnot(all(age %in% age_categories))
-
-              result <- NULL
-              j <- seq(from = 1, to = dim(model@U)[2], by = by)
-
-              for (k in age_categories) {
-                  ## Are we interested in this age category?
-                  if (k %in% age) {
-                      ## Select rows for the specific age category
-                      ii <- seq(from = k * 2, to = dim(model@U)[1], by = 6)
-
-                      ## Are we only interested in infected from
-                      ## specific nodes?
-                      if (!is.null(i))
-                          ii <- ii[i]
-
-                      ## Extract infected and add to result
-                      if (is.null(result)) {
-                          result <- as.matrix(model@U[ii, j, drop = FALSE])
-                      } else {
-                          result <- result + as.matrix(model@U[ii, j, drop = FALSE])
-                      }
-                  }
-              }
-
-              rownames(result) <- NULL
-              result
+              stopifnot(all(age %in% 1:3))
+              extract_U(model, paste0("I_", age), i)
           }
 )
 
@@ -296,23 +238,17 @@ setMethod("infected",
 ##' @export
 setMethod("prevalence",
           signature("SISe3"),
-          function(model, age = 1:3, wnp = FALSE, i = NULL, by = 1, ...)
+          function(model, type, i, age = 1:3, ...)
           {
-              I <- infected(model, age = age, i = i, by = by)
-              S <- susceptible(model, age = age, i = i, by = by)
-
-              if (identical(wnp, FALSE)) {
-                  I <- colSums(I)
-                  S <- colSums(S)
-              }
-
-              I / (S + I)
+              stopifnot(all(age %in% 1:3))
+              numerator <- paste0("I_", age)
+              denominator <- c(paste0("S_", age), paste0("I_", age))
+              calc_prevalence(model, numerator, denominator, type, i)
           }
 )
 
 ##' @name plot-methods
 ##' @aliases plot plot-methods plot,SISe3-method
-##' @importFrom graphics plot
 ##' @export
 setMethod("plot",
           signature(x = "SISe3"),
@@ -323,7 +259,7 @@ setMethod("plot",
                    lwd = 2,
                    ...)
           {
-              callNextMethod(x, legend = legend, col = col,
-                             lty = lty, lwd = lwd, ...)
+              methods::callNextMethod(x, legend = legend, col = col,
+                                      lty = lty, lwd = lwd, ...)
           }
 )

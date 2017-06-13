@@ -1479,7 +1479,7 @@ model <- SISe3(u0        = u0,
                end_t4    = 365,
                epsilon   = 0.000011)
 
-result <- run(model, threads = 1)
+result <- run(model, threads = 1, seed = 1)
 
 S_expected <- structure(c(0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L,
                           1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L,
@@ -1543,7 +1543,10 @@ model <- SISe3(u0        = u0,
                end_t3    = 273,
                end_t4    = 365,
                epsilon   = 0.000011)
-model@gdata <- rep(Inf, length(model@gdata))
+model@gdata["beta_t1"] <- Inf
+model@gdata["beta_t2"] <- Inf
+model@gdata["beta_t3"] <- Inf
+model@gdata["beta_t4"] <- Inf
 res <- tools::assertError(run(model, threads = 1))
 stopifnot(length(grep("The continuous state 'v' is not finite.",
                       res[[1]]$message)) > 0)

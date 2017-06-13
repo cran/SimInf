@@ -81,7 +81,7 @@ typedef struct scheduled_events
 /**
  * Structure to hold thread specific data/arguments for simulation.
  */
-typedef struct siminf_thread_args
+typedef struct SimInf_thread_args
 {
     /*** Constants ***/
     int Ntot;  /**< Total number of nodes. */
@@ -193,7 +193,7 @@ typedef struct siminf_thread_args
     int *u_tmp;           /**< Temporary vector with the compartment
                            *   state in a node when sampling
                            *   individuals for scheduled events. */
-} siminf_thread_args;
+} SimInf_thread_args;
 
 /* Shared variables */
 int n_thread = 0;
@@ -201,7 +201,7 @@ int *uu = NULL;
 double *vv_1 = NULL;
 double *vv_2 = NULL;
 int *update_node = NULL;
-siminf_thread_args *sim_args = NULL;
+SimInf_thread_args *sim_args = NULL;
 
 /**
  * Allocate memory for scheduled events
@@ -210,7 +210,7 @@ siminf_thread_args *sim_args = NULL;
  * @param n Number of events.
  * @return 0 on success else SIMINF_ERR_ALLOC_MEMORY_BUFFER
  */
-static int siminf_allocate_events(scheduled_events *e, int n)
+static int SimInf_allocate_events(scheduled_events *e, int n)
 {
     if (e && n > 0) {
         e->len = n;
@@ -248,7 +248,7 @@ static int siminf_allocate_events(scheduled_events *e, int n)
  *
  * @param e The scheduled_events events to free.
  */
-static void siminf_free_events(scheduled_events *e)
+static void SimInf_free_events(scheduled_events *e)
 {
     if (e) {
         if (e->event)
@@ -282,7 +282,7 @@ static void siminf_free_events(scheduled_events *e)
 /**
  * Free allocated memory to siminf thread arguments
  */
-static void siminf_free_args(siminf_thread_args *sa)
+static void SimInf_free_args(SimInf_thread_args *sa)
 {
     if (sa) {
         if (sa->rng)
@@ -304,10 +304,10 @@ static void siminf_free_args(siminf_thread_args *sa)
             free(sa->u_tmp);
         sa->u_tmp = NULL;
         if (sa->E1)
-            siminf_free_events(sa->E1);
+            SimInf_free_events(sa->E1);
         sa->E1 = NULL;
         if (sa->E2)
-            siminf_free_events(sa->E2);
+            SimInf_free_events(sa->E2);
         sa->E2 = NULL;
     }
 }
@@ -340,7 +340,7 @@ static void siminf_free_args(siminf_thread_args *sa)
  * @param Nn Total number of nodes.
  * @return 0 if Ok, else error code.
  */
-static int siminf_split_events(
+static int SimInf_split_events(
     int len, const int *event, const int *time, const int *node,
     const int *dest, const int *n, const double *proportion,
     const int *select, const int *shift, int Nn)
@@ -381,13 +381,13 @@ static int siminf_split_events(
 
     /* Allocate memory for E1 and E2 events. */
     for (i = 0; i < n_thread; i++) {
-        errcode = siminf_allocate_events(sim_args[i].E1, E1_i[i]);
+        errcode = SimInf_allocate_events(sim_args[i].E1, E1_i[i]);
         if (errcode)
             goto cleanup;
         E1_i[i] = 0;
 
         if (i == 0) {
-            errcode = siminf_allocate_events(sim_args[0].E2, E2_i);
+            errcode = SimInf_allocate_events(sim_args[0].E2, E2_i);
             if (errcode)
                 goto cleanup;
             E2_i = 0;
@@ -488,9 +488,9 @@ static int sample_select(
         n = round(proportion * Nindividuals);
 
     /* Error checking. */
-    if (Nstates <= 0        /* No states to sample from, we shouldn't be here. */
-        || n > Nindividuals /* Can not sample this number of individuals       */
-        || n < 0)           /* Can not sample negative number of individuals.  */
+    if (Nstates <= 0 ||     /* No states to sample from, we shouldn't be here. */
+        n > Nindividuals || /* Can not sample this number of individuals       */
+        n < 0)              /* Can not sample negative number of individuals.  */
         return SIMINF_ERR_SAMPLE_SELECT;
 
     /* Handle cases that require no random sampling */
@@ -557,8 +557,10 @@ static int sample_select(
  *
  * @return 0 if Ok, else error code.
  */
-static int siminf_solver()
+static int SimInf_solver()
 {
+    int k;
+
     #pragma omp parallel
     {
         int i;
@@ -566,41 +568,41 @@ static int siminf_solver()
         #pragma omp for
         for (i = 0; i < n_thread; i++) {
             int node;
-            siminf_thread_args sa = *&sim_args[i];
+            SimInf_thread_args sa = *&sim_args[i];
 
-            /* Initialize transition rate and time to event. Calculate
-             * the transition rate for every transition and every
-             * node. Store the sum of the transition rates in each
-             * node in sum_t_rate. Calculate time to next event
-             * (transition) in each node. */
+            /* Initialize the transition rate for every transition and
+             * every node. Store the sum of the transition rates in
+             * each node in sum_t_rate. Moreover, initialize time in
+             * each node. */
             for (node = 0; node < sa.Nn; node++) {
                 int j;
 
                 sa.sum_t_rate[node] = 0.0;
                 for (j = 0; j < sa.Nt; j++) {
-                    sa.t_rate[node * sa.Nt + j] =
-                        (*sa.tr_fun[j])(&sa.u[node * sa.Nc],
-                                        &sa.v[node * sa.Nd],
-                                        &sa.ldata[node * sa.Nld],
-                                        sa.gdata,
-                                        sa.tt);
+                    const double rate = (*sa.tr_fun[j])(
+                            &sa.u[node * sa.Nc], &sa.v[node * sa.Nd],
+                            &sa.ldata[node * sa.Nld], sa.gdata, sa.tt);
 
-                    sa.sum_t_rate[node] += sa.t_rate[node * sa.Nt + j];
+                    sa.t_rate[node * sa.Nt + j] = rate;
+                    sa.sum_t_rate[node] += rate;
+                    if (!isfinite(rate) || rate < 0.0)
+                        sa.errcode = SIMINF_ERR_INVALID_RATE;
                 }
 
-                sa.t_time[node] =
-                    -log(1.0 - gsl_rng_uniform(sa.rng)) /
-                    sa.sum_t_rate[node] + sa.tt;
+                sa.t_time[node] = sa.tt;
             }
 
             *&sim_args[i] = sa;
         }
     }
 
+    /* Check for error during initialization. */
+    for (k = 0; k < n_thread; k++)
+        if (sim_args[k].errcode)
+            return sim_args[k].errcode;
+
     /* Main loop. */
     for (;;) {
-        int k;
-
         #pragma omp parallel
         {
             int i;
@@ -608,53 +610,59 @@ static int siminf_solver()
             #pragma omp for
             for (i = 0; i < n_thread; i++) {
                 int node;
-                siminf_thread_args sa = *&sim_args[i];
+                SimInf_thread_args sa = *&sim_args[i];
                 scheduled_events e1 = *sa.E1;
 
                 /* (1) Handle internal epidemiological model,
                  * continuous-time Markov chain. */
                 for (node = 0; node < sa.Nn && !sa.errcode; node++) {
-                    while (sa.t_time[node] < sa.next_day) {
-                        double cum, rand, tot_rate, delta = 0.0;
+                    for (;;) {
+                        double cum, rand, tau, delta = 0.0;
                         int j, tr;
 
-                        /* a) Determine the transition that did occur
-                         * (directSSA). */
+                        /* 1a) Compute time to next event for this
+                         * node. */
+                        if (sa.sum_t_rate[node] <= 0.0) {
+                            sa.t_time[node] = sa.next_day;
+                            break;
+                        }
+                        tau = -log(gsl_rng_uniform_pos(sa.rng)) /
+                            sa.sum_t_rate[node];
+                        if ((tau + sa.t_time[node]) >= sa.next_day) {
+                            sa.t_time[node] = sa.next_day;
+                            break;
+                        }
+                        sa.t_time[node] += tau;
+
+                        /* 1b) Determine the transition that did occur
+                         * (direct SSA). */
                         rand = gsl_rng_uniform_pos(sa.rng) * sa.sum_t_rate[node];
                         for (tr = 0, cum = sa.t_rate[node * sa.Nt];
                              tr < sa.Nt && rand > cum;
                              tr++, cum += sa.t_rate[node * sa.Nt + tr]);
 
-                        /* b) Update the state of the node */
+                        /* 1c) Update the state of the node */
                         for (j = sa.jcS[tr]; j < sa.jcS[tr + 1]; j++) {
                             sa.u[node * sa.Nc + sa.irS[j]] += sa.prS[j];
                             if (sa.u[node * sa.Nc + sa.irS[j]] < 0)
                                 sa.errcode = SIMINF_ERR_NEGATIVE_STATE;
                         }
 
-                        /* c) Recalculate sum_t_rate[node] using
+                        /* 1d) Recalculate sum_t_rate[node] using
                          * dependency graph. */
                         for (j = sa.jcG[tr]; j < sa.jcG[tr + 1]; j++) {
                             const double old = sa.t_rate[node * sa.Nt + sa.irG[j]];
-                            delta += (sa.t_rate[node * sa.Nt + sa.irG[j]] =
-                                      (*sa.tr_fun[sa.irG[j]])(
-                                          &sa.u[node * sa.Nc],
-                                          &sa.v[node * sa.Nd],
-                                          &sa.ldata[node * sa.Nld],
-                                          sa.gdata,
-                                          sa.t_time[node])) - old;
+                            const double rate = (*sa.tr_fun[sa.irG[j]])(
+                                &sa.u[node * sa.Nc], &sa.v[node * sa.Nd],
+                                &sa.ldata[node * sa.Nld], sa.gdata,
+                                sa.t_time[node]);
+
+                            sa.t_rate[node * sa.Nt + sa.irG[j]] = rate;
+                            delta += rate - old;
+                            if (!isfinite(rate) || rate < 0.0)
+                                sa.errcode = SIMINF_ERR_INVALID_RATE;
                         }
                         sa.sum_t_rate[node] += delta;
-
-                        /* d) Compute time to new event for this node. */
-                        tot_rate = sa.sum_t_rate[node];
-                        if (tot_rate > 0.0) {
-                            sa.t_time[node] =
-                                -log(1.0 - gsl_rng_uniform(sa.rng)) /
-                                tot_rate + sa.t_time[node];
-                        } else {
-                            sa.t_time[node] = INFINITY;
-                        }
                     }
                 }
 
@@ -737,7 +745,7 @@ static int siminf_solver()
 
             #pragma omp master
             {
-                siminf_thread_args sa = *&sim_args[0];
+                SimInf_thread_args sa = *&sim_args[0];
                 scheduled_events e2 = *sa.E2;
 
                 /* (3) Incorporate all scheduled E2 events */
@@ -793,7 +801,7 @@ static int siminf_solver()
             #pragma omp for
             for (i = 0; i < n_thread; i++) {
                 int node;
-                siminf_thread_args sa = *&sim_args[i];
+                SimInf_thread_args sa = *&sim_args[i];
 
                 /* (4) Incorporate model specific actions after each
                  * timestep e.g. update the infectious pressure
@@ -815,28 +823,16 @@ static int siminf_solver()
 
                         for (; j < sa.Nt; j++) {
                             const double old = sa.t_rate[node * sa.Nt + j];
-                            delta += (sa.t_rate[node * sa.Nt + j] =
-                                      (*sa.tr_fun[j])(
-                                          &sa.u[node * sa.Nc],
-                                          &sa.v_new[node * sa.Nd],
-                                          &sa.ldata[node * sa.Nld],
-                                          sa.gdata, sa.tt)) - old;
+                            const double rate = (*sa.tr_fun[j])(
+                                &sa.u[node * sa.Nc], &sa.v_new[node * sa.Nd],
+                                &sa.ldata[node * sa.Nld], sa.gdata, sa.tt);
+
+                            sa.t_rate[node * sa.Nt + j] = rate;
+                            delta += rate - old;
+                            if (!isfinite(rate) || rate < 0.0)
+                                sa.errcode = SIMINF_ERR_INVALID_RATE;
                         }
                         sa.sum_t_rate[node] += delta;
-
-                        if (sa.sum_t_rate[node] > 0.0) {
-                            if (old_t_rate > 0.0 && !isinf(old_t_rate)) {
-                                sa.t_time[node] =
-                                    old_t_rate / sa.sum_t_rate[node]
-                                    * (sa.t_time[node] - sa.tt) + sa.tt;
-                            } else {
-                                sa.t_time[node] =
-                                    -log(1.0 - gsl_rng_uniform(sa.rng)) /
-                                    sa.sum_t_rate[node] + sa.tt;
-                            }
-                        } else {
-                            sa.t_time[node] = INFINITY;
-                        }
 
                         sa.update_node[node] = 0;
                     }
@@ -853,7 +849,7 @@ static int siminf_solver()
                  * However, it is possible to store the solution in a
                  * sparse matrix. In that case, the solution is stored
                  * outside the 'pragma omp parallel' statement (6b). */
-                /* a) Handle the case where the solution is stored in
+                /* 6a) Handle the case where the solution is stored in
                  * a dense matrix */
                 /* Copy compartment state to U */
                 while (sa.U && sa.U_it < sa.tlen && sa.tt > sa.tspan[sa.U_it])
@@ -868,7 +864,7 @@ static int siminf_solver()
             }
         }
 
-        /* b) Handle the case where the solution is stored in a sparse
+        /* 6b) Handle the case where the solution is stored in a sparse
          * matrix */
         while (!sim_args[0].U && sim_args[0].U_it < sim_args[0].tlen &&
                sim_args[0].tt > sim_args[0].tspan[sim_args[0].U_it]) {
@@ -992,7 +988,7 @@ static int siminf_solver()
  *        e.g. to update the infectious pressure.
  * @return 0 if Ok, else error code.
  */
-int siminf_run_solver(
+int SimInf_run_solver(
     const int *u0, const double *v0, const int *irG, const int *jcG,
     const int *irS, const int *jcS, const int *prS, const double *tspan,
     int tlen, int *U, const int *irU, const int *jcU, double *prU,
@@ -1069,7 +1065,7 @@ int siminf_run_solver(
     }
     gsl_rng_set(rng, seed);
 
-    sim_args = calloc(n_thread, sizeof(siminf_thread_args));
+    sim_args = calloc(n_thread, sizeof(SimInf_thread_args));
     if (!sim_args) {
         errcode = SIMINF_ERR_ALLOC_MEMORY_BUFFER;
         goto cleanup;
@@ -1188,12 +1184,12 @@ int siminf_run_solver(
     }
 
     /* Split scheduled events into E1 and E2 events. */
-    errcode = siminf_split_events(
+    errcode = SimInf_split_events(
         len, event, time, node, dest, n, proportion, select, shift, Nn);
     if (errcode)
         goto cleanup;
 
-    errcode = siminf_solver();
+    errcode = SimInf_solver();
 
 cleanup:
     if (uu) {
@@ -1221,7 +1217,7 @@ cleanup:
 
     if (sim_args) {
         for (i = 0; i < n_thread; i++)
-            siminf_free_args(&sim_args[i]);
+            SimInf_free_args(&sim_args[i]);
         free(sim_args);
         sim_args = NULL;
     }

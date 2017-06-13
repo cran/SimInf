@@ -124,24 +124,24 @@ SISe3_sp <- function(u0,
     ## Check distance matrix
     if (is.null(distance))
         stop("'distance' is missing")
-    if (!is(distance, "dgCMatrix"))
+    if (!methods::is(distance, "dgCMatrix"))
         stop("The 'distance' argument must be of type 'dgCMatrix'")
     if (any(distance < 0))
         stop("All values in the 'distance' matrix must be >= 0")
 
     ## Arguments seems ok...go on
 
-    E <- Matrix(c(1, 0, 0, 1, 0, 0,
-                  0, 0, 0, 1, 0, 0,
-                  0, 1, 0, 0, 1, 0,
-                  0, 0, 0, 0, 1, 0,
-                  0, 0, 1, 0, 0, 1,
-                  0, 0, 0, 0, 0, 1),
-                nrow   = 6,
-                ncol   = 6,
-                byrow  = TRUE,
-                sparse = TRUE)
-    E <- as(E, "dgCMatrix")
+    E <- Matrix::Matrix(c(1, 0, 0, 1, 0, 0,
+                          0, 0, 0, 1, 0, 0,
+                          0, 1, 0, 0, 1, 0,
+                          0, 0, 0, 0, 1, 0,
+                          0, 0, 1, 0, 0, 1,
+                          0, 0, 0, 0, 0, 1),
+                        nrow   = 6,
+                        ncol   = 6,
+                        byrow  = TRUE,
+                        sparse = TRUE)
+    E <- methods::as(E, "dgCMatrix")
     colnames(E) <- as.character(1:6)
     rownames(E) <- compartments
 
@@ -157,33 +157,33 @@ SISe3_sp <- function(u0,
     colnames(N) <- as.character(1:2)
     rownames(N) <- compartments
 
-    G <- Matrix(c(1, 1, 0, 0, 0, 0,
-                  1, 1, 0, 0, 0, 0,
-                  0, 0, 1, 1, 0, 0,
-                  0, 0, 1, 1, 0, 0,
-                  0, 0, 0, 0, 1, 1,
-                  0, 0, 0, 0, 1, 1),
-                nrow   = 6,
-                ncol   = 6,
-                byrow  = TRUE,
-                sparse = TRUE)
-    G <- as(G, "dgCMatrix")
+    G <- Matrix::Matrix(c(1, 1, 0, 0, 0, 0,
+                          1, 1, 0, 0, 0, 0,
+                          0, 0, 1, 1, 0, 0,
+                          0, 0, 1, 1, 0, 0,
+                          0, 0, 0, 0, 1, 1,
+                          0, 0, 0, 0, 1, 1),
+                        nrow   = 6,
+                        ncol   = 6,
+                        byrow  = TRUE,
+                        sparse = TRUE)
+    G <- methods::as(G, "dgCMatrix")
     colnames(G) <- as.character(1:6)
     rownames(G) <- c("S_1 -> I_1", "I_1 -> S_1",
                      "S_2 -> I_2", "I_2 -> S_2",
                      "S_3 -> I_3", "I_3 -> S_3")
 
-    S <- Matrix(c(-1,  1,  0,  0,  0,  0,
-                   1, -1,  0,  0,  0,  0,
-                   0,  0, -1,  1,  0,  0,
-                   0,  0,  1, -1,  0,  0,
-                   0,  0,  0,  0, -1,  1,
-                   0,  0,  0,  0,  1, -1),
-                nrow   = 6,
-                ncol   = 6,
-                byrow  = TRUE,
-                sparse = TRUE)
-    S <- as(S, "dgCMatrix")
+    S <- Matrix::Matrix(c(-1,  1,  0,  0,  0,  0,
+                           1, -1,  0,  0,  0,  0,
+                           0,  0, -1,  1,  0,  0,
+                           0,  0,  1, -1,  0,  0,
+                           0,  0,  0,  0, -1,  1,
+                           0,  0,  0,  0,  1, -1),
+                        nrow   = 6,
+                        ncol   = 6,
+                        byrow  = TRUE,
+                        sparse = TRUE)
+    S <- methods::as(S, "dgCMatrix")
     colnames(S) <- as.character(1:6)
     rownames(S) <- compartments
 
@@ -194,7 +194,7 @@ SISe3_sp <- function(u0,
                     nrow  = 4,
                     byrow = TRUE)
     storage.mode(ldata) <- "double"
-    ldata <- .Call("siminf_ldata_sp", ldata, distance, 1L, PACKAGE = "SimInf")
+    ldata <- .Call("SimInf_ldata_sp", ldata, distance, 1L, PACKAGE = "SimInf")
 
     gdata <- c(upsilon_1, upsilon_2, upsilon_3,
                gamma_1, gamma_2, gamma_3,
@@ -219,46 +219,17 @@ SISe3_sp <- function(u0,
                           u0     = u0,
                           v0     = v0)
 
-    return(as(model, "SISe3_sp"))
+    methods::as(model, "SISe3_sp")
 }
 
 ##' @rdname susceptible-methods
 ##' @export
 setMethod("susceptible",
           signature("SISe3_sp"),
-          function(model, age = 1:3, i = NULL, by = 1, ...)
+          function(model, age = 1:3, i = NULL, ...)
           {
-              if (identical(dim(model@U), c(0L, 0L)))
-                  stop("Please run the model first, the 'U' matrix is empty")
-
-              age_categories <- 1:3
-              stopifnot(all(age %in% age_categories))
-
-              result <- NULL
-              j <- seq(from = 1, to = dim(model@U)[2], by = by)
-
-              for (k in age_categories) {
-                  ## Are we interested in this age category?
-                  if (k %in% age) {
-                      ## Select rows for the specific age category
-                      ii <- seq(from = 1 + (k - 1) * 2, to = dim(model@U)[1], by = 6)
-
-                      ## Are we only interested in susceptible from
-                      ## specific nodes?
-                      if (!is.null(i))
-                          ii <- ii[i]
-
-                      ## Extract susceptible and add to result
-                      if (is.null(result)) {
-                          result <- as.matrix(model@U[ii, j, drop = FALSE])
-                      } else {
-                          result <- result + as.matrix(model@U[ii, j, drop = FALSE])
-                      }
-                  }
-              }
-
-              rownames(result) <- NULL
-              result
+              stopifnot(all(age %in% 1:3))
+              extract_U(model, paste0("S_", age), i)
           }
 )
 
@@ -266,39 +237,10 @@ setMethod("susceptible",
 ##' @export
 setMethod("infected",
           signature("SISe3_sp"),
-          function(model, age = 1:3, i = NULL, by = 1, ...)
+          function(model, age = 1:3, i = NULL, ...)
           {
-              if (identical(dim(model@U), c(0L, 0L)))
-                  stop("Please run the model first, the 'U' matrix is empty")
-
-              age_categories <- 1:3
-              stopifnot(all(age %in% age_categories))
-
-              result <- NULL
-              j <- seq(from = 1, to = dim(model@U)[2], by = by)
-
-              for (k in age_categories) {
-                  ## Are we interested in this age category?
-                  if (k %in% age) {
-                      ## Select rows for the specific age category
-                      ii <- seq(from = k * 2, to = dim(model@U)[1], by = 6)
-
-                      ## Are we only interested in infected from
-                      ## specific nodes?
-                      if (!is.null(i))
-                          ii <- ii[i]
-
-                      ## Extract infected and add to result
-                      if (is.null(result)) {
-                          result <- as.matrix(model@U[ii, j, drop = FALSE])
-                      } else {
-                          result <- result + as.matrix(model@U[ii, j, drop = FALSE])
-                      }
-                  }
-              }
-
-              rownames(result) <- NULL
-              result
+              stopifnot(all(age %in% 1:3))
+              extract_U(model, paste0("I_", age), i)
           }
 )
 
@@ -306,23 +248,17 @@ setMethod("infected",
 ##' @export
 setMethod("prevalence",
           signature("SISe3_sp"),
-          function(model, age = 1:3, wnp = FALSE, i = NULL, by = 1, ...)
+          function(model, type, i, age = 1:3, ...)
           {
-              I <- infected(model, age = age, i = i, by = by)
-              S <- susceptible(model, age = age, i = i, by = by)
-
-              if (identical(wnp, FALSE)) {
-                  I <- colSums(I)
-                  S <- colSums(S)
-              }
-
-              I / (S + I)
+              stopifnot(all(age %in% 1:3))
+              numerator <- paste0("I_", age)
+              denominator <- c(paste0("S_", age), paste0("I_", age))
+              calc_prevalence(model, numerator, denominator, type, i)
           }
 )
 
 ##' @name plot-methods
 ##' @aliases plot plot-methods plot,SISe3_sp-method
-##' @importFrom graphics plot
 ##' @export
 setMethod("plot",
           signature(x = "SISe3_sp"),
@@ -333,7 +269,7 @@ setMethod("plot",
                    lwd = 2,
                    ...)
           {
-              callNextMethod(x, legend = legend, col = col,
-                             lty = lty, lwd = lwd, ...)
+              methods::callNextMethod(x, legend = legend, col = col,
+                                      lty = lty, lwd = lwd, ...)
           }
 )

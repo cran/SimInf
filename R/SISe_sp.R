@@ -108,42 +108,42 @@ SISe_sp <- function(u0,
     ## Check distance matrix
     if (is.null(distance))
         stop("'distance' is missing")
-    if (!is(distance, "dgCMatrix"))
+    if (!methods::is(distance, "dgCMatrix"))
         stop("The 'distance' argument must be of type 'dgCMatrix'")
     if (any(distance < 0))
         stop("All values in the 'distance' matrix must be >= 0")
 
     ## Arguments seems ok...go on
 
-    E <- Matrix(c(1, 1,
-                  0, 1),
-                nrow   = 2,
-                ncol   = 2,
-                byrow  = TRUE,
-                sparse = TRUE)
-    E <- as(E, "dgCMatrix")
+    E <- Matrix::Matrix(c(1, 1,
+                          0, 1),
+                        nrow   = 2,
+                        ncol   = 2,
+                        byrow  = TRUE,
+                        sparse = TRUE)
+    E <- methods::as(E, "dgCMatrix")
     colnames(E) <- as.character(1:2)
     rownames(E) <- compartments
 
     N <- matrix(integer(0), nrow = 0, ncol = 0)
 
-    G <- Matrix(c(1, 1,
-                  1, 1),
-                nrow = 2,
-                ncol = 2,
-                byrow  = TRUE,
-                sparse = TRUE)
-    G <- as(G, "dgCMatrix")
+    G <- Matrix::Matrix(c(1, 1,
+                          1, 1),
+                        nrow = 2,
+                        ncol = 2,
+                        byrow  = TRUE,
+                        sparse = TRUE)
+    G <- methods::as(G, "dgCMatrix")
     colnames(G) <- as.character(1:2)
     rownames(G) <- c("S -> I", "I -> S")
 
-    S <- Matrix(c(-1,  1,
-                   1, -1),
-                nrow   = 2,
-                ncol   = 2,
-                byrow  = TRUE,
-                sparse = TRUE)
-    S <- as(S, "dgCMatrix")
+    S <- Matrix::Matrix(c(-1,  1,
+                           1, -1),
+                        nrow   = 2,
+                        ncol   = 2,
+                        byrow  = TRUE,
+                        sparse = TRUE)
+    S <- methods::as(S, "dgCMatrix")
     colnames(S) <- as.character(1:2)
     rownames(S) <- compartments
 
@@ -154,7 +154,7 @@ SISe_sp <- function(u0,
                     nrow  = 4,
                     byrow = TRUE)
     storage.mode(ldata) <- "double"
-    ldata <- .Call("siminf_ldata_sp", ldata, distance, 1L, PACKAGE = "SimInf")
+    ldata <- .Call("SimInf_ldata_sp", ldata, distance, 1L, PACKAGE = "SimInf")
 
     gdata <- c(upsilon, gamma, alpha, beta_t1, beta_t2, beta_t3, beta_t4,
                coupling)
@@ -174,24 +174,15 @@ SISe_sp <- function(u0,
                           u0     = u0,
                           v0     = v0)
 
-    return(as(model, "SISe_sp"))
+    methods::as(model, "SISe_sp")
 }
 
 ##' @rdname susceptible-methods
 ##' @export
 setMethod("susceptible",
           signature("SISe_sp"),
-          function(model, i = NULL, by = 1, ...) {
-              if (identical(dim(model@U), c(0L, 0L)))
-                  stop("Please run the model first, the 'U' matrix is empty")
-
-              ii <- seq(from = 1, to = dim(model@U)[1], by = 2)
-              if (!is.null(i))
-                  ii <- ii[i]
-              j <- seq(from = 1, to = dim(model@U)[2], by = by)
-              result <- as.matrix(model@U[ii, j, drop = FALSE])
-              rownames(result) <- NULL
-              result
+          function(model, i = NULL, ...) {
+              extract_U(model, "S", i)
           }
 )
 
@@ -199,17 +190,8 @@ setMethod("susceptible",
 ##' @export
 setMethod("infected",
           signature("SISe_sp"),
-          function(model, i = NULL, by = 1, ...) {
-              if (identical(dim(model@U), c(0L, 0L)))
-                  stop("Please run the model first, the 'U' matrix is empty")
-
-              ii <- seq(from = 2, to = dim(model@U)[1], by = 2)
-              if (!is.null(i))
-                  ii <- ii[i]
-              j <- seq(from = 1, to = dim(model@U)[2], by = by)
-              result <- as.matrix(model@U[ii, j, drop = FALSE])
-              rownames(result) <- NULL
-              result
+          function(model, i = NULL, ...) {
+              extract_U(model, "I", i)
           }
 )
 
@@ -217,22 +199,13 @@ setMethod("infected",
 ##' @export
 setMethod("prevalence",
           signature("SISe_sp"),
-          function(model, wnp = FALSE, i = NULL, by = 1, ...) {
-              I <- infected(model = model, i = i, by = by)
-              S <- susceptible(model = model, i = i, by = by)
-
-              if (identical(wnp, FALSE)) {
-                  I <- colSums(I)
-                  S <- colSums(S)
-              }
-
-              I / (S + I)
+          function(model, type, i, ...) {
+              calc_prevalence(model, "I", c("S", "I"), type, i)
           }
 )
 
 ##' @name plot-methods
 ##' @aliases plot plot-methods plot,SISe_sp-method
-##' @importFrom graphics plot
 ##' @export
 setMethod("plot",
           signature(x = "SISe_sp"),
@@ -242,6 +215,7 @@ setMethod("plot",
                    lwd = 2,
                    ...)
           {
-              callNextMethod(x, col = col, lty = lty, lwd = lwd, ...)
+              methods::callNextMethod(x, col = col, lty = lty,
+                                      lwd = lwd, ...)
           }
 )

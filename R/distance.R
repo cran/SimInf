@@ -1,6 +1,6 @@
 ## SimInf, a framework for stochastic disease spread simulations
-## Copyright (C) 2015 - 2016  Stefan Engblom
-## Copyright (C) 2015 - 2016  Stefan Widgren
+## Copyright (C) 2015 - 2017  Stefan Engblom
+## Copyright (C) 2015 - 2017  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -17,16 +17,15 @@
 
 ##' Create distance matrix
 ##'
-##' Calculate the euclidian distances beween coordinates for
+##' Calculate the euclidian distances beween coordinates for all
 ##' coordinates within the cutoff.
 ##' @param x Projected x coordinate
 ##' @param y Projected y coordinate
 ##' @param cutoff The distance cutoff
-##' @param min_dist The minimum distance to separate two nodes.
-##'     If the coordinates for two nodes are identical, the
-##'     min_dist must be assigned or an error is raised.
-##'     This is to protect against infinite values when
-##'     calculating \eqn{1 / d^2}. Default is NULL.
+##' @param min_dist The minimum distance to separate two nodes.  If
+##'     the coordinates for two nodes are identical, the min_dist must
+##'     be assigned or an error is raised.  Default is NULL i.e. to
+##'     raise an error.
 ##' @return \code{dgCMatrix}
 ##' @export
 ##' @examples
@@ -78,5 +77,6 @@ distance_matrix <- function(x, y, cutoff, min_dist = NULL)
     col_ind <- as.integer(c(0, cumsum(sapply(m, function(x) length(x$row_ind)))))
 
     ## Create a new sparse matrix
-    new("dgCMatrix", x = d, i = row_ind, p = col_ind, Dim = rep(length(x), 2))
+    methods::new("dgCMatrix", x = d, i = row_ind, p = col_ind,
+                 Dim = rep(length(x), 2))
 }

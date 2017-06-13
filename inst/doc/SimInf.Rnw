@@ -1,0 +1,2318 @@
+%% -*- mode: LaTeX; coding: utf-8; -*-
+\documentclass[nojss]{jss}
+
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{blkarray}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{subcaption}
+\usepackage{tabularx}
+
+%% Macros for the 'Epidemiological modeling' section
+\newcommand{\Connect}{\mathbb{C}}
+\newcommand{\fatmu}{\boldsymbol{\mu}}
+\newcommand{\fatnu}{\boldsymbol{\nu}}
+\newcommand{\Intdom}{\mathbf{Z}}
+\newcommand{\Ncompartments}{N_{\mbox{{\tiny comp}}}}
+\newcommand{\Nconcentrations}{N_{\mbox{{\tiny conc}}}}
+\newcommand{\Ntransitions}{N_{\mbox{{\tiny trans}}}}
+\newcommand{\Nnodes}{N_{\mbox{{\tiny nodes}}}}
+\newcommand{\Realdom}{\mathbf{R}}
+\newcommand{\Stoich}{\mathbb{S}}
+\newcommand{\X}{\mathbb{X}}
+\newcommand{\Y}{\mathbb{Y}}
+
+% *** use this command to write comments; it is easy to spot in the text!
+\newcommand{\comment}[1]{\textcolor{blue}{\{#1\}}}
+\newcommand{\margincomment}[1]{{\textcolor{blue}*} \marginpar{\textcolor{blue}{*\{#1\}}}}
+
+\author{Stefan Widgren\\National Veterinary Institute\\
+  and Uppsala University\\Sweden\And
+  Pavol Bauer\\Uppsala University\\Sweden\And
+  Stefan Engblom\\Uppsala University\\Sweden}
+
+\Plainauthor{Stefan Widgren, Pavol Bauer, Stefan Engblom}
+
+\title{\pkg{SimInf}: An \proglang{R} package for Data-driven
+  Stochastic Disease Spread Simulations}
+
+\Plaintitle{SimInf: An R package for Data-Driven Stochastic Disease
+  Spread Simulations}
+
+\Shorttitle{\pkg{SimInf}: Data-driven Stochastic Disease Spread
+  Simulations}
+
+\Abstract{
+
+  Livestock movements are critical for the spread of many infectious
+  diseases in animal populations.  The use of real livestock data
+  allows for disease spread modeling that incorporates the
+  time-varying contact network and the population demographic.  This
+  paper introduces \pkg{SimInf}, an efficient and general framework
+  for stochastic spatio-temporal disease-spread modeling over a
+  temporal network of connected nodes.  It integrates within-node
+  infection dynamics as continuous-time Markov chains and livestock
+  data as scheduled events.  The core simulation solver is implemented
+  in \proglang{C} and uses \proglang{OpenMP} to divide work over
+  multiple processors.  We provide a technical description of the
+  framework, how to use a predefined model in \pkg{SimInf},
+  demonstrate a case study, and finally show how to extend the
+  framework with a user defined model.
+
+}
+
+\Keywords{computational epidemiology, discrete-event simulation,
+  multicore implementation, stochastic modeling}
+\Plainkeywords{computational epidemiology, discrete-event simulation,
+  multicore implementation, stochastic modeling}
+
+\Address{
+  Stefan Widgren\\
+  Department of Disease Control and Epidemiology\\
+  National Veterinary Institute\\
+  SE-751 89 Uppsala, Sweden\\
+  E-mail: \email{stefan.widgren@sva.se}\\
+  \textit{and}\\
+  Division of Scientific Computing\\
+  Department of Information Technology\\
+  Uppsala University\\
+  SE-751 05 Uppsala, Sweden\\
+  E-mail: \email{stefan.widgren@it.uu.se}\\
+  \\
+  Pavol Bauer\\
+  Division of Scientific Computing\\
+  Department of Information Technology\\
+  Uppsala University\\
+  SE-751 05 Uppsala, Sweden\\
+  E-mail: \email{pavol.bauer@it.uu.se}\\
+  \\
+  Stefan Engblom\\
+  Division of Scientific Computing\\
+  Department of Information Technology\\
+  Uppsala University\\
+  SE-751 05 Uppsala, Sweden\\
+  E-mail: \email{stefane@it.uu.se}
+}
+
+<<echo=false, results=hide>>=
+options(prompt = "R> ", continue = "+    ", width = 74, useFancyQuotes = FALSE)
+@
+
+\begin{document}
+
+\SweaveOpts{engine=R,eps=FALSE,height=5,width=10}
+%\VignetteIndexEntry{SimInf: An R package for Data-Driven Stochastic Disease Spread Simulations}
+%\VignetteDepends{SimInf}
+%\VignetteKeywords{computational epidemiology, discrete-event simulation, multicore implementation, stochastic modeling}
+%\VignettePackage{SimInf}
+
+%**************************************************************************
+
+\section{Introduction}
+
+Livestock movements are an important transmission route for many
+infectious diseases and can transfer infectious individuals between
+holdings over large distances \citep{Danon2011}.  The livestock
+movements between holdings can be represented as a temporal network
+with nodes coupled by directed edges and the time when each edge was
+active \citep{Holme2012}.  The temporal network of livestock movements
+forms a complex dynamic system in the topology, connectivity and
+intensity \citep{Bajardi2011, Dutta2014}, and these properties affect
+how various diseases spread in a network \citep{Shirley2005,
+  Buettner2014}.  European Union legislation requires member states to
+keep a registry of all bovine animals in national databases
+\citep{EC-No-1760-2000, EC-No-911-2004}, which makes it possible to
+use real data for the time-varying contact network and the population
+demographics for large scale disease spread simulations, to better
+understand transmission and explore control strategies.  However,
+incorporating large amount of network data in simulations is
+computationally challenging and require efficient algorithms.
+Furthermore, specifying realistic models for disease transmission is a
+complicated process since various diseases have fundamentally
+different transmission routes. Compare, for example, fecal-oral
+pathogens with indirect transmission routes via the environment with
+infections that are transferred by direct contact between individuals
+\citep{BrooksPollock2014}.
+
+In this work, we present an efficient and flexible framework for
+data-driven spatio-temporal disease spread modeling, designed to
+efficiently incorporate large volumes of population demographics- and
+temporal network data.  This allows the user to asses the spread of,
+for example, endemic diseases in the cattle population, in national
+scale simulations \citep{Bauer2016}.  We have developed the
+\proglang{R} \citep{R} package \pkg{SimInf}, a discrete-event
+simulator that divides work among multiple processors available in
+standard computers.  The model integrates infection dynamics as
+continuous-time Markov chains and available data such as animal
+movements, births, slaughter or aging are incorporated as scheduled
+events.  One of our design goal was to make \pkg{SimInf} completely
+extendable and allow for growth in available models and specialized
+solvers through contributions from the community.  Using compiled
+\proglang{C} code, rather than interpreted \proglang{R} code, for the
+transition-rate functions ensures maximum efficiency when simulating
+the model.  To simplify the process of generating the required
+\proglang{C} code for models, the \pkg{SimInf} package include
+functionality to automatically create \proglang{C} code from a model
+specification.
+
+There exists several related \proglang{R} packages for epidemiological
+modeling on the Comprehensive \proglang{R} Archive Network (CRAN) that
+we would like to mention here.  The package \pkg{amei} \citep{amei} is
+designed for parameter estimation of epidemic models and finding
+optimal intervention strategies, for example, vaccination, to control
+disease spread.  Another package is \pkg{surveillance}, a framework
+for monitoring, modeling, and regression analysis of infectious
+diseases, \citep{surveillance}.  \pkg{EpiModel} \citep{EpiModel} is an
+\proglang{R} package that, similar to \pkg{SimInf}, includes a
+framework for modeling spread of diseases on networks.  However, they
+differ in how the data is generated for the modeling: the network data
+in \pkg{EpiModel} is simulated using \pkg{statnet} \citep{statnet},
+while \pkg{SimInf} was designed to incorporate available network data.
+The are also similarities between the \proglang{R} package
+\pkg{GillespieSSA} \citep{Pineda-Krch2008} and \pkg{SimInf}, in that
+both uses the Gillespie stochastic simulation algorithm (SSA)
+\citep{Gillespie1977}.  However, for computational efficiency, the
+algorithm is implemented using \proglang{C} code in \pkg{SimInf}.
+
+The paper is organized as follows.  In \S\ref{sec:modeling} we
+summarize the mathematical foundation for our framework.  Section
+\S\ref{sec:framework} gives a technical description of the simulation
+framework.  In \S\ref{sec:examples} we illustrate the use of the
+package by some worked examples.  Finally, in \S\ref{sec:extend} we
+demonstrate how to extend \pkg{SimInf} with user-defined models.
+
+%**************************************************************************
+
+\section{Epidemiological modeling}
+\label{sec:modeling}
+
+In the following section we give a brief overview of the
+epidemiological modeling framework employed in \pkg{SimInf}. The
+overall approach consists of continuous-time Markov chains as a
+general model of the dynamics of the epidemiological
+state. Importantly, we also allow for a coupling with concentration
+variables obeying ordinary differential equations (ODEs), as well as
+to externally defined events. We draw much of the material here from
+\citep{Bauer2016, siminf_Ch}.
+
+In \S\ref{subsec:local}--\ref{subsec:global} below we distinguish
+between the \emph{local} dynamics that describes the evolution of the
+epidemiological state at a single node, and the \emph{global}
+dynamics, which describes the system at the network level. The overall
+numerical approach underlying \pkg{SimInf} is described in
+\S\ref{subsec:numerics}.
+
+\subsection{Local dynamics}
+\label{subsec:local}
+
+We describe the state of a single node with a \emph{state vector}
+$X(t) \in \Intdom_{+}^{\Ncompartments}$, which counts the number of
+individuals at each of $\Ncompartments$ compartments at time $t$. The
+transitions between these compartments are stochastic and are
+described by the transition matrix $\Stoich \in
+\Intdom^{\Ncompartments \times \Ntransitions}$ and the transition
+intensities $R: \Intdom_{+}^{\Ncompartments} \to
+\Realdom_{+}^{\Ntransitions}$, assuming $\Ntransitions$ different
+transitions. We then form a \textit{random counting measure}
+$\mu_{k}(dt) = \mu(R_{k}(X(t-)); \, dt)$ that is associated with a
+Poisson process for the $k$th intensity $R_{k}(X(t-)$, which in turn
+depends on the state prior to any transition at time $t$, that is,
+$X(t-)$.
+
+The local dynamics can then compactly be described by a pure jump
+stochastic differential equation (SDE),
+\begin{align}
+  \label{eq:vectorJSDE}
+  dX(t) &= \Stoich\fatmu(dt),
+\end{align}
+where $\fatmu(dt)$ is a vector measure built up from the scalar
+counting measures $\fatmu(dt) = [\mu_{1}(dt),\ldots,$
+  $\mu_{\Ntransitions}(dt)]^\top$. If at time $t$, transition $k$
+occurs, then the state vector is updated according to
+\begin{align}
+  \label{eq:eventupdate}
+   X(t)=X(t-)+\Stoich_k,
+\end{align}
+with $\Stoich_k$ the $k$th column of $\Stoich$. In
+\eqref{eq:vectorJSDE} the $\Ntransitions$ different epidemiological
+state transitions are competing in the sense of independent Poisson
+processes. The `winning' process decides what event happens and
+changes the state according to \eqref{eq:eventupdate}. The simulation
+then proceeds under the Markov assumption where previous events are
+remembered via the state variable $X$ only.
+
+To make this abstract notation a bit more concrete we consider a
+traditional example as follows. In an SIS-model the transitions
+between a susceptible and an infected compartment can be written as
+\begin{align}
+\label{eq:sirtrans}
+  &\left. \begin{array}{rl}
+    S+I &\xrightarrow{\beta} 2I \\
+    I &\xrightarrow{\gamma} S \\
+  \end{array} \right\}.
+  \intertext{With a state vector consisting of two compartments $X =
+    [\#S,\#I]$, i.e., the number of susceptible and infected
+    individuals, respectively, we can then write the transition matrix
+    and intensity vector as}
+  \label{eq:SIRstoich}
+    \Stoich &= \left[ \begin{array}{rr}
+        -1 & 1 \\
+        1  & -1
+      \end{array} \right], \\
+    R(x) &= [\beta x_{1}x_{2},\gamma x_{2}]^\top.
+\end{align}
+To connect this with traditional ODE-based models, note that,
+replacing the random measure in \eqref{eq:vectorJSDE} with its mean
+drift, we arrive at
+\begin{align}
+  \label{eq:ODE}
+  \frac{dx(t)}{dt} &= \Stoich R(x),
+\end{align}
+where now the state variable $x \in \Realdom^{\Ncompartments}$. The
+differences between \eqref{eq:vectorJSDE} and \eqref{eq:ODE} are that
+the randomness and discreteness of the state variable are not present
+in the latter formulation. If these features are thought to be
+important, then \eqref{eq:vectorJSDE} is an accurate stochastic
+alternative to \eqref{eq:ODE}, relying only on the Markovian
+``memoryless'' assumption.
+
+There are, however, situations where we would like to mix the discrete
+stochastic model with a concentration-type ODE model. In a multi-scale
+description there are typically variables for which a continuous
+description is more natural: a typical example is the concentration of
+bacteria in an infectious environment for which individual counting
+would clearly not be feasible.
+
+Assuming an additional concentration state vector $Y \in
+\Realdom^{\Nconcentrations}$ a general model which augments
+\eqref{eq:vectorJSDE} is
+\begin{align}
+  \label{eq:JSDE_ODE}
+  \left. \begin{array}{rcl}
+    dX(t) &=& \Stoich\fatmu(dt) \\
+    Y'(t) &=& f(X(t-),Y(t)) \\
+  \end{array} \right\},
+\end{align}
+where now the random measure depends also on the concentration
+variable,
+\begin{align}
+  \fatmu(dt) = \fatmu(R(X(t-),Y(t)),dt).
+\end{align}
+The overall combined state vector is then $[X; \; Y] \in
+[\Intdom^{\Ncompartments}; \; \Realdom^{\Nconcentrations}]$.
+
+\subsection{Global dynamics}
+\label{subsec:global}
+
+To extend the local dynamics to a network model consisting of
+$\Nnodes$ nodes we first define the overall state matrices $\X \in
+\Intdom_{+}^{\Ncompartments \times \Nnodes}$ and $\Y \in
+\Realdom^{\Nconcentrations \times \Nnodes}$ and then extend
+\eqref{eq:JSDE_ODE} to
+\begin{align}
+  \label{eq:local1}
+  d\X^{(i)}(t) &= \Stoich\fatmu^{(i)}(dt), \\
+  \label{eq:local2}
+  \frac{d\Y^{(i)}(t)}{dt} &= f(\X^{(i)},\Y^{(i)}),
+\end{align}
+where $i \in \{1,...,\Nnodes\}$ is the node index.
+
+We then consider the $\Nnodes$ nodes being the vertices of an
+undirected graph $\mathcal{G}$ with interactions defined in terms of
+the counting measures $\fatnu^{(i,j)}$ and $\fatnu^{(j,i)}$. Here
+$\fatnu^{(i,j)}$ represents the state changes due to an inflow of
+individuals from node $i$ to node $j$, and $\fatnu^{(j,i)}$ represents
+an inflow of individuals from node $j$ to node $i$, assuming node $j$
+being in the connected component $C(i)$ of node $i$, and vice versa.
+
+The network dynamics is then written as
+\begin{align}
+  \label{eq:global1}
+  d\X^{(i)}_{t} &= -\sum_{j \in C(i)} \Connect\fatnu^{(i,j)}(dt)+
+  \sum_{j; \, i \in C(j)} \Connect\fatnu^{(j,i)}(dt), \\
+  \label{eq:global2}
+  \frac{d\Y^{(i)}(t)}{dt} &= -\sum_{j \in C(i)} g(\X^{(i)},\Y^{(i)})+
+  \sum_{j; \, i \in C(j)} g(\X^{(j)},\Y^{(j)}).
+\end{align}
+In \eqref{eq:global2}, $g$ is similarly the ``flow'' of the
+concentration variable $\Y$ between the nodes in the network. For
+example, this could be the natural modeling target for concentration
+variables $\Y$ which are transported via surface water or air.
+
+Combining this with \eqref{eq:local1}--\eqref{eq:local2} we obtain the
+overall dynamics
+\begin{align}
+  \label{eq:master1}
+  d\X^{(i)}(t) &= \Stoich\fatmu^{(i)}(dt)-
+  \sum_{j \in C(i)} \Connect\fatnu^{(i,j)}(dt)+
+  \sum_{j; \, i \in C(j)} \Connect\fatnu^{(j,i)}(dt), \\
+  \label{eq:master2}
+  \frac{d\Y^{(i)}(t)}{dt} &= f(\X^{(i)},\Y^{(i)})-
+  \sum_{j \in C(i)} g(\X^{(i)},\Y^{(i)})+
+  \sum_{j; \, i \in C(j)} g(\X^{(j)},\Y^{(j)}).
+\end{align}
+
+Note that $\fatnu^{(i,j)}$ and $\fatnu^{(j,i)}$ may be equivalently
+employed for externally scheduled events given by data using an
+equivalent construction in terms of Dirac measures. This is the case,
+for example, when intra-nodal transport data of individuals are
+available.
+
+\subsection{Numerical method}
+\label{subsec:numerics}
+
+In \pkg{SimInf}, we solve \eqref{eq:master1}--\eqref{eq:master2} by
+splitting the local update scheme \eqref{eq:local1}--\eqref{eq:local2}
+from the global update scheme
+\eqref{eq:global1}--\eqref{eq:global2}. We discretize time as $0 =
+t_{0} < t_{1} < t_2 < \cdots$, which is partially required as external
+data has to be incorporated at some finitely resolved time stamps. The
+numerical method of \pkg{SimInf} can then be written per node $i$ as
+\begin{align}
+  \label{eq:numstep1}
+  \tilde{\X}_{n+1}^{(i)} &= \X_{n}^{(i)} + \int^{t_{n+1}}_{t_n}
+  \Stoich \fatmu^{(i)}(ds), \\
+  \label{eq:numstep2}
+  \X_{n+1}^{(i)} &= \tilde{\X}^{(i)}_{n+1}-\int^{t_{n+1}}_{t_n} \sum_{j \in C(i)}
+  \Connect\fatnu^{(i,j)}(ds)+\int^{t_{n+1}}_{t_n} \sum_{j; \, i \in C(j)}
+  \Connect\fatnu^{(j,i)}(ds), \\
+  \label{eq:numstep3}
+  \Y_{n+1}^{(i)} &= \Y_{n}^{(i)} + f(\tilde{\X}_{n+1}^{(i)},
+  \Y_{n}^{(i)}) \, \Delta t_{n} \\
+  \nonumber
+  &\phantom{=}
+  -\sum_{j \in C(i)} g(\tilde{\X}_{n+1}^{(i)},\Y_{n}^{(i)})\Delta t_{n}+
+  \sum_{j; \, i \in C(j)} g(\tilde{\X}_{n+1}^{(j)},\Y_{n}^{(j)})\Delta t_{n}.
+\end{align}
+
+In this scheme, \eqref{eq:numstep1} forms the local stochastic step,
+that is in practice simulated by the Gillespie method
+\citep{Gillespie1977}. Eq.~\eqref{eq:numstep2} is the data step, where
+externally scheduled events are incorporated. Note that the stochastic
+step evolves at continuous time increments in the interval
+$[t_n,t_{n+1}]$, and the data step operates only on the final state
+$\tilde{\X}$ at $t_{n+1}$. The final step \eqref{eq:numstep3} is just
+the Euler forward method in time with time-step $\Delta t_{n} =
+t_{n+1}-t_{n}$ for the concentration variable $\Y$.
+
+%**************************************************************************
+
+\section{Technical description of the simulation framework}
+\label{sec:framework}
+
+The overall design of \pkg{SimInf} was inspired and partly adapted
+from the Unstructured Mesh Reaction-Diffusion Master Equation (URDME)
+framework \citep{Engblom2009, Drawert2012}.  \pkg{SimInf} is a general
+software framework for data-driven modeling and simulation of
+stochastic disease-spread in a temporal network of connected nodes.
+In particular, the transition rates and the transition topology are
+specified using a compiled language \proglang{C} and \proglang{R}
+matrices, respectively.  The overall modular design makes extensions
+easy to handle and since the simulation engine is written in a
+compiled language, the efficiency of the simulator is very high.
+
+The \pkg{SimInf} package is available via CRAN at
+\mbox{\url{https://CRAN.R-project.org/package=SimInf}} and is loaded
+in \proglang{R} with the following command
+
+<<load-SimInf>>=
+library("SimInf")
+@
+
+\subsection{Overview}
+
+The \pkg{SimInf} \proglang{R} package uses object oriented programming
+with \code{S4} classes \citep{Chambers2008} to define objects with
+logical layers connected by well-defined interfaces for different
+modeling scenarios.  The two \code{S4} classes \code{SimInf\_model}
+and \code{SimInf\_events} are central and provide the basis for the
+flexible framework to perform efficient simulations in compiled
+\proglang{C} code of the predefined models in \pkg{SimInf} or
+user-defined models.  The \code{SimInf\_model} class contains slots
+(Table~\ref{table:SimInf:model}) to data structures that define the
+disease-spread model and one slot \code{events} associated to a
+\code{SimInf\_events} object, which contains slots
+(Table~\ref{table:scheduled:events}) to incorporate and process
+scheduled events.  Furthermore, the \code{SimInf\_model} object also
+contains the output trajectory after running the core simulation
+solver on the disease-spread model.
+
+All disease-spread models in \pkg{SimInf} contains the \code{S4} class
+\code{SimInf\_model}.  Moreover, the predefined disease-spread models
+in \pkg{SimInf} have a generating function \citep{Chambers2008}, with
+the same name as the model, which check parameters and initialize the
+necessary data structures for that specific model.  After the model is
+initialized, the simulation is started with a call to the \code{run}
+method.  To facilitate post-processing and visualization of output
+data, the predefined models in \pkg{SimInf} provide several utility
+functions, for example, \code{susceptible}, \code{infected},
+\code{prevalence} and \code{plot}.
+
+\begin{table}
+  \small
+  \begin{tabularx}{\textwidth}{l X}
+    \toprule
+    Slot & Description\\
+    \midrule
+
+    \code{S} & Each column corresponds to a state transition, and
+    execution of state transition $j$ amounts to adding the \code{S[,
+        j]} column to the state vector \code{u[, i]} of node $i$ where
+    the transition occurred.  Sparse matrix ($\Ncompartments \times
+    \Ntransitions$) of object class \code{dgCMatrix}.\\
+
+    \code{G} & Dependency graph that indicates the transition rates
+    that need to be updated after a given state transition has
+    occurred.  A non-zero entry in element \mbox{\code{G[i, j]}}
+    indicates that transition rate $i$ needs to be recalculated if the
+    state transition $j$ occurs.  Sparse matrix ($\Ntransitions \times
+    \Ntransitions$) of object class \code{dgCMatrix}.\\
+
+    \code{tspan} & A vector of increasing time points where the state
+    of each node is to be returned.\\
+
+    \code{U} & The result matrix with the number of individuals in
+    each compartment in every node.  \mbox{\code{U[, j]}} contains the
+    number of individuals in each compartment at \code{tspan[j]}.
+    \mbox{\code{U[1:$\Ncompartments$, j]}} contains the number of
+    individuals in each compartment in node $1$ at \code{tspan[j]}.
+    \mbox{\code{U[($\Ncompartments$ + 1):(2 * $\Ncompartments$), j]}}
+    contains the number of individuals in each compartment in node $2$
+    at \code{tspan[j]} etc.  Integer matrix ($\Nnodes \Ncompartments
+    \times \text{length}(\text{tspan})$).\\
+
+    \code{U\_sparse} & It is possible to run the simulator and write
+    the number of individuals in each compartment to the
+    \code{U\_sparse} sparse matrix (\code{dgCMatrix}), which can save
+    a lot of memory if the model contains many nodes and time-points,
+    but where only a few of the data points are of interest.  If
+    \code{U\_sparse} is non-empty when \code{run} is called, the
+    non-zero entries in \code{U\_sparse} indicates where the number of
+    individuals should be written to \code{U\_sparse}.  The layout of
+    the data in \code{U\_sparse} is identical to \code{U}.  Please
+    note that the data in \code{U\_sparse} is numeric and that the
+    data in \code{U} is integer.\\
+
+    \code{u0} & The initial number of individuals in each compartment
+    in every node.  Integer matrix ($\Ncompartments \times
+    \Nnodes$).\\
+
+    \code{V} & The result matrix for the real-valued continuous
+    state.  \mbox{\code{V[, j]}} contains the real-valued state of the
+    system at \code{tspan[j]}.  Numeric matrix ($\Nnodes N_{ld} \times
+    \text{length}(\text{tspan})$).\\
+
+    \code{V\_sparse} & It is possible to run the simulator and write
+    the real-valued continuous state to the \code{V\_sparse} sparse
+    matrix (\code{dgCMatrix}), which can save a lot of memory if the
+    model contains many nodes and time-points, but where only a few of
+    the data points are of interest.  If \code{V\_sparse} is non-empty
+    when \code{run} is called, the non-zero entries in
+    \code{V\_sparse} indicates where the real-valued continuous state
+    should be written to \code{V\_sparse}.  The layout of the data in
+    \code{V\_sparse} is identical to \code{U}.\\
+
+    \code{v0} & The initial value for the real-valued continuous
+    state.  Numeric matrix ($N_{ld} \times \Nnodes$).\\
+
+    \code{ldata} & A numeric matrix with local data specific to each
+    node.  The column \code{ldata[, j]} contains the local data vector
+    for node $j$.  The local data vector is passed as an argument to
+    the transition rate functions and the post time step function.\\
+
+    \code{gdata} & A numeric vector with global data that is common to
+    all nodes.  The global data vector is passed as an argument to the
+    transition rate functions and the post time step function.\\
+
+    \code{events} & Scheduled events to modify the discrete state of
+    individuals in a node at a pre-defined time $t$.  \code{S4} class
+    \code{SimInf\_events}, see \S\ref{sec:events} and
+    Table~\ref{table:scheduled:events}.\\
+
+    \code{C\_code} & Character vector with optional model \proglang{C}
+    code, see \S\ref{sec:extend}.  If non-empty, the \proglang{C} code
+    is written to a temporary file when the \code{run} method is
+    called.  The temporary file is compiled and the resulting DLL is
+    dynamically loaded.  The DLL is unloaded and the temporary files
+    are removed after running the model.\\
+
+    \bottomrule
+  \end{tabularx}
+  \caption{Description of the slots in the S4 class
+    \code{SimInf\_model} that defines the epidemiological model.
+    $\Ntransitions$ is the number of state transitions in the model.
+    $\Ncompartments$ is the number of compartments in the model.
+    $\Nnodes$ is the number of nodes in the model.  $N_{ld}$ is the
+    number of local data specific to each node and equals
+    \code{dim(ldata)[1]}.}
+  \label{table:SimInf:model}
+\end{table}
+
+\subsection{Specification of an epidemiological model}
+\label{sec:model}
+
+The within-node disease spread model in \pkg{SimInf} is specified as a
+compartment model with the individuals divided into compartments
+defined by discrete disease statuses.  The model is defined by the
+slots in the \code{S4} class \code{SimInf\_model}
+(Table~\ref{table:SimInf:model}).  The compartments contains the
+number of individuals in each of the $\Ncompartments$ disease states
+in every $\Nnodes$ nodes.
+
+Eq.~\eqref{eq:numstep3}, the stochastic step, contains $\Ntransitions$
+state transitions and is processed using the two slots, \code{S} and
+\code{G}.  The \code{S} slot is the state-change matrix
+($\Ncompartments \times \Ntransitions$) that determines how to change
+the number of individuals in the compartments of a node when the
+$j^{th}$ state transition occurs, where $1 \le j \le \Ntransitions$.
+Each row corresponds to one compartment and each column to a state
+transition.  Let \code{u[, i]} be the number of individuals in each
+compartment in node $i$ at time $t_i$.  To move simulation time
+forward in node $i$ to $t_i = t_i + \tau_i$, the vector \code{u[, i]}
+is updated according to the $j^{th}$ transition by adding the
+state-change vector \code{S[, j]} to \code{u[, i]}.  After updating
+\code{u[, i]}, the transition rates must be recalculated to obtain the
+time to the next event.  However, a state transition might not need
+all transition rates to be recalculated.  The dependency graph
+\code{G} is a matrix ($\Ntransitions \times \Ntransitions$) that
+determines which transition rates that need to be recalculated.  A
+non-zero entry in element \code{G[k, j]} indicates that transition
+rate \code{k} needs to be recalculated if the $j^{th}$ state
+transition occurs, where \mbox{$1 \le$ \code{k} $\le \Ntransitions$}.
+Furthermore, the final step \eqref{eq:numstep3} is incorporated using
+a model specific post time step callback to allow update of the
+concentration variable $\Y$.
+
+\begin{table}[!ht]
+  \small
+  \begin{tabularx}{\textwidth}{l X}
+    \toprule Slot & Description\\ \midrule
+
+    \code{E} & Each row corresponds to one compartment in the model.
+    The non-zero entries in a column indicates the compartments to
+    include in an event.  Sparse matrix of object class
+    \code{dgCMatrix}.\\
+
+    \code{N} & Each row represents one compartment in the model and
+    the values determine how to move sampled individuals in
+    \textit{internal transfer} and \textit{external transfer} events.
+    Integer matrix.\\
+
+    \code{event} & Type of event: 0) \textit{exit}, 1) \textit{enter},
+    2) \textit{internal transfer}, and 3) \textit{external transfer}.
+    Other values are reserved for future event types and not supported
+    by the current default core solver.  Integer vector.\\
+
+    \code{time} & Time of the event.  Integer vector.\\
+
+    \code{node} & The node that the event operates on.  Also the
+    source node for an \textit{external transfer} event.  Integer
+    vector.  $1 \le$ \code{node[i]} $\le \Nnodes$.\\
+
+    \code{dest} & The destination node for an \textit{external
+      transfer} event, equals $0$ for the other event types.  Integer
+    vector.\\
+
+    \code{n} & The number of individuals affected by the event.
+    Integer vector.  \code{n[i]} $\ge 0$.\\
+
+    \code{proportion} & If \code{n[i]} equals zero, the number of
+    individuals affected by \code{event[i]} is calculated by summing
+    the number of individuals in the compartments determined by
+    \code{select[i]} and multiplying with \code{proportion[i]}.
+    Numeric vector.  $0 \le$ \code{proportion[i]} $\le 1$.\\
+
+    \code{select} & Column $j$ in the event matrix $E$ that determines
+    the compartments that the event operates on.  Integer vector.\\
+
+    \code{shift} & Column $k$ in the shift matrix $N$ that determines
+    how individuals in \textit{internal transfer} and \textit{external
+      transfer} events are shifted to enter another compartment.
+    Integer vector.\\
+
+    \bottomrule
+  \end{tabularx}
+  \caption{Description of the slots in the S4 class
+    \code{SimInf\_events} that holds data to process events.  Each
+    index, \code{i}, of the vectors represent one event.  $\Nnodes$ is
+    the number of nodes in the model.}
+  \label{table:scheduled:events}
+\end{table}
+
+Model-specific data that is passed to the transition-rate functions
+and the post time-step function are stored in the two slots:
+\code{ldata} and \code{gdata} in the \code{SimInf\_model} object.  The
+\code{ldata} matrix holds local data for each node where \code{ldata[,
+    i]} is the data vector for node $i$.  Data that is global, i.e.,
+shared between nodes, is stored in the \code{gdata} vector.
+
+The \code{events} slot in the \code{SimInf\_model} holds data to
+process the scheduled events, further described in \S\ref{sec:events}.
+
+During simulation of one trajectory, the state of the system is
+written to the two matrices \code{U} and \code{V}.  This happens at
+each occasion the simulation time passes a time point in \code{tspan},
+a vector of increasing time points.  The first and last element in
+\code{tspan} determines the start- and end-point of the simulation.
+The column \code{U[, m]} contains the number of individuals in each
+compartment in every node at \code{tspan[m]}, where $1 \le$ \code{m}
+$\le$ \code{length(tspan)}.  The first $\Ncompartments$ rows in
+\code{U} contains the compartments of the first node.  The next
+$\Ncompartments$ rows contains the compartments of the second node
+etc.  The \code{V} matrix contains output from continuous state
+variables.  The column \code{V[, m]} contains the values at
+\code{tspan[m]}.  The rows are grouped per node and the number of rows
+per node is determined by the number of continuous state variables in
+that specific model.  It is also possible to configure the simulator
+to write the state of the system to the sparse matrices
+\code{U\_sparse} and \code{V\_sparse}, which can save a lot of memory
+if the model contains many nodes and time-points, but where only a few
+of the data points are of interest.  In order to use this feature,
+call the \code{U} and \code{V} methods (before running a trajectory)
+with a sparse matrix with non-zero entries where the simulator should
+write the state of the system.  The initial state in each node is
+specified by the two matrices \code{u0} and \code{v0} where \code{u0[,
+    i]} is the initial number of individuals in each compartment at
+node $i$ and \code{v0[, i]} is the initial continuous state in node
+$i$.
+
+\begin{table}[!ht]
+  \small
+  \begin{tabularx}{\textwidth}{l X}
+    \toprule
+    Argument & Description\\
+    \midrule
+    \code{v\_new} & The continuous state vector in the node after the
+    post time step.  Exists only in \code{PTSFun}.\\
+    \code{u} & The compartment state vector in the node.\\
+    \code{v} & The current continuous state vector in the node.\\
+    \code{ldata} & The local data vector for the node.\\
+    \code{gdata} & The global data vector.\\
+    \code{node} & The node index.  Note the node index is zero-based,
+    i.e., the first node is $0$.\\
+    \code{t} & Current time in the simulation.\\
+    \bottomrule
+  \end{tabularx}
+  \caption{Description of the arguments to the transition rate
+    functions (\code{TRFun}) and the post time step function
+    (\code{PTSFun}).}
+  \label{table:arguments}
+\end{table}
+
+\newpage
+
+\subsection{Specification of scheduled events}
+\label{sec:events}
+
+The scheduled events are used to modify the discrete state of
+individuals in a node at a pre-defined time $t$.  There are four
+different types of events; \textit{enter}, \textit{internal transfer},
+\textit{external transfer} and \textit{exit}. The \textit{enter} event
+adds individuals to a node, for example, due to births. The
+\textit{internal transfer} event moves individuals between
+compartments within one node, for example, ageing of individuals in a
+model with several age compartments or vaccination to move individuals
+to a vaccinated compartment. The \textit{external transfer} event
+moves individuals from compartments in one node to compartments in a
+destination node. Finally, the \textit{exit} event removes individuals
+from a node, for example, due to slaughter. The event types are
+classified into those that operate on the compartments of a single
+node $E_1 = \{\text{\textit{enter}, \textit{internal transfer},
+  \textit{exit}}\}$ and those that operate on the compartments of two
+nodes $E_2 = \{\text{\textit{external transfer}}\}$.  The parallel
+algorithm processes these two classes of events differently, see
+Algorithm~\ref{alg:core} in the appendix with pseudo-code for the core
+simulation solver.  The scheduled events are processed when simulation
+time reaches the time for any of the events.  Events that are
+scheduled at the same time are processed in the following order:
+\textit{exit}, \textit{enter}, \textit{internal transfer} and
+\textit{external transfer}.
+
+The S4 class \code{SimInf\_events} contains slots with data structures
+to process events (Table~\ref{table:scheduled:events}).  The slots
+\code{event}, \code{time}, \code{node}, \code{dest}, \code{n},
+\code{proportion}, \code{select} and \code{shift}, are vectors of
+equal length.  These vectors hold data to process one event: \code{e},
+where $1 <$ \code{e} $\leq$ \code{length(event)}.  The event type and
+the time of the event are determined by \code{event[e]} and
+\code{time[e]}, respectively.  The compartments that \code{event[e]}
+operates on, are specified by \code{select[e]} together with the slot
+\code{E}.  Each row $\{1, 2, ..., \Ncompartments\}$ in the sparse
+matrix \code{E}, represents one compartment in the model.  Let \code{s
+  <- select[e]}, then each non-zero entry in the column \code{E[, s]}
+includes that compartment in the \code{event[e]} operation.  The
+definitions of all of these operations are a bit involved and to
+quickly get an overview, schematic pictures illustrating all of them
+have been prepared, we refer to
+Figures~\ref{fig:exit},\ref{fig:enter},\ref{fig:external},\ref{fig:internal},\ref{fig:external:shift}
+in the appendix.
+
+\subsubsection{Processing of an enter event}
+
+The \textit{enter} event adds \code{n[e]} individuals to one
+compartment at \code{node[e]}, where the compartment is specified by a
+non-zero entry in the row for the compartment in column \code{E[, s]}.
+Please note that, if the column \code{E[, s]} contains several
+non-zero entries, the individuals are added to the compartment
+represented by the first non-zero row in column \code{E[, s]}.  The
+values of \code{dest[e]}, \code{proportion[e]} and \code{shift[e]},
+described below, are not used when processing an \textit{enter} event.
+See Figure~\ref{fig:enter} in the appendix for an illustration of a
+scheduled \textit{enter} event.
+
+\subsubsection{Processing of an internal transfer event}
+
+The \textit{internal transfer} event moves \code{n[e]} individuals
+into new compartments within \code{node[e]}.  However, if \code{n[e]}
+equals zero, the number of individuals to move is calculated by
+multiplying the \code{proportion[e]} with the total number of
+individuals in the compartments represented by the non-zero entries in
+column \mbox{\code{E[, s]}}.  The individuals are then proportionally
+sampled and removed from the compartments specified by \code{E[, s]}.
+The next step is to move the sampled individuals to their new
+compartment using the matrix \code{N} and \code{shift[e]}, where
+\code{shift[e]} specifies which column in \code{N} to use.  Each row
+$\{1, 2, ..., \Ncompartments\}$ in \code{N}, represents one
+compartment in the model and the values determine how to move sampled
+individuals before adding them to \code{node[e]} again.  Let \code{q
+  <- shift[e]}, then each non-zero entry in \code{N[, q]} defines the
+number of rows to move sampled individuals from that compartment i.e.,
+sampled individuals from compartment \code{p} are moved to compartment
+\code{N[p, q] + p}, where $1 \leq$ \code{N[p, q] + p} $\le
+\Ncompartments$.  The value of \code{dest[e]}, described below, is not
+used when processing an \textit{internal transfer} event.  See
+Figure~\ref{fig:internal} in the appendix for an illustration of a
+scheduled \textit{internal transfer} event.
+
+\subsubsection{Processing of an external transfer event}
+
+The \textit{external transfer} event moves individuals from
+\code{node[e]} to \code{dest[e]}.  The sampling of individuals from
+\code{node[e]} is performed in the same way as for an \textit{internal
+  transfer} event.  The compartments at \code{node[e]} are updated by
+subtracting the sampled individuals while adding them to the
+compartments at \code{dest[e]}.  The sampled individuals are added to
+the same compartments in \code{dest[e]} as in \code{node[e]}, unless
+\code{shift[e]} $> 0$.  In that case, the sampled individuals change
+compartments according to \code{N} as described in processing an
+\textit{internal transfer} event before adding them to \code{dest[e]}.
+See Figures \ref{fig:external} and \ref{fig:external:shift} in the
+appendix for illustrations of scheduled \textit{external transfer}
+events.
+
+\subsubsection{Processing of an exit event}
+
+The \textit{exit} event removes individuals from \code{node[e]}.  The
+sampling of individuals from \code{node[e]} is performed in the same
+way as for an \textit{internal transfer} event.  The compartments at
+\code{node[e]} are updated by subtracting the sampled individuals.
+The values of \code{dest[e]} and \code{shift[e]} are not used when
+processing an \textit{exit} event.  See Figure~\ref{fig:exit} in the
+appendix for an illustration of a scheduled \textit{exit} event.
+
+\subsection{Core simulation solver}
+
+The \pkg{SimInf} package uses the ability to interface compiled code
+from R \cite{Chambers2008}.  The solver is implemented in the compiled
+language \proglang{C} \citep{Kernighan1988} and is called from
+\proglang{R} using the \code{.Call()} interface \citep{Chambers2008}.
+Using compiled rather than interpreted code ensures high performance
+when running the model.  To improve performance further, the solver
+uses \proglang{OpenMP} \citep{OpenMP2008} to divide work over multiple
+processors and perform computations in parallel.  The solver uses the
+GNU Scientific Library (GSL) \citep{Gallassi2009} to generate random
+numbers for the simulation.
+
+\subsubsection{Function pointers}
+
+The flexibility of the solver is partly achieved by using function
+pointers \citep{Kernighan1988}.  A function pointer is a variable that
+stores the address of a function that can be used to invoke the
+function.  This provides a simple way to incorporate model specific
+functionality into the solver.  A model must define one transition
+rate function for each state transition in the model.  These functions
+are called by the solver to calculate the transition rate for each
+state transition in each node.  The output from the transition rate
+function depends only on the state of the system at the current time.
+However, the output is unique to a model and data are for that reason
+passed on to the function for the calculation.  Furthermore, a model
+must define the post time step function.  This function is called once
+for each node each time the simulation of the continuous-time Markov
+chain reaches the next day (or, more generally, the next unit of time)
+and after the $E_1$ and $E_2$ events have been processed.  The main
+purpose of the post time step function is to allow for a model to
+update continuous state variables in each node.
+
+The transition rate function is defined by the data type \code{TRFun}
+and the post time step function by the data type \code{PTSFun}.  These
+data types are defined in the header file \texttt{'src/SimInf.h'} and
+shown below.  The arguments \code{v\_new}, \code{u}, \code{v},
+\code{ldata}, \code{gdata}, \code{node}, and \code{t} of the functions
+are described in Table~\ref{table:arguments}.
+
+\begin{minipage}{\linewidth}
+\begin{scriptsize}
+\begin{lstlisting}[language=C]
+  typedef double (*TRFun)(const int *u, const double *v, const double *ldata,
+                          const double *gdata, double t);
+
+  typedef int (*PTSFun)(double *v_new, const int *u, const double *v,
+                        const double *ldata, const double *gdata,
+                        int node, double t);
+\end{lstlisting}
+\end{scriptsize}
+\end{minipage}
+
+\subsubsection{Overview of the solver}
+
+Here follows an overview of the steps in the solver to run one
+trajectory, see Algorithm~\ref{alg:core} for pseudo-code and
+\texttt{'src/core/SimInf\_solver.c'} for the source code.  The
+simulation starts with a call to the \code{run} method with the model
+as the first argument and optionally the number of threads to use and
+a seed for the random number generator.  This method will first call
+the validity method on the model to perform error-checking and then
+call a model specific \proglang{C} function to initialize the function
+pointers to the transition rate functions and the post time step
+function of the model.  Subsequently, the simulation solver is called
+to run one trajectory using the model specific data, the transition
+rate functions, and the post time step function.  If the
+\code{C\_code} slot is non-empty, the \proglang{C} code is written to
+a temporary file when the \code{run} method is called.  The temporary
+file is compiled using \code{'R CMD SHLIB'} and the resulting DLL is
+dynamically loaded.  The DLL is unloaded and the temporary files are
+removed after running the model.  This is further described in
+\S\ref{sec:extend}.
+
+The solver simulates the trajectory in parallel if \proglang{OpenMP}
+is available.  The default is to use all available threads.  However,
+the user can specify the number of threads to use.  The solver divides
+data for the $\Nnodes$ nodes and the $E_1$ events over the number
+threads.  All $E_1$ events that affect node $i$ is processed in the
+same thread as node $i$ is simulated in.  The $E_2$ events are
+processed in the main thread.
+
+The solver runs the continuous-time Markov chain for each node $i$.
+For every time step $\tau_i$, the count in the compartments at node
+$i$ is updated according to the state transition that occurred
+(\S\ref{sec:model}).  The time to the next event is computed, after
+recalculating affected transition rate functions (\S\ref{sec:model}).
+When simulated time reaches the next day in node $i$ the $E_1$ events
+are processed for that node (\S\ref{sec:events}).  The $E_2$ events
+are processed when all nodes reaches the next day
+(\S\ref{sec:events}).  Thereafter, the post time step function is
+called to allow the model to incorporate model specific actions.  When
+simulated time passes the next time in \code{tspan}, the count of the
+compartments and the continuous state variables are written to
+\code{U} and \code{V}.
+
+%**************************************************************************
+
+\section[Model construction and data analysis: basic examples]{Model construction and data analysis: basic examples}
+\label{sec:examples}
+
+\subsection[A first example: The SIR model]{A first example: The \code{SIR} model}
+\label{sec:example-SIR}
+
+This section illustrates the specification of the predefined
+\code{SIR} model, which contains the three compartments susceptible
+(\code{S}), infected (\code{I}) and recovered (\code{R}), where $\{S,
+I, R\}$ represents the number of individuals in each of the three
+compartments, respectively.  The transmission route of infection to
+susceptible individuals is through direct contact between susceptible
+and infected individuals.  The \code{SIR} model has two state
+transitions in each node $i$,
+\begin{align}
+\label{eq:SIR}
+\begin{array}{rcl}
+  S_i & \xrightarrow{\beta S_i I_i / (S_i+I_i+R_i)} & I_i, \\
+  I_i &\xrightarrow{\gamma I_i} & R_i,
+  \end{array}
+\end{align}
+where $\beta$ is the transmission rate and $\gamma$ is the recovery
+rate.  The state change matrix \code{S} and the dependency graph
+\code{G} for the \code{SIR} model are defined as follows
+
+\begin{figure}[t]
+  \begin{center}
+    \includegraphics[width=1.0\linewidth]{img/SIR.pdf}
+  \end{center}
+  \caption{Schematic representation of the \code{SIR} compartment
+    model in two nodes.  The \code{SIR} model is defined by the three
+    disease states susceptible (S), infected (I), and recovered (R).
+    \textit{i)} State transitions between the $S$, $I$, and $R$
+    compartments are modeled as a continuous-time discrete-state
+    Markov process.  The other state transitions are due to scheduled
+    events: \textit{ii)} \textit{enter} events, \textit{iii)}
+    \textit{exit} events, and \textit{iv)} \textit{external transfer}
+    events.  \label{fig:SIR-model}}
+\end{figure}
+
+{\small
+\[
+\mathbf{S} =
+\begin{blockarray}{crr}
+  & 1 & 2 \\
+  \begin{block}{c(rr)}
+    S & -1 &  0 \\
+    I &  1 & -1 \\
+    R &  0 &  1 \\
+  \end{block}
+\end{blockarray} \qquad
+\mathbf{G} =
+\begin{blockarray}{ccc}
+  & 1 & 2 \\
+  \begin{block}{c(rr)}
+    S \rightarrow I & 1 & 1 \\
+    I \rightarrow R & 1 & 1 \\
+  \end{block}
+\end{blockarray}
+\]
+}
+
+The first step in creating an \code{SIR} model object is to define
+\code{u0}, a \code{data.frame} with the initial condition, i.e., the
+number individuals in each compartment when the simulation starts.  We
+will start in a node with 100 individuals of which 1 is infected.
+
+<<SIR-u0>>=
+u0 <- data.frame(S = 99, I = 1, R = 0)
+@
+
+Next, we define the time period over which we want to simulate the
+disease spread.  This is a vector of integers in units of time or a
+vector of dates.  You specify those time points in the vector that you
+wish the model to return results for.  The model itself does not run
+in discrete time steps, but continuous time, so this vector affects
+only the start and end points of the simulation and the results that
+you receive from the model, not the internal calculations of disease
+transitions through time.  In this example we simulate for 6 months
+returning results every $7^{th}$ day
+
+<<SIR-tspan>>=
+tspan <- seq(1, 6 * 30, by = 7)
+@
+
+Before we can simulate from the model, we need to specify the
+transmission rate, $\beta$, and the recovery rate, $\gamma$.
+
+<<SIR-model>>=
+model <- SIR(u0 = u0, tspan = tspan, beta = 0.16, gamma = 0.077)
+@
+
+We are now ready to run the model with these parameters and simulate
+data.  We use the \code{threads} and \code{seed} arguments for
+reproducibility.
+
+<<SIR-run>>=
+result <- run(model, threads = 1, seed = 22)
+@
+
+The \code{result} object contains the number of individuals in each
+compartment at the time points specified in \code{tspan} and can be
+extracted using the \code{U} method.  The row names indicate the
+compartments in the model and the colnames are the time points in
+\code{tspan}.  Please note that the \code{U} matrix is truncated here
+for readability.
+
+<<SIR-U>>=
+U(result)[, 1:10]
+@
+
+The package \pkg{SimInf} has a \code{plot} method for objects of class
+\code{SimInf_model}, such as the object \code{result}, which we can
+use to display the outcome of the disease simulation in the single
+node (Figure~\ref{fig:SIR-proportion}).
+
+<<eval=FALSE>>=
+plot(result)
+@
+
+\begin{figure}
+  \begin{center}
+<<SIR-plot-proportion, echo=FALSE,fig=TRUE>>=
+plot(result)
+@
+  \end{center}
+  \caption{Example of simulated data from one realization of the
+    \code{SIR} model (Eq.~\eqref{eq:SIR}) in one node, starting with
+    99 susceptible, 1 infected, and 0 recovered
+    individuals. \label{fig:SIR-proportion}}
+\end{figure}
+
+In order to run a simulation with multiple nodes we need to just add
+those nodes to the initial \code{u0} \code{data.frame} that we
+generate to start the model. If you were doing your own modeling of
+many nodes, you would have a \code{data.frame} of your node population
+that you read from, for example, a spreadsheet.  For now we will just
+add another nodes to the \code{data.frame} here in \proglang{R}.
+
+<<SIR-multiple-nodes>>=
+u0 <- data.frame(S = c(99, 90), I = c( 1,  2), R = c( 0,  0))
+model <- SIR(u0 = u0, tspan = tspan, beta = 0.16, gamma = 0.077)
+result <- run(model, threads = 1, seed = 22)
+@
+
+If we inspect the \code{U} matrix, it now includes results from two
+nodes above one another for each time point in the \code{tspan}
+vector.  Please note that the \code{U} matrix is truncated here for
+readability.
+
+<<SIR-U-multiple-nodes>>=
+U(result)[, 1:10]
+@
+
+Thanks to the high performance of the simulator, we can easily expand
+the model to include several hundreds or thousands of nodes, and still
+run the simulations efficiently.  We will illustrate this by exploring
+the dynamics when perturbing the model parameters of the population-
+and between-node prevalence in 500 nodes after 75 days.  This can be
+achieved using the \code{run\_outer} method.  It takes a
+\code{SimInf\_model}, a \code{formula} specifying the model
+\code{gdata} parameters to perturb, \code{x} and \code{y} arrays with
+values of how much to perturb the parameters, and a callback function
+\code{FUN}.  The model \code{gdata} parameters on the right-hand-side
+of the formula are scaled with \code{y}.  Similarly, the \code{gdata}
+parameters on the left-hand-side of the formula are scaled with
+\code{x}.  For each combination of \code{x} and \code{y}, the model
+parameters are scaled and the function \code{FUN} called with the
+perturbed model.
+
+<<SIR-run-outer>>=
+u0 <- data.frame(S = rep(99, 500), I = rep(1, 500), R = rep(0, 500))
+model <- SIR(u0, 1:75, beta = 0.16, gamma = 0.077)
+x <- seq(from = 0.2, to = 1.8, by = 0.05)
+y <- seq(from = 0.2, to = 1.1, by = 0.05)
+pop <- run_outer(x, y, model, gamma ~ beta,
+function(model) {prevalence(run(model), "pop")[75]})
+bnp <- run_outer(x, y, model, gamma ~ beta,
+function(model) {prevalence(run(model), "bnp")[75]})
+@
+
+This illustrates that the between-node prevalence increases for
+increasing values of the transmission rate $\beta$, but decreases for
+increasing values of the recovery rate $\gamma$
+(Figure~\ref{fig:SIR-run-outer}).  As can be seen in the figure, the
+relationship is more complex for the population prevalence.
+
+\begin{figure}
+  \begin{center}
+<<SIR-run-outer-plot, fig=TRUE, echo=FALSE>>=
+opar <- par(mfrow = c(1, 2), oma = c(1, 1, 3, 0), mar = c(4, 3, 1, 1))
+contour(x * model@gdata["beta"], y * model@gdata["gamma"],
+        pop, method = "edge", bty = "l")
+title("Population prevalence")
+mtext(expression(beta), side = 1, line = 3)
+mtext(expression(gamma), side = 2, line = 2)
+contour(x * model@gdata["beta"], y * model@gdata["gamma"],
+bnp, method = "edge", bty = "l")
+title("Between-node prevalence")
+mtext(expression(beta), side = 1, line = 3)
+mtext(expression(gamma), side = 2, line = 2)
+par(opar)
+@
+  \end{center}
+  \caption{Contour plot of the population- and between-node prevalence
+    after simulating 75 days of an \code{SIR} model in 500 nodes,
+    starting with 99 susceptible, 1 infected, and 0 recovered
+    individuals in each node at the first
+    day. \label{fig:SIR-run-outer}}
+\end{figure}
+
+\subsubsection[Specification of scheduled events in the SIR model]{Specification of scheduled events in the \code{SIR} model}
+
+In this example, we will continue to work with the predefined
+\code{SIR} model to explore a within node disease spread similar to
+the first SIR example but with the additional feature that individuals
+enter and exit the simulation and that the disease can spread between
+nodes via movements of infected individuals between nodes.
+
+We will start with the inclusion of a set of individuals that are
+moved between nodes in the network (\textit{external transfer}
+events). These events are predefined prior to the simulation and are
+applied during the simulation process. For example, if your simulation
+time is in days, then after each day, \pkg{SimInf} will apply the
+events in the data and move individuals between nodes.  In the
+following example we have five nodes with movements between nodes. To
+illustrate the movements themselves, we have only started with 30
+individuals in the first node and the other four are empty, and we
+will run the simulation for five time steps:
+
+<<SIR-u0-multiple-nodes>>=
+u0 <- data.frame(S = c(10, 0, 0, 0, 0), I = c(10, 0, 0, 0, 0),
+R = c(10, 0, 0, 0, 0))
+@
+
+Now we will define 6 scheduled events to include in the simulation.
+Below is a \code{data.frame}, that contains the events.  Interpret it
+as follows:
+
+\begin{enumerate}
+\item In time step 2 we add 2 susceptible individuals to node 2
+\item In time step 3 we move 2 individuals from node 1 to node 3
+\item In time step 4 we remove 1 individual from node 2
+\item In time step 4 we move 1 individual from node 1 to node 3
+\item In time step 4 we move 1 individual from node 1 to node 4
+\item In time step 5 we move 2 individuals from node 1 to node 5
+\end{enumerate}
+
+<<SIR-events, echo=FALSE>>=
+events <- structure(list(
+    event      = c(1, 3, 0, 3, 3, 3),
+    time       = c(2, 3, 4, 4, 4, 5),
+    node       = c(2, 1, 2, 1, 1, 1),
+    dest       = c(0, 3, 0, 3, 4, 5),
+    n          = c(2, 1, 1, 1, 1, 2),
+    proportion = c(0, 0, 0, 0, 0, 0),
+    select     = c(1, 2, 2, 2, 2, 2),
+    shift      = c(0, 0, 0, 0, 0, 0)),
+    .Names = c("event", "time", "node", "dest", "n",
+               "proportion", "select", "shift"),
+    row.names = c(NA, -6L), class = "data.frame")
+@
+
+<<SIR-events-show>>=
+events
+@
+
+Now we are ready to run the simulation using the events and the
+disease spread model as we did in earlier examples:
+
+<<U-model-events>>=
+model <- SIR(u0, 1:5, events = events, beta = 0.16, gamma = 0.077)
+U(run(model, threads = 1, seed = 22))
+@
+
+If you inspect the result of this very simple simulation, you will see
+that 2 individuals were added to node 2, of which one individual was
+later removed, and that some individuals were removed from node 1 and
+placed in nodes 3, 4, and 5.  So far this is not really
+earth-shattering, but if we do this again with a few more individuals
+then we can see how disease can spread from an infected node to a
+non-infected one. We will start with 5 nodes again, but node 1 is
+infected and nodes 2--5 now each have 100 susceptible and the
+simulation will run for 75 days:
+
+<<SIR-u0-multiple-nodes-II>>=
+u0 <- data.frame(S = c(90, 100, 100, 100, 100), I = c(10, 0, 0, 0, 0),
+R = c(0, 0, 0, 0, 0))
+@
+
+And then we have a few movements of individuals from node 1 to the others:
+
+<<SIR-events-II, echo=FALSE>>=
+events <- structure(list(
+    event      = c(3, 3, 3, 3),
+    time       = c(3, 25, 5, 10),
+    node       = c(1, 1, 1, 1),
+    dest       = c(3, 2, 3, 3),
+    n          = c(1, 9, 1, 5),
+    proportion = c(0, 0, 0, 0),
+    select     = c(2, 2, 2, 2),
+    shift      = c(0, 0, 0, 0)),
+                    .Names = c("event", "time", "node", "dest",
+                        "n", "proportion", "select", "shift"),
+    row.names = c(NA, -4L), class = "data.frame")
+@
+
+<<SIR-events-II-show>>=
+events
+@
+
+Initialize and run the model
+
+<<SIR-events-II-run>>=
+model <- SIR(u0, 1:75, events = events, beta = 0.16, gamma = 0.077)
+result <- run(model, threads = 1, seed = 5)
+@
+
+Figure~\ref{fig:SIR-spaghetti} shows the result from running the
+model.  Note the time that it takes for node 2 to become positive
+relative to the movements.  On day 25, 10 individuals are moved to the
+node causing the outbreak.  Also despite the fact that we moved
+individuals from node 1 to node 3, there was no outbreak in node 3.
+This is because of the random selection process that select
+susceptible, infected or recovered individuals to move between the
+nodes.
+
+<<SIR-spaghetti, eval=FALSE>>=
+plot(result, N = TRUE, spaghetti = TRUE, compartments = "I")
+@
+
+\begin{figure}
+  \begin{center}
+<<SIR-spaghetti-plot, echo=FALSE, fig=TRUE>>=
+plot(result, N = TRUE, spaghetti = TRUE, compartments = "I")
+@
+  \end{center}
+  \caption{The number of infected individuals in each node when
+    simulating 75 days of an \code{SIR} model in 5 nodes, starting
+    with 90 susceptible and 10 infected individuals in node 1 and 100
+    susceptible individuals in nodes 2--5, and moving individuals from
+    node 1 to nodes 2 and 3. \label{fig:SIR-spaghetti}}
+\end{figure}
+
+\subsubsection[C code for the SIR model]{\proglang{C} code for the \code{SIR} model}
+
+The \proglang{C} code for the \code{SIR} model is defined in the
+source file \texttt{'src/models/SIR.c'}.  This file contains the
+\code{SIR_run} function to initialize the core solver
+(Listing~\ref{lst:SIRrun} in the appendix), the transition rate
+functions (Listing~\ref{lst:trSIR} in the appendix) and the post time
+step function (Listing~\ref{lst:ptsSIR} in the appendix).
+
+\subsection[A second example: The SISe3_sp model]{A second example: The \code{SISe3\_sp} model}
+\label{sec:example-SISe3_sp}
+
+This section illustrates the specification of the \code{SISe3\_sp}
+model, which is also predefined in the \pkg{SimInf} package.  Two
+additional features, compared to the \code{SIR} model, are used by the
+\code{SISe3\_sp} model: ageing of individuals by \textit{internal
+  transfer} events, and usage of the real valued continuous state $V$.
+The \code{SISe3\_sp} model contains the two compartments susceptible
+(\code{S}) and infected (\code{I}) divided into the three age
+categories $j = \{1, 2, 3\}$ and the local environmental compartment
+(\code{e}) contaminated with free living pathogens
+(Figure~\ref{fig:SISe3_sp}).  Moreover, nodes are connected spatially
+with local spread of the contaminated environmental compartment among
+proximal nodes.  The transmission route of infection to susceptible
+individuals is indirect via the local environment, contaminated by
+infected individuals.  The number of individuals in each of the six
+compartments $\{S_1, I_1, S_2, I_2, S_3, I_3\}$ in node $i$ at time
+$t$ is \mbox{\code{u[, i]}}.  The \code{SISe3\_sp} model has two state
+transitions within each of the three age categories,
+\begin{align}
+\label{eq:vtectrans}
+\begin{array}{rcl}
+  S_{ij} & \xrightarrow{\upsilon_j \varphi_i} & I_{ij}, \\
+  I_{ij} & \xrightarrow{\gamma_j} & S_{ij},
+  \end{array}
+\end{align}
+
+where the state transition from susceptible to infected depends on the
+concentration of the environmental contamination $\varphi_i(t)$ of the
+pathogen in node $i$ and the indirect transmission rate $\upsilon_j$.
+The state transition from infected to susceptible depends on the
+recovery rate $\gamma_j$.  Finally, the environmental infectious
+pressure is evolved by
+\begin{equation}
+  \label{eq:envInfPressure-local-spread}
+  \frac{d \varphi_i(t)}{dt}= \frac{\alpha I_i(t)}{N_i(t)} +
+  \sum_k{\frac{\varphi_k(t) N_k(t) - \varphi_i(t) N_i(t)}{N_i(t)}
+    \cdot \frac{D}{d_{ik}}} - \beta(t) \varphi_i(t),
+\end{equation}
+
+where the constant $\alpha$ is the average shedding rate of the
+pathogen to the environment per infected individual, and $N_i = S_i +
+I_i$ the size of node $i$.  The decay and removal of the pathogen is
+captured by $\beta$, which is allowed to vary with time.  A spatial
+component with local spread among proximal nodes is also included in
+the model, where $D$ is the rate of the local spread and $d_{ik}$ the
+distance between the two holdings $i$ and $k$.  When running a
+trajectory of the \code{SISe3\_sp} model, the environmental infectious
+pressure $\varphi_i(t)$ in each node is evolved in the post-time-step
+function by the Euler forward method. The value of $\varphi_i(t)$ is
+saved to the \code{V} matrix at the time-points specified by
+\code{tspan}.
+
+\begin{figure}
+  \begin{center}
+    \includegraphics[width=0.70\linewidth]{img/SISe3_sp.pdf}
+  \end{center}
+  \caption{Schematic representation of the \code{SISe3\_sp}
+    compartment model in two nodes.  The \code{SISe3\_sp} model is
+    defined by the two disease states susceptible (S) and infected (I)
+    in three age categories and indirect transmission via an
+    environmental infectious pressure $\varphi_i$.  \textit{i)} State
+    transitions between the $S$ and $I$ compartments are modeled as a
+    continuous-time discrete-state Markov process.  The other state
+    transitions are due to scheduled events: \textit{ii)}
+    \textit{enter} events, \textit{iii)} \textit{internal transfer}
+    events, \textit{iv)} \textit{external transfer} events, and
+    \textit{v)} \textit{exit} events.  The environmental infectious
+    pressure $\varphi_i$ is modeled with an ordinary differential
+    equation and by default evolved by the Euler forward
+    method.  \label{fig:SISe3_sp}}
+\end{figure}
+
+\subsubsection[Illustration of the stochastic step in the SISe3_sp model]{Illustration of the stochastic step in the \code{SISe3\_sp} model}
+
+To illustrate the stochastic step in Eq.~\eqref{eq:numstep3}, consider
+that the number of individuals in each compartment in node $i$
+\code{u[, i]} at time $t$ is $\{12, 3, 63, 14, 92, 2\}$ and that the
+time to the next state transition is $\tau_i$.  Furthermore, assume
+that the next state transition is infected to susceptible in the first
+age category which corresponds to the second column in the state
+change matrix \code{S}.  Thus, updating the compartments corresponds
+to adding \code{S[, 2]} to \code{u[, i]}, which gives $\{13, 2, 63,
+14, 92, 2\}$.  This also implies that the transition rates for the two
+transitions $S_{i,1} \rightarrow I_{i,1}$ and $I_{i,1} \rightarrow
+S_{i,1}$ must be recalculated according to \code{G[, 2]}.
+
+{\small
+\[
+\mathbf{S} =
+\begin{blockarray}{crrrrrr}
+  & 1 & 2 & 3 & 4 & 5 & 6 \\
+  \begin{block}{c(rrrrrr)}
+    S_1 & -1 &  1 &  0 &  0 &  0 &  0 \\
+    I_1 &  1 & -1 &  0 &  0 &  0 &  0 \\
+    S_2 &  0 &  0 & -1 &  1 &  0 &  0 \\
+    I_2 &  0 &  0 &  1 & -1 &  0 &  0 \\
+    S_3 &  0 &  0 &  0 &  0 & -1 &  1 \\
+    I_3 &  0 &  0 &  0 &  0 &  1 & -1 \\
+  \end{block}
+\end{blockarray} \qquad
+\mathbf{G} =
+\begin{blockarray}{ccccccc}
+  & 1 & 2 & 3 & 4 & 5 & 6 \\
+  \begin{block}{c(rrrrrr)}
+    S_1 \rightarrow I_1 & 1 & 1 & 0 & 0 & 0 & 0 \\
+    I_1 \rightarrow S_1 & 1 & 1 & 0 & 0 & 0 & 0 \\
+    S_2 \rightarrow I_2 & 0 & 0 & 1 & 1 & 0 & 0 \\
+    I_2 \rightarrow S_2 & 0 & 0 & 1 & 1 & 0 & 0 \\
+    S_3 \rightarrow I_3 & 0 & 0 & 0 & 0 & 1 & 1 \\
+    I_3 \rightarrow S_3 & 0 & 0 & 0 & 0 & 1 & 1 \\
+  \end{block}
+\end{blockarray}
+\]
+}
+
+\subsubsection[Specification of scheduled events in the SISe3_sp model]{Specification of scheduled events in the \code{SISe3\_sp} model}
+
+The \code{SISe3\_sp} model have been specified to handle births,
+imports, ageing, moving and exits of individuals
+(Table~\ref{table:SISe3_sp:events} in the appendix).  When individuals
+enter the model (births, imports), they are added to the susceptible
+state in the age category specified by column 1, 2 or 3 in \code{E}.
+The columns 4, 5 and 6 in \code{E} are used for the other events
+(ageing, moving, exit) to sample individuals from the susceptible and
+infected states from each of the three ages categories.  To move the
+sampled individuals in a \textit{internal transfer} event (ageing)
+from age category 1 to age category 2, the susceptible and infected
+states should shift two steps to the corresponding state in age
+category 2, as specified in \code{N[, 1]}.  Similarly, \code{N[, 2]}
+move susceptible and infected individuals from age category 2 to age
+category 3.
+
+{\small
+\[
+\mathbf{E} =
+\begin{blockarray}{crrrrrr}
+  & 1 & 2 & 3 & 4 & 5 & 6 \\
+  \begin{block}{c(rrrrrr)}
+    S_1 & 1 & 0 & 0 & 1 & 0 & 0 \\
+    I_1 & 0 & 1 & 0 & 1 & 0 & 0 \\
+    S_2 & 0 & 0 & 1 & 0 & 1 & 0 \\
+    I_2 & 0 & 0 & 0 & 0 & 1 & 0 \\
+    S_3 & 0 & 0 & 0 & 0 & 0 & 1 \\
+    I_3 & 0 & 0 & 0 & 0 & 0 & 1 \\
+  \end{block}
+\end{blockarray} \qquad
+\mathbf{N} =
+\begin{blockarray}{ccc}
+  & 1 & 2 \\
+  \begin{block}{c(rr)}
+    S_1 & 2 & 0 \\
+    I_1 & 2 & 0 \\
+    S_2 & 0 & 2 \\
+    I_2 & 0 & 2 \\
+    S_3 & 0 & 0 \\
+    I_3 & 0 & 0 \\
+  \end{block}
+\end{blockarray}
+\]
+}
+
+\subsubsection[Case study using the SISe3_sp model]{Case study using the \code{SISe3\_sp} model}
+
+In this section we will demonstrate how to construct and use the
+\code{SISe3\_sp} model together with synthetic cattle events and
+population data included with the package \pkg{SimInf}.  The data
+defines the initial population divided into three age categories (0
+days $\le$ \textit{age 1} $<$ 120 days, 120 days $\le$ \textit{age 2}
+$<$ 365 days and \textit{age 3} $\ge$ 365 days) in 1600 nodes and
+scheduled events over $4 \times 365$ days.  The two data sets for the
+model are loaded with
+
+<<load-SISe3sp-events>>=
+data("u0_SISe3", package = "SimInf")
+data("events_SISe3", package = "SimInf")
+@
+
+To model local spread of the environmental infectious pressure among
+proximal nodes, we have to generate a distance matrix.  Let us use the
+synthetic data set (\code{nodes}) included in the \pkg{SimInf} package,
+which defines a cattle population consisting of 1600 herds located in a
+50 square kilometer region, and let proximal neighbors be defined as
+neighbors within 2500m.
+
+<<load-nodes>>=
+data("nodes", package = "SimInf")
+d <- distance_matrix(x = nodes$x, y = nodes$y, cutoff = 2500)
+@
+
+Next we define \code{tspan} to simulate for 4 consecutive years
+returning the results every $7^{th}$ day
+
+<<create-SISe3sp-tspan>>=
+tspan <- seq(1, 4 * 365, by = 7)
+@
+
+We are now ready to create an \code{SISe3_sp} object using the
+\code{SISe3_sp} generating method.  The parameters for this example
+have been chosen such that the between-node prevalence for a sample
+trajectory is around 10\% and have a seasonal pattern.  We assume that
+the average duration of infection is 10 days in all age categories,
+such that the recovery rate $\gamma_{1,2,3} = 0.1$ per animal per day,
+and assume that the indirect transmission rate of the environmental
+infectious pressure $\gamma$ is equal in all age categories.
+Moreover, we fix the average shedding rate $\alpha = 1$ and allow the
+decay of the bacteria to vary in four seasonal intervals, $\beta_1,
+..., \beta_4$ over the year. The end point (day of the year) for each
+season \code{beta\_t1}, ..., \code{beta\_t4} is determined by
+\code{end\_t1}, ..., \code{end\_t4}, respectively. We let the local
+environmental infectious pressure $\varphi_i = 0$ at the beginning of
+the simulation and let 10\% of the herds start with 5\% infected
+individuals.
+
+<<create-SISe3sp-u0>>=
+set.seed(123)
+i <- sample(1:1600, 160)
+u0_SISe3$I_1[i] <- as.integer(u0_SISe3$S_1[i] * 0.05)
+u0_SISe3$I_2[i] <- as.integer(u0_SISe3$S_2[i] * 0.05)
+u0_SISe3$I_3[i] <- as.integer(u0_SISe3$S_3[i] * 0.05)
+u0_SISe3$S_1[i] <- u0_SISe3$S_1[i] - u0_SISe3$I_1[i]
+u0_SISe3$S_2[i] <- u0_SISe3$S_2[i] - u0_SISe3$I_2[i]
+u0_SISe3$S_3[i] <- u0_SISe3$S_3[i] - u0_SISe3$I_3[i]
+@
+
+Let us now construct an \code{SISe3\_sp} model object
+
+<<create-SISe3sp>>=
+model <- SISe3_sp(u0 = u0_SISe3, tspan = tspan, phi = rep(0, 1600),
+events = events_SISe3, upsilon_1 = 0.013, upsilon_2 = 0.013, upsilon_3
+= 0.013, gamma_1 = 0.1, gamma_2 = 0.1, gamma_3 = 0.1, alpha = 1,
+beta_t1 = 0.095, beta_t2 = 0.12, beta_t3 = 0.10, beta_t4 = 0.15,
+end_t1 = 91, end_t2 = 182, end_t3 = 273, end_t4 = 365, distance = d,
+coupling = 0.1)
+@
+
+where \code{phi}, \code{beta\_t1}, ..., \code{beta\_t4},
+\code{end\_t1}, ..., \code{end\_t4}, and \code{distance} is local data
+to each node, and passed to the transition rate functions and the
+post-time step function in the \code{ldata} parameter.
+
+The package \pkg{SimInf} has a \code{summary} method for objects of
+class \code{SimInf_model}, such as the object \code{model}, which
+displays the model name, the number of nodes $\Nnodes$, the number of
+compartments $\Ncompartments$, the number of transitions
+$\Ntransitions$, and the total number of scheduled events and
+information regarding each event type.  If the model has not yet been
+run, the size of \code{U} and \code{V} is \code{0 x 0}.
+
+<<SISe3sp-model-summary>>=
+summary(model)
+@
+
+Furthermore, we can display the distribution of the scheduled events
+over time.  Note that the synthetic events have been generated to
+illustrate features of the \pkg{SimInf} package and not to incorporate
+the full complexity of population demographics and a temporal network.
+The synthetic data mimics seasonality in real livestock data
+\cite{Bajardi2011, Dutta2014, Widgren2016}, such that the number of
+scheduled events varies over time, see
+Figure~\ref{fig:scheduled-events-SISe3}.  However, the between-node
+movements (\textit{external transfer}) have been generated from random
+connections, which is probably not realistic for real livestock data.
+
+\begin{figure}
+  \begin{center}
+<<display-SISe3sp-model, fig=TRUE>>=
+plot(events(model))
+@
+  \end{center}
+  \caption{The distribution of the synthetic scheduled events data set
+    \code{events\_SISe3}, that is distributed with the \pkg{SimInf}
+    package.  The \textit{enter} event adds individuals to a node.
+    The \textit{internal transfer} event changes the number of
+    individuals in the compartments within one node.  The
+    \textit{external transfer} event moves individuals from
+    compartments in one node to compartments in a destination node.
+    Finally, the \textit{exit} event removes individuals from a node.}
+  \label{fig:scheduled-events-SISe3}
+\end{figure}
+
+The scheduled events give rise to a seasonal variation of the
+population size in each age category that can be explored using data
+in the \code{U} matrix.  The \code{susceptible} and \code{infected}
+methods take an \code{age} argument that can be used to determine the
+population size by age category. Let us first run a trajectory to
+generate data in \code{U}, and then plot the number of individuals in
+each age category (Figure~\ref{fig:population}).
+
+<<eval=FALSE>>=
+result <- run(model, threads = 1, seed = 1)
+N1 <- colSums(susceptible(result, age = 1) + infected(result, age = 1))
+N2 <- colSums(susceptible(result, age = 2) + infected(result, age = 2))
+N3 <- colSums(susceptible(result, age = 3) + infected(result, age = 3))
+opar <- par(mfrow = c(3, 1), mar = c(2, 5, 1, 1))
+plot(N3 ~ tspan, ylab = "N", type = "l", bty = "l", lty = 1)
+plot(N2 ~ tspan, ylab = "N", type = "l", bty = "l", lty = 2)
+plot(N1 ~ tspan, ylab = "N", type = "l", bty = "l", lty = 3)
+mtext("Day", side = 1, line = 1, at = 750)
+par(opar)
+@
+
+\begin{figure}
+  \begin{center}
+<<population-size, echo=FALSE, fig=TRUE>>=
+result <- run(model, threads = 1, seed = 1)
+N1 <- colSums(susceptible(result, age = 1) + infected(result, age = 1))
+N2 <- colSums(susceptible(result, age = 2) + infected(result, age = 2))
+N3 <- colSums(susceptible(result, age = 3) + infected(result, age = 3))
+opar <- par(mfrow = c(3, 1), mar = c(2, 5, 1, 1))
+plot(N3 ~ tspan, ylab = "N", type = "l", bty = "l", lty = 1)
+plot(N2 ~ tspan, ylab = "N", type = "l", bty = "l", lty = 2)
+plot(N1 ~ tspan, ylab = "N", type = "l", bty = "l", lty = 3)
+mtext("Day", side = 1, line = 1, at = 750)
+par(opar)
+@
+  \end{center}
+  \caption{The population dynamics after running one trajectory over
+    $4 \times 365$ days of the \code{SISe3} model using the scheduled
+    events data contained in the \pkg{SimInf} package.  Top: Plot
+    showing the number of individuals older than 356 days.  Middle:
+    Plot showing the number of individuals between 120 and 365 days.
+    Bottom: Plot showing the number of individuals younger than 120
+    days.  Please note that the y-axis do not start at zero and have
+    different scales.}
+  \label{fig:population}
+\end{figure}
+
+We might now be interested in exploring how various changes to the
+model could influence the spread of infection in the population of
+interconnected nodes.  Let us compare the spatio-temporal distribution
+of disease spread when removing the effect of animal movements and
+local spread.  First, we need to create a utility function to visualize
+the spatio-temporal spread at evenly spaced time-points.
+
+<<echo=false, results=hide>>=
+options(continue = "+  ")
+@
+
+<<plot-infected-nodes>>=
+plot_nodes <- function(x) {
+  wnp <- prevalence(x, type = "wnp") > 0
+  opar <- par(mfrow = c(3, 6), mar = c(2, 0.3, 0.3, 0.3))
+  on.exit(opar)
+  for(i in seq(1, dim(wnp)[2], length.out = 18)) {
+    Si <- which(!wnp[, i])
+    Ii <- which(wnp[, i])
+    plot(nodes$x[Si], nodes$y[Si], col = "yellow", pch = 20, xlab = "",
+      ylab = "", xaxt = "n", yaxt = "n", ann = FALSE)
+    day <- 7 * as.integer(i - 1) + 1
+    mtext(sprintf("Day: %i", day), side = 1, line = 0.5)
+    points(nodes$x[Ii], nodes$y[Ii], col = "blue", pch = 20)
+  }
+}
+@
+
+<<echo=false, results=hide>>=
+options(continue = "+    ")
+@
+
+To remove local spread, we have only to set the \code{coupling}
+parameter to zero and run the model
+(Figure~\ref{fig:SISe3sp-movements}).
+
+<<eval=FALSE>>=
+model@gdata["coupling"] <- 0
+plot_nodes(run(model, threads = 1, seed = 1))
+@
+
+\begin{figure}
+  \captionsetup[subfigure]{justification=centering}
+  \begin{center}
+    \begin{subfigure}[b]{1.0\textwidth}
+      \begin{center}
+<<plot-SISe3sp-I, echo=FALSE, results=hide>>=
+png("SimInf-plot-SISe3sp-I.png", height = 480, width = 960)
+plot_nodes(run(model, threads = 1, seed = 1))
+dev.off()
+@
+        \includegraphics{SimInf-plot-SISe3sp-I.png}
+        \caption{Between-node disease-spread by both movements of\\
+          infected individuals and local spread among proximal nodes.}
+        \label{fig:SISe3sp-movements-and-local-spred}
+      \end{center}
+    \end{subfigure}
+    \begin{subfigure}[b]{1.0\textwidth}
+      \begin{center}
+<<plot-SISe3sp-II, echo=FALSE, results=hide>>=
+model@gdata["coupling"] <- 0
+png("SimInf-plot-SISe3sp-II.png", height = 480, width = 960)
+plot_nodes(run(model, threads = 1, seed = 1))
+dev.off()
+@
+        \includegraphics{SimInf-plot-SISe3sp-II.png}
+        \caption{Between-node disease-spread by movements of infected
+          individuals.}
+        \label{fig:SISe3sp-movements}
+      \end{center}
+    \end{subfigure}
+    \begin{subfigure}[b]{1.0\textwidth}
+      \begin{center}
+<<plot-SISe3sp-III, echo=FALSE, results=hide>>=
+model@gdata["coupling"] <- 0.1
+model@events@N <- cbind(model@events@N,
+"3" = c(0L, -1L, 0L, -1L, 0L, -1L))
+i <- which(model@events@event == 3)
+model@events@shift[i] <- 3L
+png("SimInf-plot-SISe3sp-III.png", height = 480, width = 960)
+plot_nodes(run(model, threads = 1, seed = 1))
+dev.off()
+@
+        \includegraphics{SimInf-plot-SISe3sp-III.png}
+        \caption{Between-node disease-spread by local spread among
+          proximal nodes.}
+        \label{fig:SISe3sp-local-spread}
+      \end{center}
+    \end{subfigure}
+    \caption{The distribution of infected nodes (among 1600 nodes
+      within a 50 square kilometer region) at evenly spaced time
+      points from one realization of the \code{SISe3\_sp} model over
+      $4 \times 365$ days using synthetic data included in the
+      \pkg{SimInf} package.}
+    \label{fig:SISe3sp-spread-in-population}
+  \end{center}
+\end{figure}
+
+We would also like to explore the effect on the disease-spread when
+considering local spread only.  However, removing all the
+\textit{external transfer} events could potentially set a node in a
+state where the other event types cannot be handled due to too few
+animals in the node.  Another approach to solve this is to shift all
+infected animals to the susceptible state during an \textit{external
+  transfer} event so that infection is not transferred, even though an
+animal is moved.  This can be achieved in \pkg{SimInf} by adding one
+column to the shift matrix \code{N} and use that column for the
+\textit{external transfer} events.
+Figure~\ref{fig:SISe3sp-local-spread} shows the result from running
+one trajectory with the modified model.
+
+<<eval=FALSE>>=
+model@gdata["coupling"] <- 0.1
+model@events@N <- cbind(model@events@N,
+"3" = c(0L, -1L, 0L, -1L, 0L, -1L))
+i <- which(model@events@event == 3)
+model@events@shift[i] <- 3L
+plot_nodes(run(model, threads = 1, seed = 1))
+@
+
+In this example, removing either local spread or animal movements was
+not sufficient to eradicate the disease
+(Figure~\ref{fig:SISe3sp-spread-in-population}).
+
+%**************************************************************************
+
+\section[Extending SimInf: New models]{Extending \pkg{SimInf}: New models}
+\label{sec:extend}
+
+One of the design goals of \pkg{SimInf} was to make it extendable.
+The current design supports two ways to extend \pkg{SimInf} with new
+models, and this section describes the relevant steps to implement a
+new model.  Since extending \pkg{SimInf} requires that \proglang{C}
+code can be compiled, you will first need to install a compiler.  To
+read more about interfacing compiled code from \proglang{R} and
+creating \proglang{R} add-on packages, the \texttt{'Writing R
+  extensions'}
+(\url{https://cran.r-project.org/doc/manuals/r-release/R-exts.html})
+manual is the official guide and describes the process in detail.
+Another useful resource is the \texttt{'R packages'} book by
+\cite{Hadley2015} (\url{http://r-pkgs.had.co.nz/}).
+
+\subsection{Using the model parser to define a new model}
+\label{sec:mparse}
+
+The easiest way to define a new model for \pkg{SimInf} is to use the
+model parser method \code{mparse}.  It takes a character vector of
+transitions in the form of \code{"X -> propensity -> Y"} and generates
+both \proglang{C} code for the model and the two matrices \code{S} and
+\code{G}.  The left hand side of the first '\code{->}'-sign is the
+initial state, the right hand side of the last '\code{->}'-sign is the
+final state, and the propensity is written between the
+'\code{->}'-signs.  The special symbol '\code{@}' is reserved for the
+empty set $\emptyset$.  We suggest to first draw a schematic
+representation of the model that includes all compartments and arrows
+for all state transitions.  Then list the compartments in the order
+they should appear in the \code{U} matrix.  For example,
+\code{transitions <- c("S -> b*S*I/(S+I+R) -> I", "I -> g*I -> R")}
+expresses an SIR model in a closed population, where \code{b} is the
+transmission rate, and \code{g} is the recovery rate.  We also need to
+specify the compartments that defines the model.
+
+<<SIR-mparse-I>>=
+transitions <- c("S -> b*S*I/(S+I+R) -> I", "I -> g*I -> R")
+compartments <- c("S", "I", "R")
+@
+
+We can now use the \code{transitions} and \code{compartments}
+variables, together with constants \code{b} and \code{g} to build an
+object of class \code{'SimInf\_mparse'} via a call to \code{mparse}.
+Before we can simulate from the model, it needs to be initialized with
+the initial condition \code{u0} and \code{tspan}.
+
+<<SIR-mparse-II>>=
+m <- mparse(transitions, compartments, b = 0.16, g = 0.077)
+model <- init(m, u0 = cbind(S = 99, I = 1, R = 0), tspan = 1:180)
+@
+
+As in earlier examples, the \code{model} object can now be used to
+simulate data and plot the results.  Internally, the \proglang{C} code
+that was generated by \code{mparse} is written to a temporary file
+when the \code{run} method is called.  If the temporary file is
+compiled successfully, the resulting DLL is dynamically loaded and
+used to run one trajectory of the model.  Once the simulator
+completes, the DLL is unloaded and the temporary files are removed.
+
+<<SIR-mparse-III, eval=FALSE>>=
+result <- run(model, threads = 1, seed = 22)
+plot(result)
+@
+
+\begin{figure}
+  \begin{center}
+<<SIR-mparse-IV, echo=FALSE, fig=TRUE>>=
+result <- run(model, threads = 1, seed = 22)
+plot(result)
+@
+  \caption{Example of simulated data from one realization of the
+    \code{mparse} \code{SIR} model (Eq.~\eqref{eq:SIR}) in one node,
+    starting with 99 susceptible, 1 infected, and 0 recovered
+    individuals. \label{fig:SIR-mparse-proportion}}
+  \end{center}
+\end{figure}
+
+The flexibility of the \code{mparse} approach allows for quick
+prototyping of new models or features.  Let us elaborate on the
+previous example and explore the incidence cases per day.  This can
+easily be done by adding one compartment \code{'Icum'} whose sole
+purpose is to keep track of how many individuals who become infected
+over time.  We then calculate successive differences at each
+time-point in \code{'Icum'} and plot the result as an epidemic curve
+(Figure~\ref{fig:SIR-mparse-incidence}).
+
+<<SIR-mparse-incidence, eval=FALSE>>=
+m <- mparse(c("S -> b*S*I/(S+I+R) -> I + Icum", "I -> g*I -> R"),
+c("S", "I", "Icum", "R"), b = 0.16, g = 0.077)
+model <- init(m, cbind(S = 99, I = 1, Icum = 0, R = 0), 1:180)
+result <- run(model, threads = 1, seed = 22)
+plot(stepfun(result@tspan[-1], diff(c(0, U(result)["Icum",]))),
+main = "", xlab = "Time", ylab = "Number of cases",
+do.points = FALSE)
+@
+
+\begin{figure}
+  \begin{center}
+<<SIR-mparse-incidence-plot, echo=FALSE, fig=TRUE>>=
+m <- mparse(c("S -> b*S*I/(S+I+R) -> I + Icum", "I -> g*I -> R"),
+c("S", "I", "Icum", "R"), b = 0.16, g = 0.077)
+model <- init(m, cbind(S = 99, I = 1, Icum = 0, R = 0), 1:180)
+result <- run(model, threads = 1, seed = 22)
+plot(stepfun(result@tspan[-1], diff(c(0, U(result)["Icum",]))),
+main = "", xlab = "Time", ylab = "Number of cases",
+do.points = FALSE)
+@
+  \end{center}
+  \caption{One realization of an epidemic curve displaying the number
+    of incident cases per day in a node when simulating 180 days of
+    the \code{mparse} \code{SIR} model (Eq.~\eqref{eq:SIR}), starting
+    with 99 susceptible, 1 infected and 0 recovered
+    individuals.  \label{fig:SIR-mparse-incidence}}
+\end{figure}
+
+Although \pkg{SimInf} was designed to study disease spread over
+temporal networks, it is not limited to that use case but can also be
+used to study the dynamics of other systems.  In a final \code{mparse}
+example we will illustrate the Rosenzweig-MacArthur predator-prey
+model demonstrated in the \pkg{GillespieSSA} package
+\citep{Rosenzweig1963, Pineda-Krch2008}.  The model has a
+density-dependent growth in the prey and and a nonlinear Type-2
+functional response in the predator \citep{Rosenzweig1963}.  Let $R$
+and $F$ denote the number of prey and predators, respectively.  The
+model consists of five transitions (Eq.~\eqref{eq:predator-prey}):
+\textit{i)} prey birth, \textit{ii)} prey death due to non-predatory
+events, \textit{iii)} prey death due to predation, \textit{iv)}
+predator birth, and \textit{v)} predator death
+
+\begin{align}
+  \label{eq:predator-prey}
+  \left.
+     \begin{array}{rcl}
+      \emptyset & \xrightarrow{b_R \cdot R} & R \\
+      R & \xrightarrow{(d_R+(b_R-d_R) \cdot R/K) \cdot R} & \emptyset \\
+      R & \xrightarrow{\alpha/(1+w \cdot R) \cdot R \cdot F} & \emptyset \\
+      \emptyset & \xrightarrow{b_F \cdot \alpha/(1+w \cdot R) \cdot R \cdot F} & F \\
+      F & \xrightarrow{d_F \cdot F} & \emptyset \\
+    \end{array}
+  \right\},
+\end{align}
+
+where $b_R$, $d_R$, $b_F$, and $d_F$ are the per capita birth and
+death rate of the prey and predator, respectively.  Furthermore, $K$
+is the carrying capacity of the prey, $\alpha$ is the predation
+efficiency, and $w$ is the degree of predator saturation
+\citep{Pineda-Krch2008}.  Using parameter values from
+\cite{Pineda-Krch2008}, we define the model as
+
+<<mparse-predator-prey, eval=FALSE>>=
+m <- mparse(transitions = c("@ -> bR*R -> R",
+"R -> (dR+(bR-dR)*R/K)*R -> @", "R -> alpha/(1+w*R)*R*F -> @",
+"@ -> bF*alpha/(1+w*R)*R*F -> F", "F -> dF*F -> @"),
+compartments = c("R", "F"), bR = 2, bF = 2, dR = 1, K = 1000,
+alpha = 0.007, w = 0.0035, dF = 2)
+model <- init(m, cbind(R = 1000, F = 100), 1:100)
+result <- run(model, threads = 1, seed = 1)
+plot(result, N = TRUE)
+@
+
+\begin{figure}
+  \begin{center}
+<<mparse-predator-prey-plot, echo=FALSE, fig=TRUE>>=
+m <- mparse(transitions = c("@ -> bR*R -> R",
+"R -> (dR+(bR-dR)*R/K)*R -> @", "R -> alpha/(1+w*R)*R*F -> @",
+"@ -> bF*alpha/(1+w*R)*R*F -> F", "F -> dF*F -> @"),
+compartments = c("R", "F"), bR = 2, bF = 2, dR = 1, K = 1000,
+alpha = 0.007, w = 0.0035, dF = 2)
+model <- init(m, cbind(R = 1000, F = 100), 1:100)
+result <- run(model, threads = 1, seed = 1)
+plot(result, N = TRUE)
+@
+  \end{center}
+  \caption{One realization of the \code{mparse} Rosenzweig-MacArthur
+    predator-prey model.  In this trajectory, the predator (\code{F})
+    go extinct after about 25 time steps while the prey (\code{R})
+    then fluctuates around a plateu of 1000
+    individuals.  \label{fig:mparse-predator-prey}}
+\end{figure}
+
+%**************************************************************************
+
+\subsection[Use the SimInf solver from another package]{Use the \pkg{SimInf} solver from another package}
+\label{sec:linking-to}
+
+Another possibility is to extend \pkg{SimInf} by creating an
+\proglang{R} add-on package that uses \pkg{SimInf} by linking to its
+core solver native routine, and this section describes the relevant
+steps to achieve this.  Consider we wish to create a new add-on
+package \pkg{PredatorPrey} based on the Rosenzweig-MacArthur
+predator-prey model from the previous section.  To facilitate this,
+the \pkg{SimInf} package includes a method (\code{package_skeleton})
+that automates some of the setup for a new source package.  It creates
+directories, saves \proglang{R} and \proglang{C} code files to
+appropriate places, and creates skeleton help files.
+
+<<create-package-skeleton, eval=FALSE>>=
+path = tempdir()
+package_skeleton(m, "PredatorPrey", path = path)
+@
+
+where the first argument is the result (\code{SimInf_mparse} object)
+from the \code{mparse} method, and the second argument is the name of
+the package to create a skeleton for.  The created \proglang{R} file
+(\texttt{'R/models.R'}) defines the \code{S4} class
+\code{PredatorPrey} that contains the \code{SimInf\_model} and a
+generating function to create a new object of the \code{PredatorPrey}
+model.  The generating function is a template that might need to be
+updated to meet the specific requirements of the model, e.g.\ if the
+model should handle scheduled events, then \code{E} must be specified
+to select the subset of compartments involved in each specific event.
+Furthermore, if one of the events is an \textit{internal transfer}
+event, \code{N} must be specified to shift individuals between
+compartments within one holding.  It is also possible to define
+parameters that are either local (\code{ldata}) to each node or shared
+(\code{gdata}) between all nodes.
+
+The \proglang{C} file (\texttt{'src/models.c'}) defines one function
+for each state transition, the post time step function and the model
+specific run function, and is automatically compiled when installing
+the package.  The header file \code{"SimInf.h"} contains the
+declarations for these functions and should be included.  The
+\code{SimInf_model_run} function is the interface from \proglang{R} to
+the core solver in \proglang{C} and list all function pointers to the
+transition rate functions in a vector in the order the state
+transitions appear in the dependency graph \code{G}, see
+Listing~\ref{lst:SIRrun} in the appendix for an example from the
+\code{SIR} model and the use of the address of operator \code{'\&'} to
+obtain the address of a function.  The \code{SimInf_model_run}
+function must return the result from the call to the core solver with
+\code{SimInf_run}.  The arguments to \code{SimInf_run} are the
+arguments passed to the \code{SimInd_model_run} function plus the
+vector of function pointers to the transition rate functions and the
+function pointer to the post time step function.  To facilitate
+extraction of specific values from the data structures passed as
+arguments to the transition rate functions and the post time step
+function, we recommend using enumeration declarations to name the
+values, see Listing~\ref{lst:trSIR} in the appendix for an example.
+
+The add-on \pkg{PredatorPrey} source package can now be built and
+installed with
+
+<<install-package-skeleton, eval=FALSE>>=
+install.packages(file.path(path, "PredatorPrey"), repos = NULL)
+@
+
+If the installation was successful, the newly installed package
+\pkg{PredatorPrey} can be loaded in \proglang{R} with the following
+command.
+
+<<load-package-skeleton, eval=FALSE>>=
+library("PredatorPrey")
+@
+
+%**************************************************************************
+
+\section{Conclusion}
+
+In this paper we have introduced the \proglang{R} package \pkg{SimInf}
+which supports data-driven simulations of disease transmission over
+spatio-temporal networks. The package offers a very efficient and
+highly flexible tool to incorporate real data in simulations at
+realistic scales.
+
+We hope that our package will facilitate incorporating large volumes
+of available data, for example, livestock data, in network epidemic
+models to better understand disease transmission in a temporal network
+and improve design of intervention strategies for endemic and emerging
+threats.  Future efforts will be concentrated on a software
+development driven predominantly by actual use cases.
+
+%**************************************************************************
+
+\section{Acknowledgments}
+
+This work was financially supported by the Swedish Research Council
+within the UPMARC Linnaeus centre of Excellence (P.~Bauer,
+S.~Engblom), the Swedish Research Council Formas (S.~Engblom,
+S.~Widgren), the Swedish Board of Agriculture (S.~Widgren), and by the
+Swedish strategic research program eSSENCE (S.~Widgren).
+
+\bibliography{SimInf}
+
+\clearpage
+
+%**************************************************************************
+
+\section{Appendix}
+
+\subsection{Pseudo-code for the core simulation solve}
+
+\begin{algorithm}
+  \caption{Pseudo-code for the core simulation solver using direct
+    SSA}
+  \label{alg:core}
+  {\fontsize{10}{10}\selectfont
+  \begin{algorithmic}[1]
+    \STATE{\textit{Run trajectory:} Dispatch to model specific
+      \code{run} method.}
+
+    \STATE{\textit{\proglang{C} interface:} Initialize model
+      transition rate functions and post time step function.}
+
+    \renewcommand{\algorithmicdo}{\textbf{do in parallel}}
+    \FORALL{nodes i=1 \TO $\Nnodes$}
+
+    \STATE{Compute transition rates for all transitions
+      $\omega_{i,j}$, $j=1, \ldots ,\Ntransitions$.}
+
+    \ENDFOR
+
+    \renewcommand{\algorithmicdo}{\textbf{do}}
+    \WHILE{$t < T_{\text{End}}$}
+
+    \renewcommand{\algorithmicdo}{\textbf{do in parallel}}
+    \FORALL{nodes i=1 \TO $\Nnodes$}
+
+    \renewcommand{\algorithmicdo}{\textbf{do}}
+    \LOOP
+
+    \STATE{Compute sum of transition rates $\lambda_i =
+      \sum_{j=1}^{\Ntransitions}\omega_{i,j}$ }
+
+    \STATE{Sample time to next stochastic event $\tau_i = -\log(r_1)/
+      \lambda_i$} where $r_1$ is a uniformly distributed random number
+    in the range (0, 1)
+
+    \IF{$\tau_i + t_i >= T_{\text{Next day}}$}
+    \STATE{Move simulated time forward $t_i = T_{\text{Next day}}$}
+    \STATE{go to \ref{E1}}
+    \ENDIF
+
+    \STATE{Move simulated time forward $t_i = t_i + \tau_i$}
+
+    \STATE{Determine which state transition happened; by inversion,
+      find $n$ such that \\$\sum_{j=1}^{n-1} \omega_{i,j} < \lambda
+      r_2 \le \sum_{j=1}^n \omega_{i,j}$} where $r_2$ is a uniformly
+    distributed random number in the range (0, 1)
+
+    \STATE{Update the compartments \code{u[, i]} using the
+      state-change vector \code{S[, n]}}
+
+    \STATE{Use the dependency graph \code{G[, n]} to recalculate
+      affected transition rates $\omega_{i,j}$}
+
+    \ENDLOOP
+
+    \STATE{Process $E_1$ events}{\label{E1}}
+
+    \ENDFOR
+
+    \STATE{Process $E_2$ events}
+
+    \FORALL{nodes i=1 \TO $\Nnodes$}
+
+    \STATE{Call post time step function and update the continuous
+      state variable \code{v[ ,i]}.}
+
+    \ENDFOR
+
+    \STATE{$T_{\text{Next day}} = T_{\text{Next day}} + 1$}
+
+    \ENDWHILE
+  \end{algorithmic}}
+\end{algorithm}
+
+\clearpage
+
+\subsection[C code for the SIR model]{\proglang{C} code for the \code{SIR} model}
+
+\begin{minipage}{\linewidth}
+\begin{scriptsize}
+  \begin{lstlisting}[
+      language=C, caption={Implementation of the function to init and
+        run a simulation with the \code{SIR} model},
+      label={lst:SIRrun}, frame=single]
+  SEXP SIR_run(SEXP model, SEXP threads, SEXP seed)
+  {
+      TRFun tr_fun[] = {&SIR_S_to_I, &SIR_I_to_S};
+
+      return SimInf_run(model, threads, seed, tr_fun, &SISe3_post_time_step);
+  }
+\end{lstlisting}
+\end{scriptsize}
+\end{minipage}
+
+\begin{minipage}{\linewidth}
+\begin{scriptsize}
+\begin{lstlisting}[
+    language=C, caption={Implementation of the transition rate
+      functions in the \code{SIR} model for the transitions in
+      Eq.~\eqref{eq:SIR} between the susceptible and infected
+      compartments.  The enumeration declarations are used to name the
+      variable offsets and facilitate extraction of the values from
+      the various data vectors.}, label={lst:trSIR} , frame=single]
+
+  /* Offset in integer compartment state vector */
+  enum {S, I, R};
+
+  /* Offsets in global data (gdata) to parameters in the model */
+  enum {BETA, GAMMA};
+
+  /* susceptible to infected: S -> I */
+  double SIR_S_to_I(const int *u, const double *v, const double *ldata,
+                    const double *gdata, double t)
+  {
+      const double S_n = u[S];
+      const double I_n = u[I];
+      const double n = S_n + I_n + u[R];
+
+      if (n > 0.0)
+          return (gdata[BETA] * S_n * I_n) / n;
+      return 0.0;
+  }
+
+  /* infected to susceptible: I -> S */
+  double SIR_I_to_S(const int *u, const double *v, const double *ldata,
+                    const double *gdata, double t)
+  {
+      return gdata[GAMMA] * u[I];
+  }
+\end{lstlisting}
+
+\begin{lstlisting}[
+      language=C, caption={Implementation of the post time step
+        function in the \code{SIR} model.  The post time step function
+        should return a value $>0$ if the node needs to recalculate
+        the transition rates for the node, a value (error code) $<0$
+        if an error is detected, or otherwise $0$.  Since the post
+        time step function for the \code{SIR} model does not make any
+        changes to a node, it always return $0$.}, label={lst:ptsSIR}
+      ,frame=single]
+
+  int SIR_post_time_step(double *v_new, const int *u, const double *v,
+                         const double *ldata, const double *gdata,
+                         int node, double t)
+  {
+      return 0;
+  }
+\end{lstlisting}
+\end{scriptsize}
+\end{minipage}
+
+\clearpage
+
+\subsection{Illustration of scheduled events}
+
+This section illustrates how the scheduled events for the
+\code{SISe3\_sp} model are specified
+(Table~\ref{table:SISe3_sp:events}) and how each event type is
+executed
+Figures~\ref{fig:exit},\ref{fig:enter},\ref{fig:external},\ref{fig:internal},\ref{fig:external:shift}
+
+\begin{table}[!ht]
+  \small
+  \begin{tabular}{l c c c c c c c c}
+    \toprule
+    Action & \code{event} & \code{time} & \code{node} & \code{dest} &
+    \code{n} & \code{proportion} & \code{select} & \code{shift} \\
+    \midrule
+    Exit individuals in $S_1$ and $I_1$  & 0 & t & x & 0 & n & 0 & 4 & 0\\
+    Exit individuals in $S_2$ and $I_2$  & 0 & t & x & 0 & n & 0 & 5 & 0\\
+    Exit individuals in $S_3$ and $I_3$  & 0 & t & x & 0 & n & 0 & 6 & 0\\
+    Enter individuals in $S_1$ and $I_1$ & 1 & t & x & 0 & n & 0 & 1 & 0\\
+    Enter individuals in $S_2$ and $I_2$ & 1 & t & x & 0 & n & 0 & 2 & 0\\
+    Enter individuals in $S_3$ and $I_3$ & 1 & t & x & 0 & n & 0 & 3 & 0\\
+    Age individuals in $S_1$ and $I_1$   & 2 & t & x & 0 & n & 0 & 4 & 1\\
+    Age individuals in $S_2$ and $I_2$   & 2 & t & x & 0 & n & 0 & 5 & 2\\
+    Move individuals in $S_1$ and $I_1$  & 3 & t & x & y & n & 0 & 4 & 0\\
+    Move individuals in $S_2$ and $I_2$  & 3 & t & x & y & n & 0 & 5 & 0\\
+    Move individuals in $S_3$ and $I_3$  & 3 & t & x & y & n & 0 & 6 & 0\\
+    \bottomrule
+  \end{tabular}
+  \caption{Examples of the specification of a single row of scheduled
+    event data in the \code{SISe3\_sp} model to add, move or remove
+    individuals during the simulation.}
+  \label{table:SISe3_sp:events}
+\end{table}
+
+\begin{figure}[H]
+  \begin{center}
+    \includegraphics[width=0.67\linewidth]{img/exit.pdf}
+  \end{center}
+  \caption{Illustration of a scheduled \textit{exit} event (event = 0)
+    in the \code{SISe3\_sp} model at time = 4.  The removal of one
+    individual in the third age category $\{S_3, I_3\}$ from node 14.
+    Interpreting the figure from left to right: \textit{i)} A single
+    row of the event data operating on node 14.  \textit{ii)}
+    \code{u[, 14]} is the current state of node 14; \code{E[, 6]} is
+    the 6$^{th}$ column in the select matrix that determines which
+    compartments (age categories) that are eligible for sampling.
+    \textit{iii)} The operation of randomly sampling one individual (n
+    = 1) to move from the compartments selected in step \textit{ii}.
+    \textit{iv)} The resultant state of node 14 after subtracting the
+    sampled individual in step \textit{iii} from node 14.
+    $^\dag$\code{dest} and $^\S$\code{shift} are not used in a
+    scheduled \textit{exit} event.  $^\ddag$\code{proportion} is not
+    used when $n > 0$.  \label{fig:exit}}
+\end{figure}
+
+\begin{figure}[H]
+  \begin{center}
+    \includegraphics[width=0.6\linewidth]{img/enter.pdf}
+  \end{center}
+  \caption{Illustration of a scheduled \textit{enter} event (event =
+    1) in the \code{SISe3\_sp} model at time = 4.  Add three
+    susceptible individuals to the first age category $\{S_1\}$ in
+    node 14.  Interpreting the figure from left to right: \textit{i)}
+    A single row of the event data operating on node 14.  \textit{ii)}
+    \code{u[, 14]} is the current state of node 14.  \textit{iii)}
+    \code{E[, 1]} is the first column in the select matrix that
+    determines which compartments (age categories) the new individuals
+    are added.  \textit{iv)} The resultant state of node 14 after
+    adding the individuals in step \textit{iii}.  $^\dag$\code{dest},
+    $^\ddag$\code{proportion} and $^\S$\code{shift} are not used in a
+    scheduled \textit{enter} event.  \label{fig:enter}}
+
+  \vspace*{\floatsep}
+
+  \begin{center}
+    \includegraphics[width=0.66\linewidth]{img/external.pdf}
+  \end{center}
+  \caption{Illustration of a scheduled \textit{external transfer}
+    event (event = 3) in the \code{SISe3\_sp} model at time = 4.  The
+    movement of one individual in the third age category $\{S_3,
+    I_3\}$ from node 14 to destination node 23.  Interpreting the
+    figure from left to right: \textit{i)} A single row of the event
+    data operating on node 14 and destination node 23.  \textit{ii)}
+    \code{u[, 14]} is the current state of node 14; \code{u[, 23]} is
+    the current state of the destination node 23; \code{E[, 6]} is the
+    6$^{th}$ column in the select matrix that determines which
+    compartments (age categories) that are eligible for sampling.
+    \textit{iii)} The operation of randomly sampling one individual (n
+    = 1) to move from the compartments selected in step \textit{ii}.
+    \textit{iv)} The resultant state of node 14 and destination node
+    23 after subtracting the sampled individuals in step \textit{iii}
+    from node 14 and adding them to destination node 23.
+    $^\dag$\code{shift} can be used in a scheduled \textit{external
+      transfer} event, see
+    Figure~\ref{fig:external:shift}. $^\ddag$\code{proportion} is not
+    used when $n > 0$.  \label{fig:external}}
+\end{figure}
+
+\begin{figure}[H]
+  \begin{center}
+    \includegraphics[width=0.8\linewidth]{img/internal.pdf}
+  \end{center}
+  \caption{Illustration of a scheduled \textit{internal transfer}
+    event (event = 2) in the \code{SISe3\_sp} model at time = 4.  The
+    ageing of three individuals in the first age category $\{S_1,
+    I_1\}$.  Interpreting the figure from left to right: \textit{i)} A
+    single row of the event data operating on node 14.  \textit{ii)}
+    \code{u[, 14]} is the current state of node 14; \code{E[, 4]} is
+    the 4$^{th}$ column in the select matrix that determines which
+    compartments (age categories) that are eligible for sampling.
+    \textit{iii)} The operation of randomly sampling three individuals
+    (n = 3) to age from the compartments selected in step \textit{ii}.
+    \textit{iv)} The shift operation applies the shift specified in
+    column 1 of the shift matrix (\code{N}) to the individuals sampled
+    in step \textit{iii}.  \textit{v)} The resultant state of node 14
+    after subtracting the sampled individuals in step \textit{iii} and
+    adding the individuals after the shift operation in step
+    \textit{iv}.  $^\dag$\code{dest} is not used in \textit{internal
+      transfers}.  $^\ddag$\code{proportion} is not used when $n >
+    0$.  \label{fig:internal}}
+
+  \vspace*{\floatsep}
+
+  \begin{center}
+    \includegraphics[width=0.66\linewidth]{img/external-shift.pdf}
+  \end{center}
+  \caption{Illustration of a scheduled \textit{external transfer}
+    event (event = 3) in the \code{SISe3} model at time = 4.  The
+    ageing of three individuals in the second age category $\{S_2,
+    I_2\}$ that are subsequently moved.  Interpreting the figure from
+    left to right: \textit{i)} A single row of the event data
+    operating on node 14 and destination node 23.  \textit{ii)}
+    \code{u[, 14]} is the current state of node 14; \code{u[, 23]} is
+    the current state of the destination node 23; \code{E[, 5]} is the
+    5$^{th}$ column in the select matrix that determines which
+    compartments (age categories) that are eligible for sampling.
+    \textit{iii)} The operation of randomly sampling three individuals
+    (n = 3) to move from the compartments selected in step
+    \textit{ii}.  \textit{iv)} The shift operation applies the shift
+    specified in column 2 of the shift matrix (\code{N}) to the
+    individuals sampled in step \textit{iii}.  \textit{v)} The
+    resultant state of node 14 and destination node 23 after
+    subtracting the sampled individuals in step \textit{iii} from node
+    14 and adding them to the destination node 23 after the shift
+    operation in step \textit{iv}.  $^\ddag$\code{proportion} is not
+    used when $n > 0$.  \label{fig:external:shift}}
+\end{figure}
+
+\end{document}
+
+%**************************************************************************
