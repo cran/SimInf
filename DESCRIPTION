@@ -1,7 +1,7 @@
 Package: SimInf
 Title: A Framework for Data-Driven Stochastic Disease Spread
         Simulations
-Version: 5.0.0
+Version: 5.1.0
 Author: Stefan Widgren (National Veterinary Institute, Sweden and
     Uppsala University, Sweden),
     Pavol Bauer (Uppsala University, Sweden),
@@ -37,6 +37,6 @@ Collate: 'AllGenerics.R' 'check_arguments.R' 'SimInf_events.R'
         'SISe3_sp.R' 'SISe_sp.R' 'SimInf.R' 'distance.R'
         'model_builder.R' 'package_skeleton.R' 'run_outer.R'
 RoxygenNote: 6.0.1
-Packaged: 2017-06-13 13:49:18 UTC; stefan
+Packaged: 2017-10-18 10:47:46 UTC; stefan
 Repository: CRAN
-Date/Publication: 2017-06-13 14:41:21 UTC
+Date/Publication: 2017-10-18 11:02:29 UTC

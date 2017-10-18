@@ -1,6 +1,6 @@
-14a6268f2b3b18ca6bf7c1522e2d643b *DESCRIPTION
+fe3af513aff457d882fa461f3b7469aa *DESCRIPTION
 e351ee0e09586a070c0e9562e1d6927d *NAMESPACE
-f49e43e6dd62db56c0a81dd5bb66765e *NEWS
+e3fe56032f99139f955adb780cb62ddc *NEWS
 dae76f490d690fbf818f1458548fc5fc *R/AllGenerics.R
 15453f1cb5371213076a546cfab93880 *R/SEIR.R
 e63041f2338b5a739108a9c2ba3fbbdd *R/SIR.R
@@ -16,7 +16,7 @@ e7163e8f57d3e7d5a9c9c957a8310e31 *R/SimInf_model.R
 35e9407862e94f5a1a32e4bcfca94653 *R/model_builder.R
 0d1cafa1008e578cbcfd7fa9e5a203cd *R/package_skeleton.R
 99dd9364285ebc35b2352fbd48156eea *R/run_outer.R
-ded2b492346da8348885a087e3df763f *build/vignette.rds
+2518b8625abcfaa741564c565b576baf *build/vignette.rds
 0d434394e2a8452b2f82b919202433ef *cleanup
 87a88dbe3610b7b7dc36192c6126eed4 *cleanup.win
 d1ddf1025f779b808a948e42051104b9 *configure
@@ -27,9 +27,9 @@ ecca23e39a9ddac0b09a67d6e086c146 *data/events_SISe3.rda
 ff4c69bfaa0057b4469c8784f825f329 *data/nodes.rda
 25fd46ad094359f08eb7c3678455b515 *data/u0_SISe3.rda
 03faa169ee5105aa11739385702d8c82 *inst/CITATION
-a01147edc68a7cfa4293e74c5270208e *inst/doc/SimInf.R
-4853db83e5dbc2fd41aaceb1bc7278cd *inst/doc/SimInf.Rnw
-0239dea61673471f79d397722aae452e *inst/doc/SimInf.pdf
+d6d3cdc983013e8ff487317256218b22 *inst/doc/SimInf.R
+47145d726da623d2487a445d7dfdce7a *inst/doc/SimInf.Rnw
+738d490b4eead6440ef60211aa1a9e3d *inst/doc/SimInf.pdf
 e5c07b1c86798b32a56a9f10218d7523 *inst/include/SimInf.h
 1e86d077e218c848a4b1dd29b2373835 *man/C_code-methods.Rd
 c76d84218a049adb5afff83c6f9bfed8 *man/SEIR-class.Rd
@@ -90,9 +90,9 @@ bf2167a5124cc72f6ac7d1d7f71f04cd *man/u0_SISe.Rd
 d3918f4de0ca767cfe0e232ef37dfdb9 *man/u0_SISe3.Rd
 c7514a4baf2c98ea67d9921d8ea4482c *src/Makevars.in
 132d851865d8e68cfb6ea67df0b8606a *src/Makevars.win
-2f1078b6bd97ffb730a649262a4e04c4 *src/SimInf.c
+71008dd1b665acacb1e1f0284945aeb2 *src/SimInf.c
 e5c07b1c86798b32a56a9f10218d7523 *src/SimInf.h
-7f39b5fde84a2cd06d781d746bad1017 *src/core/SimInf_solver.c
+6bce65a658b7f45eee9dbe3ec3c0d371 *src/core/SimInf_solver.c
 87fa2a0b010da7bbf5e5018b7f995aa7 *src/core/SimInf_solver.h
 db5c0935570d70ce21ebabf7a7d7c225 *src/init.c
 bbfb15c307964af620e35749ef5ab530 *src/misc/SimInf_arg.c
@@ -126,8 +126,8 @@ cd39ad8183051237dfb471f9d5560cb6 *tests/SimInf_events.R
 67829f700c0d4f50cb0e6b078d445696 *tests/run_outer.R
 beedf47f265f990f011aefd11c695212 *tests/sample_select.R
 a8f994b2a887459b1ec4d625e15e561f *tests/sparse.R
-4853db83e5dbc2fd41aaceb1bc7278cd *vignettes/SimInf.Rnw
-0cafa863c9addcff67fb183e46bf6f74 *vignettes/SimInf.bib
+47145d726da623d2487a445d7dfdce7a *vignettes/SimInf.Rnw
+844ada9568abc78e8692e03c3afe0fb2 *vignettes/SimInf.bib
 2335b023d465aca7fbb5a85911bd4203 *vignettes/img/SIR.pdf
 d1e2fdea2a3e0fd0bae83191ccaff5d0 *vignettes/img/SISe3_sp.pdf
 9df192bbfe04492bf2b198c72e1d6eef *vignettes/img/enter.pdf

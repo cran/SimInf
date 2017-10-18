@@ -43,7 +43,7 @@ U(result)[, 1:10]
 
 
 ###################################################
-### code chunk number 8: SimInf.Rnw:1030-1031 (eval = FALSE)
+### code chunk number 8: SimInf.Rnw:1033-1034 (eval = FALSE)
 ###################################################
 ## plot(result)
 
@@ -241,7 +241,7 @@ plot(events(model))
 
 
 ###################################################
-### code chunk number 31: SimInf.Rnw:1557-1567 (eval = FALSE)
+### code chunk number 31: SimInf.Rnw:1563-1573 (eval = FALSE)
 ###################################################
 ## result <- run(model, threads = 1, seed = 1)
 ## N1 <- colSums(susceptible(result, age = 1) + infected(result, age = 1))
@@ -271,7 +271,7 @@ par(opar)
 
 
 ###################################################
-### code chunk number 33: SimInf.Rnw:1603-1604
+### code chunk number 33: SimInf.Rnw:1609-1610
 ###################################################
 options(continue = "+  ")
 
@@ -282,7 +282,7 @@ options(continue = "+  ")
 plot_nodes <- function(x) {
   wnp <- prevalence(x, type = "wnp") > 0
   opar <- par(mfrow = c(3, 6), mar = c(2, 0.3, 0.3, 0.3))
-  on.exit(opar)
+  on.exit(par(opar))
   for(i in seq(1, dim(wnp)[2], length.out = 18)) {
     Si <- which(!wnp[, i])
     Ii <- which(wnp[, i])
@@ -296,13 +296,13 @@ plot_nodes <- function(x) {
 
 
 ###################################################
-### code chunk number 35: SimInf.Rnw:1624-1625
+### code chunk number 35: SimInf.Rnw:1630-1631
 ###################################################
 options(continue = "+    ")
 
 
 ###################################################
-### code chunk number 36: SimInf.Rnw:1632-1634 (eval = FALSE)
+### code chunk number 36: SimInf.Rnw:1638-1640 (eval = FALSE)
 ###################################################
 ## model@gdata["coupling"] <- 0
 ## plot_nodes(run(model, threads = 1, seed = 1))
@@ -339,7 +339,7 @@ dev.off()
 
 
 ###################################################
-### code chunk number 40: SimInf.Rnw:1707-1713 (eval = FALSE)
+### code chunk number 40: SimInf.Rnw:1713-1719 (eval = FALSE)
 ###################################################
 ## model@gdata["coupling"] <- 0.1
 ## model@events@N <- cbind(model@events@N,
