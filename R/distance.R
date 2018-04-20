@@ -15,7 +15,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-##' Create distance matrix
+##' Create a distance matrix between nodes for spatial models
 ##'
 ##' Calculate the euclidian distances beween coordinates for all
 ##' coordinates within the cutoff.
@@ -28,8 +28,18 @@
 ##'     raise an error.
 ##' @return \code{dgCMatrix}
 ##' @export
+##' @importFrom methods new
 ##' @examples
-##' distance_matrix(1:10, 1:10, 3)
+##' ## Generate a grid 10 x 10 and place one node in each cell
+##' ## separated by 100m.
+##' nodes <- expand.grid(x = (0:9) * 100, y = (0:9) * 100)
+##' plot(y ~ x, nodes)
+##'
+##' ## Define the cutoff to only include neighbors within 300m.
+##' d <- distance_matrix(x = nodes$x, y = nodes$y, cutoff = 301)
+##'
+##' ## View the first 10 rows and columns in the distance matrix
+##' d[1:10, 1:10]
 distance_matrix <- function(x, y, cutoff, min_dist = NULL)
 {
     if (!is.null(min_dist)) {
@@ -77,6 +87,5 @@ distance_matrix <- function(x, y, cutoff, min_dist = NULL)
     col_ind <- as.integer(c(0, cumsum(sapply(m, function(x) length(x$row_ind)))))
 
     ## Create a new sparse matrix
-    methods::new("dgCMatrix", x = d, i = row_ind, p = col_ind,
-                 Dim = rep(length(x), 2))
+    new("dgCMatrix", x = d, i = row_ind, p = col_ind, Dim = rep(length(x), 2))
 }

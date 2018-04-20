@@ -2,14 +2,14 @@
 % Please edit documentation in R/SEIR.R
 \name{SEIR}
 \alias{SEIR}
-\title{Create a SEIR model}
+\title{Create an \acronym{SEIR} model}
 \usage{
 SEIR(u0, tspan, events = NULL, beta = NULL, epsilon = NULL,
   gamma = NULL)
 }
 \arguments{
-\item{u0}{A \code{data.frame} with the initial state in each node,
-see details.}
+\item{u0}{A \code{data.frame} with the initial state in each node
+(see \sQuote{Details}).}
 
 \item{tspan}{A vector (length >= 2) of increasing time points
 where the state of each node is to be returned. Can be either
@@ -32,13 +32,29 @@ vector.}
 \code{SEIR}
 }
 \description{
-Create a SEIR model to be used by the simulation framework.
+Create an \acronym{SEIR} model to be used by the simulation
+framework.
 }
 \details{
+The \acronym{SEIR} model contains four compartments; number of
+susceptible (S), number of exposed (E) (those who have been
+infected but are not yet infectious), number of infectious (I),
+and number of recovered (R).  Moreover, it has three state
+transitions,
+
+\deqn{S \stackrel{\beta S I / N}{\longrightarrow} E}{S -- beta S I / N --> E}
+\deqn{E \stackrel{\epsilon E}{\longrightarrow} I}{E -- epsilon E --> I}
+\deqn{I \stackrel{\gamma I}{\longrightarrow} R}{I -- gamma I --> R}
+
+where \eqn{\beta} is the transmission rate, \eqn{\epsilon} is the
+incubation rate, \eqn{\gamma} is the recovery rate, and
+\eqn{N=S+E+I+R}.
+
 The argument \code{u0} must be a \code{data.frame} with one row for
 each node with the following columns:
 \describe{
 \item{S}{The number of sucsceptible in each node}
+\item{E}{The number of exposed in each node}
 \item{I}{The number of infected in each node}
 \item{R}{The number of recovered in each node}
 }
@@ -52,6 +68,7 @@ model <- SEIR(u0 = data.frame(S = 99, E = 0, I = 1, R = 0),
               gamma = 0.077)
 
 ## Run the SEIR model and plot the result.
-result <- run(model, threads = 1, seed = 3)
+set.seed(3)
+result <- run(model)
 plot(result)
 }

@@ -16,6 +16,7 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ##' Create a DESCRIPTION file for the package skeleton
+##' @importFrom utils packageVersion
 ##' @noRd
 create_DESCRIPTION_file <- function(path, name, author, maintainer,
                                     email, license)
@@ -30,7 +31,7 @@ create_DESCRIPTION_file <- function(path, name, author, maintainer,
                paste0("    to the 'SimInf' package for the '", name, "' model."),
                paste0("License: ", license),
                "NeedsCompilation: yes",
-               "Depends: SimInf",
+               paste0("Depends: SimInf(>= ", packageVersion("SimInf"), ")"),
                "Imports: methods",
                "LinkingTo: SimInf",
                "Collate:",
@@ -72,17 +73,32 @@ create_model_R_class <- function(name)
       paste0("setClass(\"", name, "\", contains = \"SimInf_model\")"))
 }
 
+##' @importFrom utils capture.output
+##' @noRd
 create_model_R_object <- function(model, name)
 {
     rows <- paste0(rownames(model@S), collapse = "\", \"")
+    parameters <- paste0(names(model@gdata), collapse = "\", \"")
 
-    G <- utils::capture.output(dput(model@G))
+    ## Dependency graph
+    G <- capture.output(dput(as.matrix(model@G)))
     G <- c(paste0("G <- ", G[1]), G[-1])
     G <- paste0("    ", G)
 
-    S <- utils::capture.output(dput(model@S))
+    ## State change matrix
+    S <- capture.output(dput(as.matrix(model@S)))
     S <- c(paste0("S <- ", S[1]), S[-1])
     S <- paste0("    ", S)
+
+    ## Select matrix
+    E <- capture.output(dput(as.matrix(model@events@E)))
+    E <- c(paste0("E <- ", E[1]), E[-1])
+    E <- paste0("    ", E)
+
+    ## Shift matrix
+    N <- capture.output(dput(as.matrix(model@events@N)))
+    N <- c(paste0("N <- ", N[1]), N[-1])
+    N <- paste0("    ", N)
 
     c("##' Create a model for the SimInf framework",
       "##'",
@@ -90,50 +106,48 @@ create_model_R_object <- function(model, name)
       "##' @param u0 A data.frame with the initial state in each node.",
       "##' @param tspan A vector (length >= 2) of increasing time points",
       "##'     where the state of each node is to be returned.",
+      "##' @param events A data.frame with scheduled events.",
+      "##' @param gdata A named numeric vector with rate-constants for the",
+      "##'     model.",
       "##' @import SimInf",
       "##' @import methods",
       "##' @export",
       "##' @examples",
       "##' ## Please add example(s) how to use the model",
-      paste0(name, " <- function(u0, tspan) {"),
+      paste0(name, " <- function(u0 = NULL, tspan = NULL, events = NULL, gdata = NULL) {"),
       paste0("    compartments <- c(\"", rows, "\")"),
+      paste0("    parameters <- c(\"", parameters, "\")"),
       "",
       "    ## Check u0",
+      "    if (is.null(u0))",
+      "        stop(\"'u0' must be specified.\")",
       "    if (!is.data.frame(u0))",
       "        u0 <- as.data.frame(u0)",
       "    if (!all(compartments %in% names(u0)))",
       "        stop(\"Missing columns in u0\")",
       "    u0 <- u0[, compartments, drop = FALSE]",
       "",
+      "    ## Check gdata",
+      "    if (is.null(gdata))",
+      "        stop(\"'gdata' must be specified.\")",
+      "    if (!is.numeric(gdata))",
+      "        stop(\"'gdata' must be a named numeric vector.\")",
+      "    if (!all(parameters %in% names(gdata)))",
+      "        stop(\"Missing parameters in 'gdata'\")",
+      "    gdata <- gdata[parameters]",
+      "",
       G,
       "",
       S,
       "",
-      "    E <- methods::as(matrix(integer(0), nrow = 0, ncol = 0), \"dgCMatrix\")",
+      E,
       "",
-      "    N <- matrix(integer(0), nrow = 0, ncol = 0)",
+      N,
       "",
-      "    v0 <- matrix(numeric(0), nrow  = 0, ncol = nrow(u0))",
-      "    storage.mode(v0) <- \"double\"",
+      "    model <- SimInf_model(G = G, S = S, E = E, N = N, tspan = tspan,",
+      "                          events = events, u0 = u0, gdata = gdata)",
       "",
-      "    ldata <- matrix(numeric(0), nrow = 0, ncol = nrow(u0))",
-      "    storage.mode(ldata) <- \"double\"",
-      "",
-      "    events <- NULL",
-      "    gdata <- numeric()",
-      "",
-      "    model <- SimInf_model(G      = G,",
-      "                          S      = S,",
-      "                          E      = E,",
-      "                          N      = N,",
-      "                          tspan  = tspan,",
-      "                          events = events,",
-      "                          ldata  = ldata,",
-      "                          gdata  = gdata,",
-      "                          u0     = u0,",
-      "                          v0     = v0)",
-      "",
-      paste0("    methods::as(model, \"", name, "\")"),
+      paste0("    as(model, \"", name, "\")"),
       "}")
 }
 
@@ -145,25 +159,27 @@ create_model_run_fn <- function(name)
       "##' @param model The model to run.",
       "##' @param threads Number of threads. Default is NULL, i.e. to use all",
       "##'     available processors.",
-      "##' @param seed Random number seed. Default is NULL, i.e. the",
-      "##'     simulator uses time to seed the random number generator.",
-      "##' @return model with result from simulation.",
+      "##' @param solver Which numerical solver to utilize. Default is NULL,",
+      "##'     i.e., use the default numerical solver in SimInf.",
+      "##' @return SimInf_model with result from simulation.",
       "##' @export",
       paste0("##' @useDynLib ", name, ", .registration=TRUE"),
       "setMethod(\"run\",",
       paste0("    signature(model = \"", name, "\"),"),
-      "    function(model, threads, seed)",
+      "    function(model, threads = NULL, solver = NULL)",
       "    {",
       "        methods::validObject(model)",
-      paste0("       .Call(SimInf_model_run, model, threads, seed, PACKAGE = \"",
+      paste0("       .Call(SimInf_model_run, model, threads, solver, PACKAGE = \"",
              name, "\")"),
       "    })")
 }
 
+##' @importFrom utils packageVersion
+##' @noRd
 create_model_R_file <- function(path, model, name)
 {
     lines <- c(sprintf("## Generated by SimInf (v%s) %s */",
-                       utils::packageVersion("SimInf"),
+                       packageVersion("SimInf"),
                        format(Sys.time(), "%Y-%m-%d %H:%M")),
                "",
                create_model_R_class(name),
@@ -198,13 +214,16 @@ create_model_man_file <- function(path, name)
                paste0("\\alias{", name, "}"),
                "\\title{Create a model for the SimInf framework}",
                "\\usage{",
-               paste0(name, "(u0, tspan)"),
+               paste0(name, "(u0 = NULL, tspan = NULL, events = NULL, gdata = NULL)"),
                "}",
                "\\arguments{",
                "\\item{u0}{A \\code{data.frame} with the initial state in each node.}",
                "",
                "\\item{tspan}{A vector (length >= 2) of increasing time points",
                "where the state of each node is to be returned.}",
+               "\\item{events}{A data.frame with scheduled events.}",
+               "\\item{gdata}{A named numeric vector with rate-constants for the",
+               "model.}",
                "}",
                "\\description{",
                "Create a model to be used by the SimInf framework.",
@@ -225,7 +244,7 @@ create_model_run_man_file <- function(path, name)
                paste0("\\alias{run,", name, "-method}"),
                "\\title{Run the model}",
                "\\usage{",
-               paste0("\\S4method{run}{", name, "}(model, threads = NULL, seed = NULL)"),
+               paste0("\\S4method{run}{", name, "}(model, threads = NULL, solver = NULL)"),
                "}",
                "\\arguments{",
                "\\item{model}{The model to run.}",
@@ -233,11 +252,11 @@ create_model_run_man_file <- function(path, name)
                "\\item{threads}{Number of threads. Default is NULL, i.e. to use all",
                "available processors.}",
                "",
-               "\\item{seed}{Random number seed. Default is NULL, i.e. the",
-               "simulator uses time to seed the random number generator.}",
+               "\\item{solver}{Which numerical solver to utilize. Default is NULL, i.e.",
+               "use the default numerical solver in SimInf.}",
                "}",
                "\\value{",
-               "model with result from simulation.",
+               "SimInf_model with result from simulation.",
                "}",
                "\\description{",
                "Run the model",
@@ -248,39 +267,58 @@ create_model_run_man_file <- function(path, name)
     invisible(NULL)
 }
 
-##' @rdname package_skeleton-methods
+##' Create a package skeleton from a \code{SimInf_model}
+##'
+##' Describe your model in a logical way in R, then \code{mparse}
+##' creates a \code{\linkS4class{SimInf_model}} object with your model
+##' definition that can be installed as an add-on R package.
+##' @param model The \code{model} \code{\linkS4class{SimInf_model}}
+##'     object with your model to create the package skeleton from.
+##' @param name Character string: the package name and directory name
+##'     for your package.
+##' @param path Path to put the package directory in. Default is '.'
+##'     i.e. the current directory.
+##' @param author Author of the package.
+##' @param email Email of the package maintainer.
+##' @param maintainer Maintainer of the package.
+##' @param license License of the package. Default is 'GPL-3'.
+##' @return invisible \code{NULL}.
 ##' @export
-setMethod("package_skeleton",
-          signature(model = "SimInf_mparse"),
-          function(model, name = NULL, path = ".", author = NULL,
-                   email = NULL, maintainer = NULL, license = "GPL-3")
+##' @references Read the \emph{Writing R Extensions} manual for more
+##'     details.
+##'
+##' Once you have created a \emph{source} package you need to install
+##' it: see the \emph{R Installation and Administration} manual,
+##' \code{\link{INSTALL}} and \code{\link{install.packages}}.
+package_skeleton <- function(model, name = NULL, path = ".",
+                             author = NULL, email = NULL,
+                             maintainer = NULL, license = "GPL-3")
 {
+    ## Check model argument
+    if (missing(model))
+        stop("Missing 'model' argument")
+    if (!is(model, "SimInf_model"))
+        stop("'model' argument is not a 'SimInf_model' object")
+
     stopifnot(!is.null(name), is.character(name), length(name) == 1,
               nchar(name) > 0)
     stopifnot(!is.null(path), is.character(path), length(path) == 1,
               nchar(path) > 0)
     path <- file.path(path, name)
-    if (dir.exists(path))
+    if (!is.na(file.info(path)$size))
         stop(paste0("'", path, "' already exists"))
 
-    if (is.null(author)) {
+    if (is.null(author))
         author <- "Your Name"
-    } else {
-        stopifnot(is.character(author), length(author) == 1, nchar(author) > 0)
-    }
+    stopifnot(is.character(author), length(author) == 1, nchar(author) > 0)
 
-    if (is.null(email)) {
+    if (is.null(email))
         email <- "your@email.com"
-    } else {
-        stopifnot(is.character(email), length(email) == 1, nchar(email) > 0)
-    }
+    stopifnot(is.character(email), length(email) == 1, nchar(email) > 0)
 
-    if (is.null(maintainer)) {
+    if (is.null(maintainer))
         maintainer <- author
-    } else {
-        stopifnot(is.character(maintainer), length(maintainer) == 1,
-                  nchar(maintainer) > 0)
-    }
+    stopifnot(is.character(maintainer), length(maintainer) == 1, nchar(maintainer) > 0)
 
     ## Create folder structure
     message("Creating directories ...", domain = NA)
@@ -305,4 +343,4 @@ setMethod("package_skeleton",
     create_model_run_man_file(path, name)
 
     invisible(NULL)
-})
+}

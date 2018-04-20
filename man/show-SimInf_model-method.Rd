@@ -3,7 +3,6 @@
 \docType{methods}
 \name{show,SimInf_model-method}
 \alias{show,SimInf_model-method}
-\alias{show,SimInf_model-methods}
 \title{Brief summary of \code{SimInf_model}}
 \usage{
 \S4method{show}{SimInf_model}(object)
@@ -31,10 +30,9 @@ model <- SIR(u0 = data.frame(S = rep(99, 10),
 model
 
 ## Run the model and save the result
-result <- run(model, threads = 1, seed = 1)
+result <- run(model, threads = 1)
 
 ## Brief summary of the result. Note that 'U' and 'V' are
 ## non-empty after running the model.
 result
 }
-\keyword{methods}

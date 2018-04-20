@@ -14,14 +14,14 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-library(SimInf)
+library("SimInf")
 
 ## For debugging
 sessionInfo()
 
 ## Check invalid u0
 res <- tools::assertError(SIR(u0 = "u0"))
-stopifnot(length(grep("'u0' must be a data.frame",
+stopifnot(length(grep("Missing columns in u0",
                       res[[1]]$message)) > 0)
 
 u0 <- structure(list(S  = c(0, 1, 2, 3, 4, 5),
@@ -93,7 +93,8 @@ res <- tools::assertError(SIR(u0      = u0,
 stopifnot(length(grep("'gamma' must be of length 1",
                       res[[1]]$message)) > 0)
 
-## Check 'suscpetible', 'infected' and 'recovered' methods
+## Extract data from the 'suscpetible', 'infected' and 'recovered'
+## compartments
 model <- SIR(u0     = u0,
              tspan  = seq_len(10) - 1,
              events = NULL,
@@ -107,10 +108,12 @@ S_expected <- structure(c(0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L,
                           2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L,
                           3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L,
                           4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L),
-                        .Dim = c(6L, 10L), .Dimnames = list(NULL, NULL))
+                        .Dim = c(6L, 10L),
+                        .Dimnames = list(c("S", "S", "S", "S", "S", "S"),
+                                         c("0", "1", "2", "3", "4", "5",
+                                           "6", "7", "8", "9")))
 
-S_observed <- susceptible(result)
-
+S_observed <- trajectory(result, compartments = "S", as.is = TRUE)
 stopifnot(identical(S_observed, S_expected))
 
 I_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
@@ -118,10 +121,12 @@ I_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L),
-                        .Dim = c(6L, 10L), .Dimnames = list(NULL, NULL))
+                        .Dim = c(6L, 10L),
+                        .Dimnames = list(c("I", "I", "I", "I", "I", "I"),
+                                         c("0", "1", "2", "3", "4", "5",
+                                           "6", "7", "8", "9")))
 
-I_observed <- infected(result)
-
+I_observed <- trajectory(result, compartments = "I", as.is = TRUE)
 stopifnot(identical(I_observed, I_expected))
 
 R_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
@@ -129,9 +134,12 @@ R_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L),
-                        .Dim = c(6L, 10L), .Dimnames = list(NULL, NULL))
+                        .Dim = c(6L, 10L),
+                        .Dimnames = list(c("R", "R", "R", "R", "R", "R"),
+                                         c("0", "1", "2", "3", "4", "5",
+                                           "6", "7", "8", "9")))
 
-R_observed <- recovered(result)
+R_observed <- trajectory(result, compartments = "R", as.is = TRUE)
 
 stopifnot(identical(R_observed, R_expected))
 
@@ -187,12 +195,26 @@ stopifnot(file.exists(pdf_file))
 unlink(pdf_file)
 
 ## Check that C SIR run function fails for misspecified SIR model
-res <- tools::assertError(.Call("SIR_run", NULL, NULL, NULL,
-                                PACKAGE = "SimInf"))
+res <- tools::assertError(.Call("SIR_run", NULL, NULL, NULL, PACKAGE = "SimInf"))
 stopifnot(length(grep("Invalid model.",
                       res[[1]]$message)) > 0)
 
-res <- tools::assertError(.Call("SIR_run", "SIR", NULL, NULL,
-                                PACKAGE = "SimInf"))
+res <- tools::assertError(.Call("SIR_run", "SIR", NULL, NULL, PACKAGE = "SimInf"))
 stopifnot(length(grep("Invalid model.",
                       res[[1]]$message)) > 0)
+
+## Check events method
+res <- tools::assertError(events())
+stopifnot(length(grep("Missing 'model' argument",
+                      res[[1]]$message)) > 0)
+
+res <- tools::assertError(events(5))
+stopifnot(length(grep("'model' argument is not a 'SimInf_model",
+                      res[[1]]$message)) > 0)
+
+model <- SIR(u0     = u0_SIR(),
+             tspan  = seq_len(365 * 4),
+             events = events_SIR(),
+             beta   = 0,
+             gamma  = 0)
+stopifnot(is(events(model), "SimInf_events"))

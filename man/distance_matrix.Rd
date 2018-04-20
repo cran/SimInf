@@ -2,7 +2,7 @@
 % Please edit documentation in R/distance.R
 \name{distance_matrix}
 \alias{distance_matrix}
-\title{Create distance matrix}
+\title{Create a distance matrix between nodes for spatial models}
 \usage{
 distance_matrix(x, y, cutoff, min_dist = NULL)
 }
@@ -26,5 +26,14 @@ Calculate the euclidian distances beween coordinates for all
 coordinates within the cutoff.
 }
 \examples{
-distance_matrix(1:10, 1:10, 3)
+## Generate a grid 10 x 10 and place one node in each cell
+## separated by 100m.
+nodes <- expand.grid(x = (0:9) * 100, y = (0:9) * 100)
+plot(y ~ x, nodes)
+
+## Define the cutoff to only include neighbors within 300m.
+d <- distance_matrix(x = nodes$x, y = nodes$y, cutoff = 301)
+
+## View the first 10 rows and columns in the distance matrix
+d[1:10, 1:10]
 }

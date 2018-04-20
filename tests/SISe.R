@@ -16,14 +16,14 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-library(SimInf)
+library("SimInf")
 
 ## For debugging
 sessionInfo()
 
 ## Check invalid u0
 res <- tools::assertError(SISe(u0 = "u0"))
-stopifnot(length(grep("'u0' must be a data.frame",
+stopifnot(length(grep("Missing columns in u0",
                       res[[1]]$message)) > 0)
 
 u0 <- structure(list(S  = c(0, 1, 2, 3, 4, 5),
@@ -57,45 +57,6 @@ res <- tools::assertError(SISe(u0      = u0,
                                end_t4  = 365,
                                epsilon = 0.000011))
 stopifnot(length(grep("Invalid 'phi': must be numeric vector",
-                      res[[1]]$message)) > 0)
-
-res <- tools::assertError(SISe(u0      = u0,
-                               tspan   = seq_len(10) - 1,
-                               events  = NULL,
-                               phi     = matrix(rep(1, nrow(u0))),
-                               upsilon = 0.0357,
-                               gamma   = 0.1,
-                               alpha   = 1.0,
-                               beta_t1 = 0.19,
-                               beta_t2 = 0.085,
-                               beta_t3 = 0.075,
-                               beta_t4 = 0.185,
-                               end_t1  = 91,
-                               end_t2  = 182,
-                               end_t3  = 273,
-                               end_t4  = 365,
-                               epsilon = 0.000011))
-stopifnot(length(grep("Invalid 'phi': must be numeric vector",
-                      res[[1]]$message)) > 0)
-
-res <- tools::assertError(SISe(u0      = u0,
-                               tspan   = seq_len(10) - 1,
-                               events  = NULL,
-                               phi     = rep(1, nrow(u0) - 1),
-                               upsilon = 0.0357,
-                               gamma   = 0.1,
-                               alpha   = 1.0,
-                               beta_t1 = 0.19,
-                               beta_t2 = 0.085,
-                               beta_t3 = 0.075,
-                               beta_t4 = 0.185,
-                               end_t1  = 91,
-                               end_t2  = 182,
-                               end_t3  = 273,
-                               end_t4  = 365,
-                               epsilon = 0.000011))
-stopifnot(length(
-    grep("Invalid 'phi': must be numeric vector with length 'nrow[(]u0[)]'",
                       res[[1]]$message)) > 0)
 
 res <- tools::assertError(SISe(u0      = u0,
@@ -802,86 +763,6 @@ res <- tools::assertError(SISe(u0      = u0,
 stopifnot(length(grep("'beta_t4' must be of length 1",
                       res[[1]]$message)) > 0)
 
-## Check that length of end_t1 equals 1 or nrow(u0)
-res <- tools::assertError(SISe(u0      = u0,
-                               tspan   = seq_len(10) - 1,
-                               events  = NULL,
-                               phi     = rep(1, nrow(u0)),
-                               upsilon = 0.0357,
-                               gamma   = 0.1,
-                               alpha   = 1.0,
-                               beta_t1 = 0.19,
-                               beta_t2 = 0.085,
-                               beta_t3 = 0.075,
-                               beta_t4 = 0.185,
-                               end_t1  = c(91, 91),
-                               end_t2  = 182,
-                               end_t3  = 273,
-                               end_t4  = 365,
-                               epsilon = 0.000011))
-stopifnot(length(grep("'end_t1' must be of length 1 or 'nrow\\(u0\\)'",
-                      res[[1]]$message)) > 0)
-
-## Check that length of end_t2 equals 1 or nrow(u0)
-res <- tools::assertError(SISe(u0      = u0,
-                               tspan   = seq_len(10) - 1,
-                               events  = NULL,
-                               phi     = rep(1, nrow(u0)),
-                               upsilon = 0.0357,
-                               gamma   = 0.1,
-                               alpha   = 1.0,
-                               beta_t1 = 0.19,
-                               beta_t2 = 0.085,
-                               beta_t3 = 0.075,
-                               beta_t4 = 0.185,
-                               end_t1  = 91,
-                               end_t2  = c(182, 182),
-                               end_t3  = 273,
-                               end_t4  = 365,
-                               epsilon = 0.000011))
-stopifnot(length(grep("'end_t2' must be of length 1 or 'nrow\\(u0\\)'",
-                      res[[1]]$message)) > 0)
-
-## Check that length of end_t3 equals 1 or nrow(u0)
-res <- tools::assertError(SISe(u0      = u0,
-                               tspan   = seq_len(10) - 1,
-                               events  = NULL,
-                               phi     = rep(1, nrow(u0)),
-                               upsilon = 0.0357,
-                               gamma   = 0.1,
-                               alpha   = 1.0,
-                               beta_t1 = 0.19,
-                               beta_t2 = 0.085,
-                               beta_t3 = 0.075,
-                               beta_t4 = 0.185,
-                               end_t1  = 91,
-                               end_t2  = 182,
-                               end_t3  = c(273, 273),
-                               end_t4  = 365,
-                               epsilon = 0.000011))
-stopifnot(length(grep("'end_t3' must be of length 1 or 'nrow\\(u0\\)'",
-                      res[[1]]$message)) > 0)
-
-## Check that length of end_t4 equals 1 or nrow(u0)
-res <- tools::assertError(SISe(u0      = u0,
-                               tspan   = seq_len(10) - 1,
-                               events  = NULL,
-                               phi     = rep(1, nrow(u0)),
-                               upsilon = 0.0357,
-                               gamma   = 0.1,
-                               alpha   = 1.0,
-                               beta_t1 = 0.19,
-                               beta_t2 = 0.085,
-                               beta_t3 = 0.075,
-                               beta_t4 = 0.185,
-                               end_t1  = 91,
-                               end_t2  = 182,
-                               end_t3  = 273,
-                               end_t4  = c(365, 365),
-                               epsilon = 0.000011))
-stopifnot(length(grep("'end_t4' must be of length 1 or 'nrow\\(u0\\)'",
-                      res[[1]]$message)) > 0)
-
 ## Check that length of epsilon equals 1
 res <- tools::assertError(SISe(u0      = u0,
                                tspan   = seq_len(10) - 1,
@@ -1037,23 +918,24 @@ stopifnot(length(grep(
     "'end_t4' must be less than 'end_t1' or greater than 'end_t3'",
     res[[1]]$message)) > 0)
 
-## Check 'suscpetible' and 'infected' methods
+## Check extraction of data from 'suscpetible', and 'infected'
+## compartments
 model <- SISe(u0      = u0,
               tspan   = seq_len(10) - 1,
               events  = NULL,
-              phi     = rep(0, nrow(u0)),
-              upsilon = 0.0357,
+              phi     = seq(0, by = 0.1, length.out = nrow(u0)),
+              upsilon = 0,
               gamma   = 0.1,
               alpha   = 1.0,
-              beta_t1 = 0.19,
-              beta_t2 = 0.085,
-              beta_t3 = 0.075,
-              beta_t4 = 0.185,
+              beta_t1 = 0,
+              beta_t2 = 0,
+              beta_t3 = 0,
+              beta_t4 = 0,
               end_t1  = 91,
               end_t2  = 182,
               end_t3  = 273,
               end_t4  = 365,
-              epsilon = 0.000011)
+              epsilon = 0)
 
 result <- run(model, threads = 1)
 
@@ -1062,10 +944,11 @@ S_expected <- structure(c(0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L,
                           2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L,
                           3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L,
                           4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L),
-                        .Dim = c(6L, 10L), .Dimnames = list(NULL, NULL))
-
-S_observed <- susceptible(result)
-
+                        .Dim = c(6L, 10L),
+                        .Dimnames = list(c("S", "S", "S", "S", "S", "S"),
+                                         c("0", "1", "2", "3", "4", "5",
+                                           "6", "7", "8", "9")))
+S_observed <- trajectory(result, compartments = "S", as.is = TRUE)
 stopifnot(identical(S_observed, S_expected))
 
 I_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
@@ -1073,11 +956,104 @@ I_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L),
-                        .Dim = c(6L, 10L), .Dimnames = list(NULL, NULL))
-
-I_observed <- infected(result)
-
+                        .Dim = c(6L, 10L),
+                        .Dimnames = list(c("I", "I", "I", "I", "I", "I"),
+                                         c("0", "1", "2", "3", "4", "5",
+                                           "6", "7", "8", "9")))
+I_observed <- trajectory(result, compartments = "I", as.is = TRUE)
 stopifnot(identical(I_observed, I_expected))
+
+## Check output from trajectory method
+model@tspan <- c(1,2)
+result <- run(model, threads = 1)
+res <- tools::assertError(trajectory(result, c("S", "phi"), as.is = TRUE))
+stopifnot(length(grep("Select either continuous or discrete compartments",
+                      res[[1]]$message)) > 0)
+
+stopifnot(identical(class(trajectory(result, c("S", "phi"))$phi), "numeric"))
+stopifnot(identical(class(trajectory(result, c("phi"))$phi), "numeric"))
+
+traj_expected <- structure(list(
+    node = c(1L, 2L, 3L, 4L, 5L, 6L, 1L, 2L, 3L, 4L, 5L, 6L),
+    time = c(1L, 1L, 1L, 1L, 1L, 1L, 2L, 2L, 2L, 2L, 2L, 2L),
+    S = c(0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L)),
+    .Names = c("node", "time", "S"),
+    row.names = c(NA, -12L),
+    class = "data.frame")
+stopifnot(identical(trajectory(result, c("S", "S")), traj_expected))
+
+traj_expected <- structure(list(
+    node = c(1L, 2L, 3L, 4L, 5L, 6L, 1L, 2L, 3L, 4L, 5L, 6L),
+    time = c(1L, 1L, 1L, 1L, 1L, 1L, 2L, 2L, 2L, 2L, 2L, 2L),
+    S = c(0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L),
+    phi = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0, 0.1, 0.2, 0.3, 0.4, 0.5)),
+    .Names = c("node", "time", "S", "phi"),
+    row.names = c(NA, -12L),
+    class = "data.frame")
+stopifnot(identical(trajectory(result, c("S", "S", "phi", "phi"))[, -4], traj_expected[, -4]))
+stopifnot(identical(trajectory(result, c("phi", "phi", "S", "S"))[, -4], traj_expected[, -4]))
+stopifnot(all(abs(trajectory(result, c("phi", "phi", "S", "S"))[, 4] - traj_expected$phi) < 1e-8))
+
+## Check extracting a subset of nodes
+traj_expected <- structure(list(
+    node = c(2L, 5L, 2L, 5L),
+    time = c(1L, 1L, 2L, 2L),
+    S = c(1L, 4L, 1L, 4L),
+    phi = c(0.1, 0.4, 0.1, 0.4)),
+    .Names = c("node", "time", "S", "phi"),
+    row.names = c(NA, -4L),
+    class = "data.frame")
+stopifnot(identical(trajectory(result, c("S", "S", "phi", "phi"), node = c(5, 2))[, -4], traj_expected[, -4]))
+stopifnot(identical(trajectory(result, c("phi", "phi", "S", "S"), node = c(5, 2))[, -4], traj_expected[, -4]))
+stopifnot(all(abs(trajectory(result, c("phi", "phi", "S", "S"), node = c(5, 2))[, 4] - traj_expected$phi) < 1e-8))
+stopifnot(identical(trajectory(result, c("S", "phi"), node = c(5, 2)), traj_expected))
+
+## Check extracting all compartments in U
+stopifnot(identical(trajectory(result, c("S", "I"), as.is = TRUE), result@U))
+
+## Check extracting all compartments of U in internal format
+stopifnot(identical(trajectory(result, c("S", "I"), as.is = TRUE), result@U))
+
+## Check extracting a subset compartments of V in internal format
+traj_observed <- trajectory(result, "phi", node = c(5, 2), as.is = TRUE)
+stopifnot(identical(dim(traj_observed), c(2L, 2L)))
+stopifnot(all(abs(traj_observed[1, ] - 0.1) < 1e-8))
+stopifnot(all(abs(traj_observed[2, ] - 0.4) < 1e-8))
+
+## Check extracting all compartments in a subset of U as a data.frame
+traj_expected <- data.frame(node = c(2L, 5L, 2L, 5L),
+                            time = c(1L, 1L, 2L, 2L),
+                            S = c(1L, 4L, 1L, 4L),
+                            I = c(0L, 0L, 0L, 0L))
+stopifnot(identical(trajectory(result, c("S", "I"), node = c(5, 2)), traj_expected))
+
+## Check extracting all compartments in U as a data.frame
+traj_expected <- data.frame(node = c(1L, 2L, 3L, 4L, 5L, 6L, 1L, 2L, 3L, 4L, 5L, 6L),
+                            time = c(1L, 1L, 1L, 1L, 1L, 1L, 2L, 2L, 2L, 2L, 2L, 2L),
+                            S = c(0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L),
+                            I = c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L))
+traj_observed <- trajectory(result, c("S", "I"))
+stopifnot(identical(traj_observed, traj_expected))
+
+## Check extracting all compartments in U and V as a data.frame
+traj_expected <- data.frame(node = c(1L, 2L, 3L, 4L, 5L, 6L, 1L, 2L, 3L, 4L, 5L, 6L),
+                            time = c(1L, 1L, 1L, 1L, 1L, 1L, 2L, 2L, 2L, 2L, 2L, 2L),
+                            S = c(0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L),
+                            I = c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L),
+                            phi = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0, 0.1, 0.2, 0.3, 0.4, 0.5))
+traj_observed <- trajectory(result, c("S", "I", "phi"))
+stopifnot(identical(traj_observed[, -5], traj_expected[, -5]))
+stopifnot(all(abs(traj_observed[, 5] - traj_expected$phi) < 1e-8))
+
+## Use formula notation
+traj_observed <- trajectory(result, ~.)
+stopifnot(identical(traj_observed[, -5], traj_expected[, -5]))
+stopifnot(all(abs(traj_observed[, 5] - traj_expected$phi) < 1e-8))
+
+## Specify invalid formula
+res <- tools::assertError(trajectory(result, ~1))
+stopifnot(length(grep("Invalid formula specification of 'compartments'",
+                      res[[1]]$message)) > 0)
 
 ## Check SISe plot method
 pdf_file <- tempfile(fileext = ".pdf")
@@ -1088,13 +1064,11 @@ stopifnot(file.exists(pdf_file))
 unlink(pdf_file)
 
 ## Check that C SISe run function fails for misspecified SISe model
-res <- tools::assertError(.Call("SISe_run", NULL, NULL, NULL,
-                                PACKAGE = "SimInf"))
+res <- tools::assertError(.Call("SISe_run", NULL, NULL, NULL, PACKAGE = "SimInf"))
 stopifnot(length(grep("Invalid model.",
                       res[[1]]$message)) > 0)
 
-res <- tools::assertError(.Call("SISe_run", "SISe", NULL, NULL,
-                                PACKAGE = "SimInf"))
+res <- tools::assertError(.Call("SISe_run", "SISe", NULL, NULL, PACKAGE = "SimInf"))
 stopifnot(length(grep("Invalid model.",
                       res[[1]]$message)) > 0)
 

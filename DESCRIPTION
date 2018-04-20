@@ -1,27 +1,39 @@
 Package: SimInf
 Title: A Framework for Data-Driven Stochastic Disease Spread
         Simulations
-Version: 5.1.0
-Author: Stefan Widgren (National Veterinary Institute, Sweden and
-    Uppsala University, Sweden),
-    Pavol Bauer (Uppsala University, Sweden),
-    Stefan Engblom (Uppsala University, Sweden)
-Maintainer: Stefan Widgren <stefan.widgren@gmail.com>
-Description: Livestock movements are important for the spread of many
-    infectious diseases between herds. The package provides an
-    efficient and flexible framework for stochastic disease spread
-    modelling that integrates within-herd disease dynamics as
-    continuous-time Markov chains and livestock movements between
-    herds as scheduled events. The core simulation solver is
-    implemented in C and uses 'OpenMP' (if available) to divide work
-    over multiple processors. The package contains template models and
-    can be extended with user defined models.
+Version: 6.0.0
+Authors@R: c(person("Stefan", "Widgren", role = c("aut", "cre"),
+                    email = "stefan.widgren@gmail.com",
+                    comment = c(ORCID = "0000-0001-5745-2284")),
+             person("Robin", "Eriksson", role = "aut",
+                    comment = c(ORCID = "0000-0002-4291-712X")),
+             person("Stefan", "Engblom", role = "aut",
+                    comment = c(ORCID = "0000-0002-3614-1732")),
+             person("Pavol", "Bauer", role = "aut",
+                    comment = c(ORCID = "0000-0003-4328-7171")),
+             person("Attractive Chaos", role = "cph",
+                    comment = "Author of 'kvec.h', a generic dynamic array"))
+Description: Provides an efficient and very flexible framework to
+    conduct data-driven epidemiological modeling in realistic large
+    scale disease spread simulations. The framework integrates
+    infection dynamics in subpopulations as continuous-time Markov
+    chains using the Gillespie stochastic simulation algorithm and
+    incorporates available data such as births, deaths and movements
+    as scheduled events at predefined time-points. Using C code for
+    the numerical solvers and 'OpenMP' (if available) to divide work
+    over multiple processors ensures high performance when simulating
+    a sample outcome. One of our design goal was to make the package
+    extendable and enable usage of the numerical solvers from other R
+    extension packages in order to facilitate complex epidemiological
+    research. The package contains template models and can be extended
+    with user-defined models.
 Acknowledgements: This work was financially supported by the Swedish
         Research Council within the UPMARC Linnaeus center of
-        Excellence (Pavol Bauer and Stefan Engblom), the Swedish
-        Research Council Formas (Stefan Engblom and Stefan Widgren),
-        the Swedish Board of Agriculture (Stefan Widgren), and by the
-        Swedish strategic research program eSSENCE (Stefan Widgren).
+        Excellence (Pavol Bauer, Robin Eriksson, and Stefan Engblom),
+        the Swedish Research Council Formas (Stefan Engblom and Stefan
+        Widgren), the Swedish Board of Agriculture (Stefan Widgren),
+        and by the Swedish strategic research program eSSENCE (Stefan
+        Widgren).
 License: GPL-3
 URL: https://github.com/stewid/SimInf
 BugReports: https://github.com/stewid/SimInf/issues
@@ -30,13 +42,19 @@ LazyData: true
 Biarch: true
 NeedsCompilation: yes
 SystemRequirements: GNU Scientific Library (GSL)
-Depends: R(>= 3.0.2)
-Imports: graphics, methods, stats, utils, Matrix
-Collate: 'AllGenerics.R' 'check_arguments.R' 'SimInf_events.R'
-        'SimInf_model.R' 'SEIR.R' 'SIR.R' 'SISe.R' 'SISe3.R'
-        'SISe3_sp.R' 'SISe_sp.R' 'SimInf.R' 'distance.R'
-        'model_builder.R' 'package_skeleton.R' 'run_outer.R'
+Depends: R(>= 3.1)
+Imports: graphics, grDevices, methods, stats, utils, Matrix
+Collate: 'check_arguments.R' 'SimInf_events.R' 'SimInf_model.R'
+        'SEIR.R' 'SIR.R' 'SISe.R' 'SISe3.R' 'SISe3_sp.R' 'SISe_sp.R'
+        'SimInf.R' 'SimInf_mparse.R' 'distance.R' 'package_skeleton.R'
+        'run_outer.R'
 RoxygenNote: 6.0.1
-Packaged: 2017-10-18 10:47:46 UTC; stefan
+Packaged: 2018-04-20 22:02:40 UTC; stefan
+Author: Stefan Widgren [aut, cre] (<https://orcid.org/0000-0001-5745-2284>),
+  Robin Eriksson [aut] (<https://orcid.org/0000-0002-4291-712X>),
+  Stefan Engblom [aut] (<https://orcid.org/0000-0002-3614-1732>),
+  Pavol Bauer [aut] (<https://orcid.org/0000-0003-4328-7171>),
+  Attractive Chaos [cph] (Author of 'kvec.h', a generic dynamic array)
+Maintainer: Stefan Widgren <stefan.widgren@gmail.com>
 Repository: CRAN
-Date/Publication: 2017-10-18 11:02:29 UTC
+Date/Publication: 2018-04-20 22:44:15 UTC

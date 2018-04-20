@@ -15,7 +15,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-library(SimInf)
+library("SimInf")
 
 ## For debugging
 sessionInfo()
@@ -777,90 +777,6 @@ res <- tools::assertError(SISe_sp(u0       = u0,
 stopifnot(length(grep("'beta_t4' must be of length 1",
                       res[[1]]$message)) > 0)
 
-## Check that length of end_t1 equals 1 or nrow(u0)
-res <- tools::assertError(SISe_sp(u0       = u0,
-                                  tspan    = seq_len(10) - 1,
-                                  events   = NULL,
-                                  phi      = rep(1, nrow(u0)),
-                                  upsilon  = 0.0357,
-                                  gamma    = 0.1,
-                                  alpha    = 1.0,
-                                  beta_t1  = 0.19,
-                                  beta_t2  = 0.085,
-                                  beta_t3  = 0.075,
-                                  beta_t4  = 0.185,
-                                  end_t1   = c(91, 91),
-                                  end_t2   = 182,
-                                  end_t3   = 273,
-                                  end_t4   = 365,
-                                  coupling = 0.0005,
-                                  distance = distance))
-stopifnot(length(grep("'end_t1' must be of length 1 or 'nrow\\(u0\\)'",
-                      res[[1]]$message)) > 0)
-
-## Check that length of end_t2 equals 1 or nrow(u0)
-res <- tools::assertError(SISe_sp(u0       = u0,
-                                  tspan    = seq_len(10) - 1,
-                                  events   = NULL,
-                                  phi      = rep(1, nrow(u0)),
-                                  upsilon  = 0.0357,
-                                  gamma    = 0.1,
-                                  alpha    = 1.0,
-                                  beta_t1  = 0.19,
-                                  beta_t2  = 0.085,
-                                  beta_t3  = 0.075,
-                                  beta_t4  = 0.185,
-                                  end_t1   = 91,
-                                  end_t2   = c(182, 182),
-                                  end_t3   = 273,
-                                  end_t4   = 365,
-                                  coupling = 0.0005,
-                                  distance = distance))
-stopifnot(length(grep("'end_t2' must be of length 1 or 'nrow\\(u0\\)'",
-                      res[[1]]$message)) > 0)
-
-## Check that length of end_t3 equals 1 or nrow(u0)
-res <- tools::assertError(SISe_sp(u0       = u0,
-                                  tspan    = seq_len(10) - 1,
-                                  events   = NULL,
-                                  phi      = rep(1, nrow(u0)),
-                                  upsilon  = 0.0357,
-                                  gamma    = 0.1,
-                                  alpha    = 1.0,
-                                  beta_t1  = 0.19,
-                                  beta_t2  = 0.085,
-                                  beta_t3  = 0.075,
-                                  beta_t4  = 0.185,
-                                  end_t1   = 91,
-                                  end_t2   = 182,
-                                  end_t3   = c(273, 273),
-                                  end_t4   = 365,
-                                  coupling = 0.0005,
-                                  distance = distance))
-stopifnot(length(grep("'end_t3' must be of length 1 or 'nrow\\(u0\\)'",
-                      res[[1]]$message)) > 0)
-
-## Check that length of end_t4 equals 1 or nrow(u0)
-res <- tools::assertError(SISe_sp(u0       = u0,
-                                  tspan    = seq_len(10) - 1,
-                                  events   = NULL,
-                                  phi      = rep(1, nrow(u0)),
-                                  upsilon  = 0.0357,
-                                  gamma    = 0.1,
-                                  alpha    = 1.0,
-                                  beta_t1  = 0.19,
-                                  beta_t2  = 0.085,
-                                  beta_t3  = 0.075,
-                                  beta_t4  = 0.185,
-                                  end_t1   = 91,
-                                  end_t2   = 182,
-                                  end_t3   = 273,
-                                  end_t4   = c(365, 365),
-                                  coupling = 0.0005,
-                                  distance = distance))
-stopifnot(length(grep("'end_t4' must be of length 1 or 'nrow\\(u0\\)'",
-                      res[[1]]$message)) > 0)
-
 ## Check that length of coupling equals 1
 res <- tools::assertError(SISe_sp(u0       = u0,
                                   tspan    = seq_len(10) - 1,
@@ -1045,7 +961,8 @@ res <- tools::assertError(SISe_sp(u0       = u0,
 stopifnot(length(grep("The 'distance' argument must be of type 'dgCMatrix'",
                       res[[1]]$message)) > 0)
 
-## Check 'suscpetible' and 'infected' methods
+## Check extraction of data from 'suscpetible', and 'infected'
+## compartments
 model <- SISe_sp(u0       = u0,
                  tspan    = seq_len(10) - 1,
                  events   = NULL,
@@ -1076,10 +993,11 @@ S_expected <- structure(c(0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L,
                           0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L,
                           0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L,
                           0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L),
-                        .Dim = 9:10, .Dimnames = list(NULL, NULL))
-
-S_observed <- susceptible(result)
-
+                        .Dim = 9:10,
+                        .Dimnames = list(
+                            c("S", "S", "S", "S", "S", "S", "S", "S", "S"),
+                            c("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")))
+S_observed <- trajectory(result, compartments = "S", as.is = TRUE)
 stopifnot(identical(S_observed, S_expected))
 
 I_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
@@ -1092,10 +1010,11 @@ I_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L),
-                        .Dim = 9:10, .Dimnames = list(NULL, NULL))
-
-I_observed <- infected(result)
-
+                        .Dim = 9:10,
+                        .Dimnames = list(
+                            c("I", "I", "I", "I", "I", "I", "I", "I", "I"),
+                            c("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")))
+I_observed <- trajectory(result, compartments = "I", as.is = TRUE)
 stopifnot(identical(I_observed, I_expected))
 
 ## Check SISe_sp plot method
@@ -1107,13 +1026,11 @@ stopifnot(file.exists(pdf_file))
 unlink(pdf_file)
 
 ## Check that C SISe_sp run function fails for misspecified SISe_sp model
-res <- tools::assertError(.Call("SISe_sp_run", NULL, NULL, NULL,
-                                PACKAGE = "SimInf"))
+res <- tools::assertError(.Call("SISe_sp_run", NULL, NULL, NULL, PACKAGE = "SimInf"))
 stopifnot(length(grep("Invalid model.",
                       res[[1]]$message)) > 0)
 
-res <- tools::assertError(.Call("SISe_sp_run", "SISe_sp", NULL, NULL,
-                                PACKAGE = "SimInf"))
+res <- tools::assertError(.Call("SISe_sp_run", "SISe_sp", NULL, NULL, PACKAGE = "SimInf"))
 stopifnot(length(grep("Invalid model.",
                       res[[1]]$message)) > 0)
 

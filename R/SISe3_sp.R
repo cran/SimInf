@@ -15,11 +15,10 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-##' Class \code{"SISe3_sp"}
+##' Definition of the \sQuote{SISe3_sp} model
 ##'
 ##' Class to handle the SISe3_sp \code{\link{SimInf_model}} model.
 ##' @include SimInf_model.R
-##' @include AllGenerics.R
 ##' @export
 setClass("SISe3_sp", contains = c("SimInf_model"))
 
@@ -40,14 +39,10 @@ setClass("SISe3_sp", contains = c("SimInf_model"))
 ##' }
 ##'
 ##' @template beta-section
-##' @param u0 A \code{data.frame} with the initial state in each
-##' node, see details.
+##' @template u0-param
 ##' @template tspan-param
-##' @param events a \code{data.frame} with the scheduled events, see
-##' \code{\link{SimInf_model}}.
-##' @param phi A numeric vector with the initial environmental
-##' infectious pressure in each node. Default NULL which gives 0 in
-##' each node.
+##' @template events-param
+##' @template phi-param
 ##' @param upsilon_1 Indirect transmission rate of the environmental
 ##' infectious pressure in age category 1
 ##' @param upsilon_2 Indirect transmission rate of the environmental
@@ -67,6 +62,7 @@ setClass("SISe3_sp", contains = c("SimInf_model"))
 ##' @return \code{SISe3_sp}
 ##' @include check_arguments.R
 ##' @export
+##' @importFrom methods is
 SISe3_sp <- function(u0,
                      tspan,
                      events    = NULL,
@@ -95,14 +91,15 @@ SISe3_sp <- function(u0,
 
     ## Check u0
     if (!is.data.frame(u0))
-        stop("'u0' must be a data.frame")
+        u0 <- as.data.frame(u0)
     if (!all(compartments %in% names(u0)))
         stop("Missing columns in u0")
-    u0 <- u0[, compartments]
+    u0 <- u0[, compartments, drop = FALSE]
 
     ## Check initial infectious pressure
     if (is.null(phi))
-        phi <- rep(0, nrow(u0))
+        phi <- 0
+    phi <- rep(phi, length.out = nrow(u0))
     check_infectious_pressure_arg(nrow(u0), phi)
 
     ## Check 'gdata' parameters
@@ -111,102 +108,57 @@ SISe3_sp <- function(u0,
 
     ## Check interval endpoints
     check_integer_arg(end_t1, end_t2, end_t3, end_t4)
-    if (identical(length(end_t1), 1L))
-        end_t1 <- rep(end_t1, nrow(u0))
-    if (identical(length(end_t2), 1L))
-        end_t2 <- rep(end_t2, nrow(u0))
-    if (identical(length(end_t3), 1L))
-        end_t3 <- rep(end_t3, nrow(u0))
-    if (identical(length(end_t4), 1L))
-        end_t4 <- rep(end_t4, nrow(u0))
+    end_t1 <- rep(end_t1, length.out = nrow(u0))
+    end_t2 <- rep(end_t2, length.out = nrow(u0))
+    end_t3 <- rep(end_t3, length.out = nrow(u0))
+    end_t4 <- rep(end_t4, length.out = nrow(u0))
     check_end_t_arg(nrow(u0), end_t1, end_t2, end_t3, end_t4)
 
     ## Check distance matrix
     if (is.null(distance))
         stop("'distance' is missing")
-    if (!methods::is(distance, "dgCMatrix"))
+    if (!is(distance, "dgCMatrix"))
         stop("The 'distance' argument must be of type 'dgCMatrix'")
     if (any(distance < 0))
         stop("All values in the 'distance' matrix must be >= 0")
 
-    ## Arguments seems ok...go on
+    ## Arguments seem ok...go on
 
-    E <- Matrix::Matrix(c(1, 0, 0, 1, 0, 0,
-                          0, 0, 0, 1, 0, 0,
-                          0, 1, 0, 0, 1, 0,
-                          0, 0, 0, 0, 1, 0,
-                          0, 0, 1, 0, 0, 1,
-                          0, 0, 0, 0, 0, 1),
-                        nrow   = 6,
-                        ncol   = 6,
-                        byrow  = TRUE,
-                        sparse = TRUE)
-    E <- methods::as(E, "dgCMatrix")
-    colnames(E) <- as.character(1:6)
-    rownames(E) <- compartments
+    E <- matrix(c(1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+                  1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1),
+                nrow = 6, ncol = 6,
+                dimnames = list(compartments, c("1", "2", "3", "4", "5", "6")))
 
-    N <- matrix(c(2, 0,
-                  2, 0,
-                  0, 2,
-                  0, 2,
-                  0, 0,
-                  0, 0),
-                nrow   = 6,
-                ncol   = 2,
-                byrow  = TRUE)
-    colnames(N) <- as.character(1:2)
-    rownames(N) <- compartments
+    N <- matrix(c(2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, -1, 0, -1, 0, -1),
+                nrow = 6, ncol = 3,
+                dimnames = list(compartments, c("1", "2", "3")))
 
-    G <- Matrix::Matrix(c(1, 1, 0, 0, 0, 0,
-                          1, 1, 0, 0, 0, 0,
-                          0, 0, 1, 1, 0, 0,
-                          0, 0, 1, 1, 0, 0,
-                          0, 0, 0, 0, 1, 1,
-                          0, 0, 0, 0, 1, 1),
-                        nrow   = 6,
-                        ncol   = 6,
-                        byrow  = TRUE,
-                        sparse = TRUE)
-    G <- methods::as(G, "dgCMatrix")
-    colnames(G) <- as.character(1:6)
-    rownames(G) <- c("S_1 -> I_1", "I_1 -> S_1",
-                     "S_2 -> I_2", "I_2 -> S_2",
-                     "S_3 -> I_3", "I_3 -> S_3")
+    G <- matrix(c(1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+                  0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1),
+                nrow   = 6, ncol   = 6,
+                dimnames = list(c("S_1 -> I_1", "I_1 -> S_1",
+                                  "S_2 -> I_2", "I_2 -> S_2",
+                                  "S_3 -> I_3", "I_3 -> S_3"),
+                                c("1", "2", "3", "4", "5", "6")))
 
-    S <- Matrix::Matrix(c(-1,  1,  0,  0,  0,  0,
-                           1, -1,  0,  0,  0,  0,
-                           0,  0, -1,  1,  0,  0,
-                           0,  0,  1, -1,  0,  0,
-                           0,  0,  0,  0, -1,  1,
-                           0,  0,  0,  0,  1, -1),
-                        nrow   = 6,
-                        ncol   = 6,
-                        byrow  = TRUE,
-                        sparse = TRUE)
-    S <- methods::as(S, "dgCMatrix")
-    colnames(S) <- as.character(1:6)
-    rownames(S) <- compartments
+    S <- matrix(c(-1, 1, 0, 0, 0, 0, 1, -1, 0, 0, 0, 0, 0, 0, -1, 1, 0, 0,
+                  0, 0, 1, -1, 0, 0, 0, 0, 0, 0, -1, 1, 0, 0, 0, 0, 1, -1),
+                nrow = 6, ncol = 6,
+                dimnames = list(compartments, c("1", "2", "3", "4", "5", "6")))
 
-    v0 <- matrix(phi, nrow  = 1, byrow = TRUE)
-    storage.mode(v0) <- "double"
+    v0 <- matrix(as.numeric(phi), nrow  = 1, byrow = TRUE,
+                 dimnames = list("phi"))
 
-    ldata <- matrix(c(end_t1, end_t2, end_t3, end_t4),
-                    nrow  = 4,
-                    byrow = TRUE)
-    storage.mode(ldata) <- "double"
+    ldata <- matrix(as.numeric(c(end_t1, end_t2, end_t3, end_t4)),
+                    nrow = 4, byrow = TRUE)
     ldata <- .Call("SimInf_ldata_sp", ldata, distance, 1L, PACKAGE = "SimInf")
 
-    gdata <- c(upsilon_1, upsilon_2, upsilon_3,
-               gamma_1, gamma_2, gamma_3,
-               alpha,
-               beta_t1, beta_t2, beta_t3, beta_t4,
-               coupling)
-    storage.mode(gdata) <- "double"
+    gdata <- as.numeric(c(upsilon_1, upsilon_2, upsilon_3,
+                          gamma_1, gamma_2, gamma_3, alpha,
+                          beta_t1, beta_t2, beta_t3, beta_t4, coupling))
     names(gdata) <- c("upsilon_1", "upsilon_2", "upsilon_3",
-                      "gamma_1", "gamma_2", "gamma_3",
-                      "alpha",
-                      "beta_t1", "beta_t2", "beta_t3", "beta_t4",
-                      "coupling")
+                      "gamma_1", "gamma_2", "gamma_3", "alpha",
+                      "beta_t1", "beta_t2", "beta_t3", "beta_t4", "coupling")
 
     model <- SimInf_model(G      = G,
                           S      = S,
@@ -219,57 +171,5 @@ SISe3_sp <- function(u0,
                           u0     = u0,
                           v0     = v0)
 
-    methods::as(model, "SISe3_sp")
+    as(model, "SISe3_sp")
 }
-
-##' @rdname susceptible-methods
-##' @export
-setMethod("susceptible",
-          signature("SISe3_sp"),
-          function(model, age = 1:3, i = NULL, ...)
-          {
-              stopifnot(all(age %in% 1:3))
-              extract_U(model, paste0("S_", age), i)
-          }
-)
-
-##' @rdname infected-methods
-##' @export
-setMethod("infected",
-          signature("SISe3_sp"),
-          function(model, age = 1:3, i = NULL, ...)
-          {
-              stopifnot(all(age %in% 1:3))
-              extract_U(model, paste0("I_", age), i)
-          }
-)
-
-##' @rdname prevalence-methods
-##' @export
-setMethod("prevalence",
-          signature("SISe3_sp"),
-          function(model, type, i, age = 1:3, ...)
-          {
-              stopifnot(all(age %in% 1:3))
-              numerator <- paste0("I_", age)
-              denominator <- c(paste0("S_", age), paste0("I_", age))
-              calc_prevalence(model, numerator, denominator, type, i)
-          }
-)
-
-##' @name plot-methods
-##' @aliases plot plot-methods plot,SISe3_sp-method
-##' @export
-setMethod("plot",
-          signature(x = "SISe3_sp"),
-          function(x,
-                   legend = expression(S[1], I[1], S[2], I[2], S[3], I[3]),
-                   col = rep(c("blue", "red"), 3),
-                   lty = rep(1:3, each = 2),
-                   lwd = 2,
-                   ...)
-          {
-              methods::callNextMethod(x, legend = legend, col = col,
-                                      lty = lty, lwd = lwd, ...)
-          }
-)

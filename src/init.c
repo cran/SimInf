@@ -1,8 +1,9 @@
 /*
  *  SimInf, a framework for stochastic disease spread simulations
- *  Copyright (C) 2015  Pavol Bauer
- *  Copyright (C) 2015 - 2017  Stefan Engblom
- *  Copyright (C) 2015 - 2017  Stefan Widgren
+ *  Copyright (C) 2015 Pavol Bauer
+ *  Copyright (C) 2017 - 2018 Robin Eriksson
+ *  Copyright (C) 2015 - 2018 Stefan Engblom
+ *  Copyright (C) 2015 - 2018 Stefan Widgren
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,7 +31,7 @@ SEXP SISe_run(SEXP, SEXP, SEXP);
 SEXP SISe3_run(SEXP, SEXP, SEXP);
 SEXP SISe3_sp_run(SEXP, SEXP, SEXP);
 SEXP SISe_sp_run(SEXP, SEXP, SEXP);
-SEXP SimInf_ldata_sp(SEXP, SEXP, SEXP);
+SEXP SimInf_ldata_sp(SEXP, SEXP, SEXP, SEXP);
 
 /**
  * Is OpenMP available

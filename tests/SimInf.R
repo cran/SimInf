@@ -16,7 +16,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-library(SimInf)
+library("SimInf")
 
 ## For debugging
 sessionInfo()
@@ -49,19 +49,19 @@ model <- SISe(u0      = u0,
               end_t4  = 365,
               epsilon = 1)
 
-result <- run(model, threads = 1, seed = 123L)
+result <- run(model, threads = 1)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(identical(sum(U(result)), 1001L))
-stopifnot(any(U(result)[1,]))
-stopifnot(any(U(result)[2,]))
+stopifnot(identical(sum(trajectory(result, as.is = TRUE)), 1001L))
+stopifnot(any(trajectory(result, as.is = TRUE)[1,]))
+stopifnot(any(trajectory(result, as.is = TRUE)[2,]))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
 stopifnot(identical(model@events, result@events))
 
 if (SimInf:::have_openmp()) {
-    result_omp <- run(model, threads = 2, seed = 123L)
+    result_omp <- run(model, threads = 2)
     stopifnot(identical(model@G, result_omp@G))
     stopifnot(identical(model@S, result_omp@S))
     stopifnot(identical(sum(result_omp@U), 1001L))
@@ -125,19 +125,21 @@ model <- SISe3(u0        = u0,
                end_t4    = 365,
                epsilon   = 1)
 
-result <- run(model, threads = 1, seed = 123L)
+set.seed(123)
+result <- run(model, threads = 1)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(all(apply(U(result)[1:6,], 1, any)))
-stopifnot(identical(sum(U(result)[1:6,11]), 45L))
-stopifnot(identical(sum(U(result)[,1]), 45L))
+stopifnot(all(apply(trajectory(result, as.is = TRUE)[1:6,], 1, any)))
+stopifnot(identical(sum(trajectory(result, as.is = TRUE)[1:6,11]), 45L))
+stopifnot(identical(sum(trajectory(result, as.is = TRUE)[,1]), 45L))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
 stopifnot(identical(model@events, result@events))
 
 if (SimInf:::have_openmp()) {
-    result_omp <- run(model, threads = 2, seed = 123L)
+    set.seed(123)
+    result_omp <- run(model, threads = 2)
     stopifnot(identical(model@G, result_omp@G))
     stopifnot(identical(model@S, result_omp@S))
     stopifnot(all(apply(result_omp@U[1:6,], 1, any)))
@@ -202,35 +204,48 @@ model <- SISe3(u0        = u0,
                end_t4    = 365,
                epsilon   = 1)
 
-result <- run(model, threads = 1, seed = 123L)
+result <- run(model, threads = 1)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(identical(
-    susceptible(result, age = 2, i = 1) + infected(result, age = 2, i = 1),
-    structure(c(0L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L),
-              .Dim = c(1L, 11L), .Dimnames = list(NULL, NULL))))
-stopifnot(identical(
-    susceptible(result, age = 3, i = 1) + infected(result, age = 3, i = 1),
-    structure(c(0L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L),
-              .Dim = c(1L, 11L), .Dimnames = list(NULL, NULL))))
-stopifnot(identical(sum(U(result)[,1]), 45L))
+
+m <- trajectory(result, compartments = "S_2", node = 1, as.is = TRUE) +
+    trajectory(result, compartments = "I_2", node = 1, as.is = TRUE)
+dimnames(m) <- NULL
+stopifnot(identical(m,
+                    structure(c(0L, 15L, 15L, 15L, 15L,
+                                15L, 15L, 15L, 15L, 15L, 15L),
+                              .Dim = c(1L, 11L))))
+m <- trajectory(result, compartments = "S_3", node = 1, as.is = TRUE) +
+    trajectory(result, compartments = "I_3", node = 1, as.is = TRUE)
+dimnames(m) <- NULL
+stopifnot(identical(m,
+                    structure(c(0L, 15L, 15L, 15L, 15L,
+                                15L, 15L, 15L, 15L, 15L, 15L),
+                              .Dim = c(1L, 11L))))
+stopifnot(identical(sum(trajectory(result, as.is = TRUE)[,1]), 45L))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
 stopifnot(identical(model@events, result@events))
 
 if (SimInf:::have_openmp()) {
-    result_omp <- run(model, threads = 2, seed = 123L)
+    result_omp <- run(model, threads = 2)
     stopifnot(identical(model@G, result_omp@G))
     stopifnot(identical(model@S, result_omp@S))
-    stopifnot(identical(
-        susceptible(result, age = 2, i = 1) + infected(result, age = 2, i = 1),
-        structure(c(0L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L),
-                  .Dim = c(1L, 11L), .Dimnames = list(NULL, NULL))))
-    stopifnot(identical(
-        susceptible(result, age = 3, i = 1) + infected(result, age = 3, i = 1),
-        structure(c(0L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L, 15L),
-                  .Dim = c(1L, 11L), .Dimnames = list(NULL, NULL))))
+    m <- trajectory(result, compartments = "S_2", node = 1, as.is = TRUE) +
+        trajectory(result, compartments = "I_2", node = 1, as.is = TRUE)
+    dimnames(m) <- NULL
+    stopifnot(identical(m,
+                        structure(c(0L, 15L, 15L, 15L, 15L,
+                                    15L, 15L, 15L, 15L, 15L, 15L),
+                                  .Dim = c(1L, 11L))))
+    m <- trajectory(result, compartments = "S_3", node = 1, as.is = TRUE) +
+        trajectory(result, compartments = "I_3", node = 1, as.is = TRUE)
+    dimnames(m) <- NULL
+    stopifnot(identical(m,
+                        structure(c(0L, 15L, 15L, 15L, 15L,
+                                    15L, 15L, 15L, 15L, 15L, 15L),
+                                  .Dim = c(1L, 11L))))
     stopifnot(identical(sum(result_omp@U[,1]), 45L))
     stopifnot(identical(model@ldata, result_omp@ldata))
     stopifnot(identical(model@tspan, result_omp@tspan))
@@ -276,19 +291,19 @@ model <- SISe3(u0        = u0,
                end_t4    = 365,
                epsilon   = 1)
 
-result <- run(model, threads = 1, seed = 123L)
+result <- run(model, threads = 1)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(all(U(result)[1:6,] == 0))
-stopifnot(all(apply(U(result)[seq(from=8, to=36, by=2),], 1, any)))
-stopifnot(identical(sum(U(result)[,11]), 45L))
+stopifnot(all(trajectory(result, as.is = TRUE)[1:6,] == 0))
+stopifnot(all(apply(trajectory(result, as.is = TRUE)[seq(from=8, to=36, by=2),], 1, any)))
+stopifnot(identical(sum(trajectory(result, as.is = TRUE)[,11]), 45L))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
 stopifnot(identical(model@events, result@events))
 
 if (SimInf:::have_openmp()) {
-    result_omp <- run(model, threads = 2, seed = 123L)
+    result_omp <- run(model, threads = 2)
     stopifnot(identical(model@G, result_omp@G))
     stopifnot(identical(model@S, result_omp@S))
     stopifnot(all(result_omp@U[1:6,] == 0))
@@ -397,17 +412,17 @@ U_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L, 0L, 1L,
                                            "S_1", "I_1", "S_2", "I_2", "S_3", "I_3"),
                                          c("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10")))
 
-result <- run(model, threads = 1, seed = 123L)
+result <- run(model, threads = 1)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(identical(U(result), U_expected))
+stopifnot(identical(trajectory(result, as.is = TRUE), U_expected))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
 stopifnot(identical(model@events, result@events))
 
 if (SimInf:::have_openmp()) {
-    result_omp <- run(model, threads = 2, seed = 123L)
+    result_omp <- run(model, threads = 2)
     stopifnot(identical(model@G, result_omp@G))
     stopifnot(identical(model@S, result_omp@S))
     stopifnot(identical(result_omp@U, U_expected))
@@ -513,17 +528,17 @@ U_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                                            "S_1", "I_1", "S_2", "I_2", "S_3", "I_3"),
                                          c("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10")))
 
-result <- run(model, threads = 1, seed = 123L)
+result <- run(model, threads = 1)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(identical(U(result), U_expected))
+stopifnot(identical(trajectory(result, as.is = TRUE), U_expected))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
 stopifnot(identical(model@events, result@events))
 
 if (SimInf:::have_openmp()) {
-    result_omp <- run(model, threads = 2, seed = 123L)
+    result_omp <- run(model, threads = 2)
     stopifnot(identical(model@G, result_omp@G))
     stopifnot(identical(model@S, result_omp@S))
     stopifnot(identical(result_omp@U, U_expected))
@@ -629,17 +644,17 @@ U_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L, 0L, 1L,
                                            "S_1", "I_1", "S_2", "I_2", "S_3", "I_3"),
                                          c("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10")))
 
-result <- run(model, threads = 1, seed = 123L)
+result <- run(model, threads = 1)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(identical(U(result), U_expected))
+stopifnot(identical(trajectory(result, as.is = TRUE), U_expected))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
 stopifnot(identical(model@events, result@events))
 
 if (SimInf:::have_openmp()) {
-    result_omp <- run(model, threads = 2, seed = 123L)
+    result_omp <- run(model, threads = 2)
     stopifnot(identical(model@G, result_omp@G))
     stopifnot(identical(model@S, result_omp@S))
     stopifnot(identical(result_omp@U, U_expected))
@@ -746,17 +761,17 @@ U_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 1L, 0L, 1L,
                                            "S_1", "I_1", "S_2", "I_2", "S_3", "I_3"),
                                          c("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10")))
 
-result <- run(model, threads = 1, seed = 123L)
+result <- run(model, threads = 1)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(identical(U(result), U_expected))
+stopifnot(identical(trajectory(result, as.is = TRUE), U_expected))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
 stopifnot(identical(model@events, result@events))
 
 if (SimInf:::have_openmp()) {
-    result_omp <- run(model, threads = 2, seed = 123L)
+    result_omp <- run(model, threads = 2)
     stopifnot(identical(model@G, result_omp@G))
     stopifnot(identical(model@S, result_omp@S))
     stopifnot(identical(result_omp@U, U_expected))
@@ -804,18 +819,20 @@ model <- SISe3(u0        = u0,
                end_t4    = 365,
                epsilon   = 1)
 
-result <- run(model, threads = 1, seed = 123L)
+set.seed(123)
+result <- run(model, threads = 1)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(identical(sum(U(result)[1:6,]), 0L))
-stopifnot(all(apply(U(result)[7:36,], 1, any)))
+stopifnot(identical(sum(trajectory(result, as.is = TRUE)[1:6,]), 0L))
+stopifnot(all(apply(trajectory(result, as.is = TRUE)[7:36,], 1, any)))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
 stopifnot(identical(model@events, result@events))
 
 if (SimInf:::have_openmp()) {
-    result_omp <- run(model, threads = 2, seed = 123L)
+    set.seed(123)
+    result_omp <- run(model, threads = 2)
     stopifnot(identical(model@G, result_omp@G))
     stopifnot(identical(model@S, result_omp@S))
     stopifnot(identical(sum(result_omp@U[1:6,]), 0L))
@@ -826,7 +843,7 @@ if (SimInf:::have_openmp()) {
     stopifnot(identical(model@events, result_omp@events))
 }
 
-## Check extraction of seed parameter
+## Check extraction of number of threads
 model <- SISe(u0      = data.frame(S = 99, I = 1),
               tspan   = seq_len(1000) - 1,
               events  = NULL,
@@ -843,147 +860,35 @@ model <- SISe(u0      = data.frame(S = 99, I = 1),
               end_t3  = 273,
               end_t4  = 365,
               epsilon = 0.000011)
-.Call("SISe_run",
-      model,
-      NULL,
-      NULL,
-      PACKAGE = "SimInf")
 
-res <- tools::assertError(.Call("SISe_run",
-                                model,
-                                NULL,
-                                "1",
-                                PACKAGE = "SimInf"))
-stopifnot(length(grep("Invalid 'seed' value",
-                      res[[1]]$message)) > 0)
+.Call("SISe_run", model, NULL, NULL, PACKAGE = "SimInf")
+.Call("SISe_run", model, 1L, NULL, PACKAGE = "SimInf")
+.Call("SISe_run", model, 1, NULL, PACKAGE = "SimInf")
 
-.Call("SISe_run",
-      model,
-      NULL,
-      numeric(0),
-      PACKAGE = "SimInf")
-
-.Call("SISe_run",
-      model,
-      NULL,
-      integer(0),
-      PACKAGE = "SimInf")
-
-.Call("SISe_run",
-      model,
-      NULL,
-      1L,
-      PACKAGE = "SimInf")
-
-.Call("SISe_run",
-      model,
-      NULL,
-      1,
-      PACKAGE = "SimInf")
-
-res <- tools::assertError(.Call("SISe_run",
-                                model,
-                                NULL,
-                                NA_integer_,
-                                PACKAGE = "SimInf"))
-stopifnot(length(grep("Invalid 'seed' value",
-                      res[[1]]$message)) > 0)
-
-res <- tools::assertError(.Call("SISe_run",
-                                model,
-                                NULL,
-                                NA_real_,
-                                PACKAGE = "SimInf"))
-stopifnot(length(grep("Invalid 'seed' value",
-                      res[[1]]$message)) > 0)
-
-res <- tools::assertError(.Call("SISe_run",
-                                model,
-                                NULL,
-                                c(1L, 2L),
-                                PACKAGE = "SimInf"))
-stopifnot(length(grep("Invalid 'seed' value",
-                      res[[1]]$message)) > 0)
-
-res <- tools::assertError(.Call("SISe_run",
-                                model,
-                                NULL,
-                                c(1, 2),
-                                PACKAGE = "SimInf"))
-stopifnot(length(grep("Invalid 'seed' value",
-                      res[[1]]$message)) > 0)
-
-## Check extraction of number of threads
-.Call("SISe_run",
-      model,
-      NULL,
-      NULL,
-      PACKAGE = "SimInf")
-
-.Call("SISe_run",
-      model,
-      1L,
-      NULL,
-      PACKAGE = "SimInf")
-
-.Call("SISe_run",
-      model,
-      1,
-      NULL,
-      PACKAGE = "SimInf")
-
-res <- tools::assertError(.Call("SISe_run",
-                                model,
-                                -1L,
-                                NULL,
-                                PACKAGE = "SimInf"))
+res <- tools::assertError(.Call("SISe_run", model, -1L, NULL, PACKAGE = "SimInf"))
 stopifnot(length(grep("Invalid 'threads' value",
                       res[[1]]$message)) > 0)
 
-res <- tools::assertError(.Call("SISe_run",
-                                model,
-                                -1,
-                                NULL,
-                                PACKAGE = "SimInf"))
+res <- tools::assertError(.Call("SISe_run", model, -1, NULL, PACKAGE = "SimInf"))
 stopifnot(length(grep("Invalid 'threads' value",
                       res[[1]]$message)) > 0)
 
-res <- tools::assertError(.Call("SISe_run",
-                                model,
-                                "1",
-                                NULL,
-                                PACKAGE = "SimInf"))
+res <- tools::assertError(.Call("SISe_run", model, "1", NULL, PACKAGE = "SimInf"))
 stopifnot(length(grep("Invalid 'threads' value",
                       res[[1]]$message)) > 0)
 
-res <- tools::assertError(.Call("SISe_run",
-                                model,
-                                c(1L, 1L),
-                                NULL,
-                                PACKAGE = "SimInf"))
+res <- tools::assertError(.Call("SISe_run", model, c(1L, 1L), NULL, PACKAGE = "SimInf"))
 stopifnot(length(grep("Invalid 'threads' value",
                       res[[1]]$message)) > 0)
 
-res <- tools::assertError(.Call("SISe_run",
-                                model,
-                                c(1, 1),
-                                NULL,
-                                PACKAGE = "SimInf"))
+res <- tools::assertError(.Call("SISe_run", model, c(1, 1), NULL, PACKAGE = "SimInf"))
 stopifnot(length(grep("Invalid 'threads' value",
                       res[[1]]$message)) > 0)
 
-res <- tools::assertError(.Call("SISe_run",
-                                model,
-                                NA_integer_,
-                                NULL,
-                                PACKAGE = "SimInf"))
+res <- tools::assertError(.Call("SISe_run", model, NA_integer_, NULL, PACKAGE = "SimInf"))
 stopifnot(length(grep("Invalid 'threads' value",
                       res[[1]]$message)) > 0)
 
-res <- tools::assertError(.Call("SISe_run",
-                                model,
-                                NA_real_,
-                                NULL,
-                                PACKAGE = "SimInf"))
+res <- tools::assertError(.Call("SISe_run", model, NA_real_, NULL, PACKAGE = "SimInf"))
 stopifnot(length(grep("Invalid 'threads' value",
                       res[[1]]$message)) > 0)

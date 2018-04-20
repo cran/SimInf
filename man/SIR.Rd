@@ -2,13 +2,13 @@
 % Please edit documentation in R/SIR.R
 \name{SIR}
 \alias{SIR}
-\title{Create a SIR model}
+\title{Create an \acronym{SIR} model}
 \usage{
 SIR(u0, tspan, events = NULL, beta = NULL, gamma = NULL)
 }
 \arguments{
-\item{u0}{A \code{data.frame} with the initial state in each node,
-see details.}
+\item{u0}{A \code{data.frame} with the initial state in each node
+(see \sQuote{Details}).}
 
 \item{tspan}{A vector (length >= 2) of increasing time points
 where the state of each node is to be returned. Can be either
@@ -26,12 +26,21 @@ vector.}
 \item{gamma}{The recovery rate from infected to recovered.}
 }
 \value{
-\code{SIR}
+A \code{\link{SimInf_model}} of class \code{SIR}
 }
 \description{
-Create a SIR model to be used by the simulation framework.
+Create an \acronym{SIR} model to be used by the simulation
+framework.
 }
 \details{
+The \acronym{SIR} model contains three compartments; number of
+susceptible (S), number of infectious (I), and number of
+recovered (R).  Moreover, it has two state transitions,
+\deqn{S \stackrel{\beta S I / N}{\longrightarrow} I}{S -- beta S I / N --> I}
+\deqn{I \stackrel{\gamma I}{\longrightarrow} R}{I -- gamma I --> R}
+where \eqn{\beta} is the transmission rate, \eqn{\gamma} is the
+recovery rate, and \eqn{N=S+I+R}.
+
 The argument \code{u0} must be a \code{data.frame} with one row for
 each node with the following columns:
 \describe{
@@ -41,13 +50,14 @@ each node with the following columns:
 }
 }
 \examples{
-## Create a SIR model object.
+## Create an SIR model object.
 model <- SIR(u0 = data.frame(S = 99, I = 1, R = 0),
              tspan = 1:100,
              beta = 0.16,
              gamma = 0.077)
 
 ## Run the SIR model and plot the result.
-result <- run(model, threads = 1, seed = 22)
+set.seed(22)
+result <- run(model)
 plot(result)
 }

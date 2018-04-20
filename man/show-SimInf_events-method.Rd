@@ -3,7 +3,6 @@
 \docType{methods}
 \name{show,SimInf_events-method}
 \alias{show,SimInf_events-method}
-\alias{show,SimInf_events-methods}
 \title{Brief summary of \code{SimInf_events}}
 \usage{
 \S4method{show}{SimInf_events}(object)
@@ -17,4 +16,3 @@ None (invisible 'NULL').
 \description{
 Shows the number of scheduled events.
 }
-\keyword{methods}

@@ -16,8 +16,8 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-library(SimInf)
-library(Matrix)
+library("SimInf")
+library("Matrix")
 
 ## For debugging
 sessionInfo()
@@ -33,6 +33,7 @@ S <- Matrix(c(-1,  0,  0,
             ncol   = 3,
             byrow  = TRUE,
             sparse = TRUE)
+rownames(S) <- LETTERS[1:6]
 
 Nn <- 6L
 
@@ -44,6 +45,7 @@ G <- as(Matrix(c(1, 0, 0,
                byrow  = TRUE,
                sparse = TRUE),
         "dgCMatrix")
+rownames(G) <- c("A -> B", "C -> D", "E -> F")
 
 u0 <- structure(c(0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 2, 0, 2, 0, 2,
                   0, 3, 0, 3, 0, 3, 0, 4, 0, 4, 0, 4, 0, 5, 0, 5, 0, 5, 0),
@@ -158,6 +160,63 @@ res <- tools::assertError(new("SimInf_model",
 stopifnot(length(grep("Wrong size of dependency graph.",
                       res[[1]]$message)) > 0)
 
+## Check specication of transition
+rownames(G) <- NULL
+res <- tools::assertError(new("SimInf_model",
+                              G     = G,
+                              S     = S,
+                              U     = U,
+                              ldata = matrix(rep(0, Nn), nrow = 1),
+                              tspan = as.numeric(1:10),
+                              u0    = u0))
+stopifnot(length(grep("'G' must have rownames that specify transitions.",
+                      res[[1]]$message)) > 0)
+
+rownames(G) <- c("", "  ", "E -> F")
+res <- tools::assertError(new("SimInf_model",
+                              G     = G,
+                              S     = S,
+                              U     = U,
+                              ldata = matrix(rep(0, Nn), nrow = 1),
+                              tspan = as.numeric(1:10),
+                              u0    = u0))
+stopifnot(length(grep("'G' must have rownames that specify transitions.",
+                      res[[1]]$message)) > 0)
+
+rownames(G) <- c("A -> B", "C -> D", "E ->")
+res <- tools::assertError(new("SimInf_model",
+                              G     = G,
+                              S     = S,
+                              U     = U,
+                              ldata = matrix(rep(0, Nn), nrow = 1),
+                              tspan = as.numeric(1:10),
+                              u0    = u0))
+stopifnot(length(grep("'G' rownames have invalid transitions.",
+                      res[[1]]$message)) > 0)
+
+rownames(G) <- c("A -> B", "C -> D", "E ->")
+res <- tools::assertError(new("SimInf_model",
+                              G     = G,
+                              S     = S,
+                              U     = U,
+                              ldata = matrix(rep(0, Nn), nrow = 1),
+                              tspan = as.numeric(1:10),
+                              u0    = u0))
+stopifnot(length(grep("'G' rownames have invalid transitions.",
+                      res[[1]]$message)) > 0)
+
+rownames(G) <- c("A -> B", "C -> D", "E -> G")
+res <- tools::assertError(new("SimInf_model",
+                              G     = G,
+                              S     = S,
+                              U     = U,
+                              ldata = matrix(rep(0, Nn), nrow = 1),
+                              tspan = as.numeric(1:10),
+                              u0    = u0))
+stopifnot(length(grep("'G' and 'S' must have identical compartments",
+                      res[[1]]$message)) > 0)
+rownames(G) <- c("A -> B", "C -> D", "E -> F")
+
 ## Check gdata
 res <- tools::assertError(new("SimInf_model",
                               G     = G,
@@ -200,7 +259,7 @@ res <- tools::assertError(SimInf_model())
 stopifnot(length(grep("'u0' is NULL",
                       res[[1]]$message)) > 0)
 
-## Check show method without events
+## Check first lines of show method without events
 model <- SISe(u0      = data.frame(S = 99, I = 1),
               tspan   = seq_len(1000) - 1,
               events  = NULL,
@@ -219,39 +278,19 @@ model <- SISe(u0      = data.frame(S = 99, I = 1),
               epsilon = 0.000011)
 
 show_expected <- c("Model: SISe",
-                   "",
                    "Number of nodes: 1",
-                   "Number of compartments: 2",
                    "Number of transitions: 2",
                    "Number of scheduled events: 0",
-                   "",
-                   "U: 0 x 0",
-                   "V: 0 x 0")
+                   "")
 
 show_observed <- capture.output(show(model))
 
-stopifnot(identical(show_observed, show_expected))
+stopifnot(identical(show_observed[1:5], show_expected))
 
 ## Check summary method without events
-summary_expected <- c("Model: SISe",
-                      "",
-                      "Number of nodes: 1",
-                      "Number of compartments: 2",
-                      "Number of transitions: 2",
-                      "Number of scheduled events: 0",
-                      " - Exit: 0",
-                      " - Enter: 0",
-                      " - Internal transfer: 0",
-                      " - External transfer: 0",
-                      "",
-                      "U: 2 x 1000",
-                      "V: 1 x 1000")
+summary(run(model))
 
-summary_observed <- capture.output(summary(run(model)))
-
-stopifnot(identical(summary_observed, summary_expected))
-
-## Check show method with events
+## Check first lines of show method with events
 u0 <- structure(list(S_1 = c(0, 1, 2, 3, 4, 5),
                      I_1 = c(0, 0, 0, 0, 0, 0),
                      S_2 = c(0, 1, 2, 3, 4, 5),
@@ -297,37 +336,17 @@ model <- SISe3(u0        = u0,
                epsilon   = 1)
 
 show_expected <- c("Model: SISe3",
-                   "",
                    "Number of nodes: 6",
-                   "Number of compartments: 6",
                    "Number of transitions: 6",
                    "Number of scheduled events: 15",
-                   "",
-                   "U: 0 x 0",
-                   "V: 0 x 0")
+                   "")
 
 show_observed <- capture.output(show(model))
 
-stopifnot(identical(show_observed, show_expected))
+stopifnot(identical(show_observed[1:5], show_expected))
 
 ## Check summary method with events
-summary_expected <- c("Model: SISe3",
-                      "",
-                      "Number of nodes: 6",
-                      "Number of compartments: 6",
-                      "Number of transitions: 6",
-                      "Number of scheduled events: 15",
-                      " - Exit: 0",
-                      " - Enter: 0",
-                      " - Internal transfer: 0",
-                      " - External transfer: 15 (n: min = 1 max = 5 avg = 3.0)",
-                      "",
-                      "U: 36 x 11",
-                      "V: 6 x 11")
-
-summary_observed <- capture.output(summary(run(model)))
-
-stopifnot(identical(summary_observed, summary_expected))
+summary(run(model))
 
 ## Check U. Change storage mode of U to double.
 ## Should not raise error
@@ -517,8 +536,8 @@ model <- SIR(u0 = data.frame(S = 99, I = 1, R = 0),
              beta = 0.16,
              gamma = 0.077)
 result <- run(model, threads = 1)
-stopifnot(identical(colnames(U(result)), as.character(1:10)))
-stopifnot(identical(colnames(V(result)), as.character(1:10)))
+stopifnot(identical(colnames(trajectory(result, as.is = TRUE)), as.character(1:10)))
+stopifnot(identical(colnames(result@V), as.character(1:10)))
 
 tspan <- seq(as.Date("2016-01-01"), as.Date("2016-01-10"), by = 1)
 model <- SIR(u0 = data.frame(S = 99, I = 1, R = 0),
@@ -526,8 +545,8 @@ model <- SIR(u0 = data.frame(S = 99, I = 1, R = 0),
              beta = 0.16,
              gamma = 0.077)
 result <- run(model, threads = 1)
-stopifnot(identical(colnames(U(result)), as.character(tspan)))
-stopifnot(identical(colnames(V(result)), as.character(tspan)))
+stopifnot(identical(colnames(trajectory(result, as.is = TRUE)), as.character(tspan)))
+stopifnot(identical(colnames(result@V), as.character(tspan)))
 
 u0 <- data.frame(S = 100:105, I = 1:6)
 model <- SISe(u0 = u0, tspan = 1:10,
@@ -544,11 +563,17 @@ model <- SISe(u0 = u0, tspan = 1:10,
               end_t3  = 273,
               end_t4  = 365,
               epsilon = 0.000011)
-U(model) <- Matrix::sparseMatrix(1:6, 5:10, dims = c(12, 10))
-V(model) <- Matrix::sparseMatrix(1:6, 5:10)
+
+U(model) <- data.frame(time = c(5, 6, 7, 8, 9, 10),
+                       node = c(1, 1, 2, 2, 3, 3),
+                       S = c(TRUE, FALSE, TRUE, FALSE, TRUE, FALSE),
+                       I = c(FALSE, TRUE, FALSE, TRUE, FALSE, TRUE))
+V(model) <- data.frame(time = 5:10,
+                       node = 1:6,
+                       phi = rep(TRUE, 6))
 result <- run(model, threads = 1)
-stopifnot(identical(colnames(U(result)), as.character(1:10)))
-stopifnot(identical(colnames(V(result)), as.character(1:10)))
+stopifnot(identical(colnames(trajectory(result, as.is = TRUE)), as.character(1:10)))
+stopifnot(identical(colnames(trajectory(result, "phi", as.is = TRUE)), as.character(1:10)))
 
 tspan <- seq(as.Date("2016-01-01"), as.Date("2016-01-10"), by = 1)
 u0 <- data.frame(S = 100:105, I = 1:6)
@@ -566,8 +591,70 @@ model <- SISe(u0 = u0, tspan = tspan,
               end_t3  = 273,
               end_t4  = 365,
               epsilon = 0.000011)
-U(model) <- Matrix::sparseMatrix(1:6, 5:10, dims = c(12, 10))
-V(model) <- Matrix::sparseMatrix(1:6, 5:10)
+
+U(model) <- data.frame(time = c(5, 6, 7, 8, 9, 10),
+                       node = c(1, 1, 2, 2, 3, 3),
+                       S = c(TRUE, FALSE, TRUE, FALSE, TRUE, FALSE),
+                       I = c(FALSE, TRUE, FALSE, TRUE, FALSE, TRUE))
+V(model) <- data.frame(time = 5:10,
+                       node = 1:6,
+                       phi = rep(TRUE, 6))
+V(model) <- data.frame(time = 5:10,
+                       node = 1:6,
+                       phi = rep(TRUE, 6))
 result <- run(model, threads = 1)
-stopifnot(identical(colnames(U(result)), as.character(tspan)))
-stopifnot(identical(colnames(V(result)), as.character(tspan)))
+stopifnot(identical(colnames(trajectory(result, as.is = TRUE)), as.character(tspan)))
+stopifnot(identical(colnames(trajectory(result, "phi", as.is = TRUE)), as.character(tspan)))
+
+## Check arguments to 'U' method
+u0 <- data.frame(S = 100:105, I = 1:6, R = rep(0, 6))
+model <- SIR(u0 = u0, tspan = 1:10, beta = 0.16, gamma = 0.077)
+result <- run(model, threads = 1)
+res <- tools::assertError(trajectory(result, compartments = c("A", "S")))
+stopifnot(length(grep("Non-existing compartment[(]s[)] in model: 'A'",
+                      res[[1]]$message)) > 0)
+res <- tools::assertError(trajectory(result, node = c("A", "S")))
+stopifnot(length(grep("'node' must be integer",
+                      res[[1]]$message)) > 0)
+res <- tools::assertError(trajectory(result, node = 3.4))
+stopifnot(length(grep("'node' must be integer",
+                      res[[1]]$message)) > 0)
+res <- tools::assertError(trajectory(result, node = 0))
+stopifnot(length(grep("'node' must be integer > 0",
+                      res[[1]]$message)) > 0)
+res <- tools::assertError(trajectory(result, node = 10))
+stopifnot(length(grep("'node' must be integer <= number of nodes",
+                      res[[1]]$message)) > 0)
+
+## Check arguments to 'prevalence' method
+u0 <- data.frame(S = 100:105, I = 1:6, R = rep(0, 6))
+model <- SIR(u0 = u0, tspan = 1:10, beta = 0.16, gamma = 0.077)
+result <- run(model, threads = 1)
+res <- tools::assertError(prevalence(result, A+S~S))
+stopifnot(length(grep("Non-existing compartment[(]s[)] in model: 'A'",
+                      res[[1]]$message)) > 0)
+res <- tools::assertError(prevalence(result, S~A+S))
+stopifnot(length(grep("Non-existing compartment[(]s[)] in model: 'A'",
+                      res[[1]]$message)) > 0)
+res <- tools::assertError(prevalence(result, I~S+I+R, node = c("A", "S")))
+stopifnot(length(grep("'node' must be integer",
+                      res[[1]]$message)) > 0)
+res <- tools::assertError(prevalence(result, I~S+I+R, node = 3.4))
+stopifnot(length(grep("'node' must be integer",
+                      res[[1]]$message)) > 0)
+res <- tools::assertError(prevalence(result, I~S+I+R, node = 0))
+stopifnot(length(grep("'node' must be integer > 0",
+                      res[[1]]$message)) > 0)
+res <- tools::assertError(prevalence(result, I~S+I+R, node = 10))
+stopifnot(length(grep("'node' must be integer <= number of nodes",
+                      res[[1]]$message)) > 0)
+
+## Check 'gdata'
+model <- SIR(u0 = data.frame(S = 99, I = 1, R = 0),
+             tspan = 1:5, beta = 2, gamma = 4)
+
+stopifnot(identical(gdata(model), structure(c(2, 4), .Names = c("beta", "gamma"))))
+gdata(model, "beta") <- 6
+stopifnot(identical(gdata(model), structure(c(6, 4), .Names = c("beta", "gamma"))))
+tools::assertError(gdata(model) <- 6)
+tools::assertError(gdata(model, "beta") <- "6")

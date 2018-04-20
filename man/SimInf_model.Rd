@@ -14,13 +14,13 @@ need to be updated after a given state transition has occured.
 A non-zero entry in element \code{G[i, i]} indicates that
 transition rate \code{i} needs to be recalculated if the state
 transition \code{j} occurs. Sparse matrix (\eqn{Nt \times Nt})
-of object class \code{"\linkS4class{dgCMatrix}"}.}
+of object class \code{\linkS4class{dgCMatrix}}.}
 
 \item{S}{Each column corresponds to a transition, and execution of
 state transition \code{j} amounts to adding the \code{S[, j]}
 to the state vector of the node where the state transition
 occurred.  Sparse matrix (\eqn{Nc \times Nt}) of object class
-\code{"\linkS4class{dgCMatrix}"}.}
+\code{\linkS4class{dgCMatrix}}.}
 
 \item{tspan}{A vector (length >= 2) of increasing time points
 where the state of each node is to be returned. Can be either
@@ -54,7 +54,7 @@ contains the state of node \code{2} at \code{tspan[j]} etc.}
 individuals in each compartment in every node.}
 
 \item{v0}{The initial continuous state vector in every node.
-(\code{dim(ldata)[1]} \eqn{N_N \times}). The continuous state
+(\code{dim(ldata)[1]} \eqn{\times N_N}). The continuous state
 vector is updated by the specific model during the simulation
 in the post time step function.}
 

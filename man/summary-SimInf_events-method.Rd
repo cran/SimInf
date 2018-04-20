@@ -3,8 +3,7 @@
 \docType{methods}
 \name{summary,SimInf_events-method}
 \alias{summary,SimInf_events-method}
-\alias{summary,SimInf_events-methods}
-\title{Summary of \code{SimInf_events}}
+\title{Detailed summary of a \code{SimInf_events} object}
 \usage{
 \S4method{summary}{SimInf_events}(object, ...)
 }
@@ -20,4 +19,3 @@ None (invisible 'NULL').
 Shows the number of scheduled events and the number of scheduled
 events per event type.
 }
-\keyword{methods}

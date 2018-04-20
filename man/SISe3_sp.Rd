@@ -11,8 +11,8 @@ SISe3_sp(u0, tspan, events = NULL, phi = NULL, upsilon_1 = NULL,
   end_t3 = NULL, end_t4 = NULL, distance = NULL, coupling = NULL)
 }
 \arguments{
-\item{u0}{A \code{data.frame} with the initial state in each
-node, see details.}
+\item{u0}{A \code{data.frame} with the initial state in each node
+(see \sQuote{Details}).}
 
 \item{tspan}{A vector (length >= 2) of increasing time points
 where the state of each node is to be returned. Can be either
@@ -26,8 +26,9 @@ vector.}
 \code{\link{SimInf_model}}.}
 
 \item{phi}{A numeric vector with the initial environmental
-infectious pressure in each node. Default NULL which gives 0 in
-each node.}
+infectious pressure in each node. Will be repeated to the
+length of nrow(u0). Default is NULL which gives 0 in each
+node.}
 
 \item{upsilon_1}{Indirect transmission rate of the environmental
 infectious pressure in age category 1}
@@ -61,17 +62,21 @@ in interval 3.}
 \item{beta_t4}{The decay of the environmental infectious pressure
 in interval 4.}
 
-\item{end_t1}{The non-inclusive day of the year that ends interval
-1.}
+\item{end_t1}{vector with the non-inclusive day of the year that
+ends interval 1 in each node. Will be repeated to the length
+of nrow(u0).}
 
-\item{end_t2}{The non-inclusive day of the year that ends interval
-2.}
+\item{end_t2}{vector with the non-inclusive day of the year that
+ends interval 2 in each node. Will be repeated to the length
+of nrow(u0).}
 
-\item{end_t3}{The non-inclusive day of the year that ends interval
-3.}
+\item{end_t3}{vector with the non-inclusive day of the year that
+ends interval 3 in each node. Will be repeated to the length
+of nrow(u0).}
 
-\item{end_t4}{The non-inclusive day of the year that ends interval
-4.}
+\item{end_t4}{vector with the non-inclusive day of the year that
+ends interval 4 in each node. Will be repeated to the length
+of nrow(u0).}
 
 \item{distance}{The distance matrix between neighboring nodes}
 

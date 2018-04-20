@@ -16,17 +16,17 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-##' Class \code{"SISe3"}
+##' Definition of the \sQuote{SISe3} model
 ##'
 ##' Class to handle the SISe3 \code{\link{SimInf_model}} model.
 ##' @include SimInf_model.R
-##' @include AllGenerics.R
 ##' @export
 setClass("SISe3", contains = c("SimInf_model"))
 
-##' Create a SISe3 model
+##' Create a \sQuote{SISe3} model
 ##'
-##' Create a SISe3 model to be used by the simulation framework.
+##' Create a \sQuote{SISe3} model to be used by the simulation
+##' framework.
 ##'
 ##'
 ##' The argument \code{u0} must be a \code{data.frame} with one row for
@@ -41,14 +41,10 @@ setClass("SISe3", contains = c("SimInf_model"))
 ##' }
 ##'
 ##' @template beta-section
-##' @param u0 A \code{data.frame} with the initial state in each
-##' node, see details.
+##' @template u0-param
 ##' @template tspan-param
-##' @param events a \code{data.frame} with the scheduled events, see
-##' \code{\link{SimInf_model}}.
-##' @param phi A numeric vector with the initial environmental
-##' infectious pressure in each node. Default NULL which gives 0 in
-##' each node.
+##' @template events-param
+##' @template phi-param
 ##' @param upsilon_1 Indirect transmission rate of the environmental
 ##' infectious pressure in age category 1
 ##' @param upsilon_2 Indirect transmission rate of the environmental
@@ -94,14 +90,15 @@ SISe3 <- function(u0,
 
     ## Check u0
     if (!is.data.frame(u0))
-        stop("'u0' must be a data.frame")
+        u0 <- as.data.frame(u0)
     if (!all(compartments %in% names(u0)))
         stop("Missing columns in u0")
-    u0 <- u0[, compartments]
+    u0 <- u0[, compartments, drop = FALSE]
 
     ## Check initial infectious pressure
     if (is.null(phi))
-        phi <- rep(0, nrow(u0))
+        phi <- 0
+    phi <- rep(phi, length.out = nrow(u0))
     check_infectious_pressure_arg(nrow(u0), phi)
 
     ## Check 'gdata' parameters
@@ -110,93 +107,48 @@ SISe3 <- function(u0,
 
     ## Check interval endpoints
     check_integer_arg(end_t1, end_t2, end_t3, end_t4)
-    if (identical(length(end_t1), 1L))
-        end_t1 <- rep(end_t1, nrow(u0))
-    if (identical(length(end_t2), 1L))
-        end_t2 <- rep(end_t2, nrow(u0))
-    if (identical(length(end_t3), 1L))
-        end_t3 <- rep(end_t3, nrow(u0))
-    if (identical(length(end_t4), 1L))
-        end_t4 <- rep(end_t4, nrow(u0))
+    end_t1 <- rep(end_t1, length.out = nrow(u0))
+    end_t2 <- rep(end_t2, length.out = nrow(u0))
+    end_t3 <- rep(end_t3, length.out = nrow(u0))
+    end_t4 <- rep(end_t4, length.out = nrow(u0))
     check_end_t_arg(nrow(u0), end_t1, end_t2, end_t3, end_t4)
 
-    ## Arguments seems ok...go on
+    ## Arguments seem ok...go on
 
-    E <- Matrix::Matrix(c(1, 0, 0, 1, 0, 0,
-                          0, 0, 0, 1, 0, 0,
-                          0, 1, 0, 0, 1, 0,
-                          0, 0, 0, 0, 1, 0,
-                          0, 0, 1, 0, 0, 1,
-                          0, 0, 0, 0, 0, 1),
-                        nrow   = 6,
-                        ncol   = 6,
-                        byrow  = TRUE,
-                        sparse = TRUE)
-    E <- methods::as(E, "dgCMatrix")
-    colnames(E) <- as.character(1:6)
-    rownames(E) <- compartments
+    E <- matrix(c(1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+                  1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1),
+                nrow = 6, ncol = 6,
+                dimnames = list(compartments, c("1", "2", "3", "4", "5", "6")))
 
-    N <- matrix(c(2, 0,
-                  2, 0,
-                  0, 2,
-                  0, 2,
-                  0, 0,
-                  0, 0),
-                nrow   = 6,
-                ncol   = 2,
-                byrow  = TRUE)
-    colnames(N) <- as.character(1:2)
-    rownames(N) <- compartments
+    N <- matrix(c(2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, -1, 0, -1, 0, -1),
+                nrow = 6, ncol = 3,
+                dimnames = list(compartments, c("1", "2", "3")))
 
-    G <- Matrix::Matrix(c(1, 1, 0, 0, 0, 0,
-                          1, 1, 0, 0, 0, 0,
-                          0, 0, 1, 1, 0, 0,
-                          0, 0, 1, 1, 0, 0,
-                          0, 0, 0, 0, 1, 1,
-                          0, 0, 0, 0, 1, 1),
-                        nrow   = 6,
-                        ncol   = 6,
-                        byrow  = TRUE,
-                        sparse = TRUE)
-    G <- methods::as(G, "dgCMatrix")
-    colnames(G) <- as.character(1:6)
-    rownames(G) <- c("S_1 -> I_1", "I_1 -> S_1",
-                     "S_2 -> I_2", "I_2 -> S_2",
-                     "S_3 -> I_3", "I_3 -> S_3")
+    G <- matrix(c(1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+                  0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1),
+                nrow   = 6, ncol   = 6,
+                dimnames = list(c("S_1 -> I_1", "I_1 -> S_1",
+                                  "S_2 -> I_2", "I_2 -> S_2",
+                                  "S_3 -> I_3", "I_3 -> S_3"),
+                                c("1", "2", "3", "4", "5", "6")))
 
-    S <- Matrix::Matrix(c(-1,  1,  0,  0,  0,  0,
-                           1, -1,  0,  0,  0,  0,
-                           0,  0, -1,  1,  0,  0,
-                           0,  0,  1, -1,  0,  0,
-                           0,  0,  0,  0, -1,  1,
-                           0,  0,  0,  0,  1, -1),
-                        nrow   = 6,
-                        ncol   = 6,
-                        byrow  = TRUE,
-                        sparse = TRUE)
-    S <- methods::as(S, "dgCMatrix")
-    colnames(S) <- as.character(1:6)
-    rownames(S) <- compartments
+    S <- matrix(c(-1, 1, 0, 0, 0, 0, 1, -1, 0, 0, 0, 0, 0, 0, -1, 1, 0, 0,
+                  0, 0, 1, -1, 0, 0, 0, 0, 0, 0, -1, 1, 0, 0, 0, 0, 1, -1),
+                nrow = 6, ncol = 6,
+                dimnames = list(compartments, c("1", "2", "3", "4", "5", "6")))
 
-    v0 <- matrix(phi, nrow  = 1, byrow = TRUE)
-    storage.mode(v0) <- "double"
+    v0 <- matrix(as.numeric(phi), nrow  = 1, byrow = TRUE,
+                 dimnames = list("phi"))
 
-    ldata <- matrix(c(end_t1, end_t2, end_t3, end_t4),
-                    nrow  = 4,
-                    byrow = TRUE)
-    storage.mode(ldata) <- "double"
+    ldata <- matrix(as.numeric(c(end_t1, end_t2, end_t3, end_t4)),
+                    nrow = 4, byrow = TRUE)
 
-    gdata <- c(upsilon_1, upsilon_2, upsilon_3,
-               gamma_1, gamma_2, gamma_3,
-               alpha,
-               beta_t1, beta_t2, beta_t3, beta_t4,
-               epsilon)
-    storage.mode(gdata) <- "double"
+    gdata <- as.numeric(c(upsilon_1, upsilon_2, upsilon_3,
+                          gamma_1, gamma_2, gamma_3, alpha,
+                          beta_t1, beta_t2, beta_t3, beta_t4, epsilon))
     names(gdata) <- c("upsilon_1", "upsilon_2", "upsilon_3",
-                      "gamma_1", "gamma_2", "gamma_3",
-                      "alpha",
-                      "beta_t1", "beta_t2", "beta_t3", "beta_t4",
-                      "epsilon")
+                      "gamma_1", "gamma_2", "gamma_3", "alpha",
+                      "beta_t1", "beta_t2", "beta_t3", "beta_t4", "epsilon")
 
     model <- SimInf_model(G      = G,
                           S      = S,
@@ -209,57 +161,107 @@ SISe3 <- function(u0,
                           u0     = u0,
                           v0     = v0)
 
-    methods::as(model, "SISe3")
+    as(model, "SISe3")
 }
 
-##' @rdname susceptible-methods
-##' @export
-setMethod("susceptible",
-          signature("SISe3"),
-          function(model, age = 1:3, i = NULL, ...)
-          {
-              stopifnot(all(age %in% 1:3))
-              extract_U(model, paste0("S_", age), i)
-          }
-)
+##' Example data to initialize events for the \sQuote{SISe3} model
+##'
+##' Example data to initialize scheduled events for a population of
+##' 1600 nodes and demonstrate the \code{\linkS4class{SISe3}} model.
+##'
+##' Example data to initialize scheduled events (see
+##' \code{\linkS4class{SimInf_events}}) for a population of 1600 nodes
+##' and demonstrate the \code{\linkS4class{SISe3}} model. The dataset
+##' contains 783773 events for 1600 nodes distributed over 4 * 365
+##' days. The events are divided into three types: \sQuote{Exit}
+##' events remove individuals from the population (n = 182535),
+##' \sQuote{Enter} events add individuals to the population (n =
+##' 182685), sQuote{Internal transfer} events move individuals between
+##' compartmens within one node e.g. ageing (n = 317081), and
+##' \sQuote{External transfer} events move individuals between nodes
+##' in the population (n = 101472). The vignette contains a detailed
+##' description of how scheduled events operate on a model.
+##' @name events_SISe3
+##' @docType data
+##' @usage data(events_SISe3)
+##' @format A \code{data.frame}
+##' @keywords dataset
+##' @examples
+##' ## Create an 'SISe3' model with 1600 nodes and initialize
+##' ## it to run over 4*365 days. Add one infected individual
+##' ## to the first node.
+##' data("u0_SISe3", package = "SimInf")
+##' data("events_SISe3", package = "SimInf")
+##' u0_SISe3$I_1[1] <- 1
+##' tspan <- seq(from = 1, to = 4*365, by = 1)
+##' model <- SISe3(u0 = u0_SISe3, tspan = tspan, events = events_SISe3,
+##'                phi = rep(0, nrow(u0_SISe3)), upsilon_1 = 1.8e-2,
+##'                upsilon_2 = 1.8e-2, upsilon_3 = 1.8e-2,
+##'                gamma_1 = 0.1, gamma_2 = 0.1, gamma_3 = 0.1,
+##'                alpha = 1, beta_t1 = 1.0e-1, beta_t2 = 1.0e-1,
+##'                beta_t3 = 1.25e-1, beta_t4 = 1.25e-1, end_t1 = 91,
+##'                end_t2 = 182, end_t3 = 273, end_t4 = 365, epsilon = 0)
+##'
+##' ## Display the number of individuals affected by each event type
+##' ## per day.
+##' plot(events(model))
+##'
+##' ## Run the model to generate a single stochastic trajectory.
+##' result <- run(model, threads = 1)
+##'
+##' ## Summarize the trajectory. The summary includes the number of
+##' ## events by event type.
+##' summary(result)
+NULL
 
-##' @rdname infected-methods
-##' @export
-setMethod("infected",
-          signature("SISe3"),
-          function(model, age = 1:3, i = NULL, ...)
-          {
-              stopifnot(all(age %in% 1:3))
-              extract_U(model, paste0("I_", age), i)
-          }
-)
-
-##' @rdname prevalence-methods
-##' @export
-setMethod("prevalence",
-          signature("SISe3"),
-          function(model, type, i, age = 1:3, ...)
-          {
-              stopifnot(all(age %in% 1:3))
-              numerator <- paste0("I_", age)
-              denominator <- c(paste0("S_", age), paste0("I_", age))
-              calc_prevalence(model, numerator, denominator, type, i)
-          }
-)
-
-##' @name plot-methods
-##' @aliases plot plot-methods plot,SISe3-method
-##' @export
-setMethod("plot",
-          signature(x = "SISe3"),
-          function(x,
-                   legend = expression(S[1], I[1], S[2], I[2], S[3], I[3]),
-                   col = rep(c("blue", "red"), 3),
-                   lty = rep(1:3, each = 2),
-                   lwd = 2,
-                   ...)
-          {
-              methods::callNextMethod(x, legend = legend, col = col,
-                                      lty = lty, lwd = lwd, ...)
-          }
-)
+##' Example data to initialize the \sQuote{SISe3} model
+##'
+##' Example data to initialize a population of 1600 nodes and
+##' demonstrate the \code{\linkS4class{SISe3}} model.
+##'
+##' A \code{data.frame} with the number of individuals in the
+##' \sQuote{S_1}, \sQuote{S_2}, \sQuote{S_3}, \sQuote{I_1},
+##' \sQuote{I_2} and \sQuote{I_3} compartments in 1600 nodes. Note
+##' that the \sQuote{I_1}, \sQuote{I_2} and \sQuote{I_3} compartments
+##' are zero.
+##' @name u0_SISe3
+##' @docType data
+##' @usage data(u0_SISe3)
+##' @format A \code{data.frame}
+##' @keywords dataset
+##' @examples
+##' ## Create an 'SISe3' model with 1600 nodes and initialize it to
+##' ## run over 4*365 days and record data at weekly time-points.
+##'
+##' ## Load the initial population and add ten infected individuals to
+##' ## I_1 in the first node.
+##' u0 <- u0_SISe3
+##' u0$I_1[1] <- 10
+##'
+##' ## Define 'tspan' to run the simulation over 4*365 and record the
+##' ## state of the system at weekly time-points.
+##' tspan <- seq(from = 1, to = 4*365, by = 7)
+##'
+##' ## Load scheduled events for the population of nodes with births,
+##' ## deaths and between-node movements of individuals.
+##' events <- events_SISe3
+##'
+##' ## Create a 'SISe3' model
+##' model <- SISe3(u0 = u0, tspan = tspan, events = events,
+##'                phi = rep(0, nrow(u0)), upsilon_1 = 1.8e-2,
+##'                upsilon_2 = 1.8e-2, upsilon_3 = 1.8e-2,
+##'                gamma_1 = 0.1, gamma_2 = 0.1, gamma_3 = 0.1,
+##'                alpha = 1, beta_t1 = 1.0e-1, beta_t2 = 1.0e-1,
+##'                beta_t3 = 1.25e-1, beta_t4 = 1.25e-1, end_t1 = 91,
+##'                end_t2 = 182, end_t3 = 273, end_t4 = 365, epsilon = 0)
+##'
+##' ## Run the model to generate a single stochastic trajectory.
+##' result <- run(model, threads = 1)
+##'
+##' ## Summarize trajectory
+##' summary(result)
+##'
+##' ## Plot the proportion of nodes with at least one infected
+##' ## individual.
+##' plot(prevalence(result, I_1 + I_2 + I_3 ~ ., "nop"), type = "l")
+NULL

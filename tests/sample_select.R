@@ -16,7 +16,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-library(SimInf)
+library("SimInf")
 
 ## For debugging
 sessionInfo()
@@ -225,14 +225,12 @@ model <- SISe3(u0        = u0,
 ## Replace proportion = 1 with proportion = 10
 model@events@proportion <- 10
 
-res <- tools::assertError(.Call("SISe3_run", model, 1L, NULL,
-                                PACKAGE = "SimInf"))
+res <- tools::assertError(.Call("SISe3_run", model, 1L, NULL, PACKAGE = "SimInf"))
 stopifnot(length(grep("Unable to sample individuals for event.",
                       res[[1]]$message)) > 0)
 
 if (SimInf:::have_openmp()) {
-    res <- tools::assertError(.Call("SISe3_run", model, 2L,
-                                    NULL, PACKAGE = "SimInf"))
+    res <- tools::assertError(.Call("SISe3_run", model, 2L, NULL, PACKAGE = "SimInf"))
     stopifnot(length(grep("Unable to sample individuals for event.",
                           res[[1]]$message)) > 0)
 }
@@ -318,14 +316,12 @@ model <- SISe3(u0        = u0,
 ## Replace proportion = 0 with proportion = -1
 model@events@proportion <- -1
 
-res <- tools::assertError(.Call("SISe3_run", model, 1L, NULL,
-                                PACKAGE = "SimInf"))
+res <- tools::assertError(.Call("SISe3_run", model, 1L, NULL, PACKAGE = "SimInf"))
 stopifnot(length(grep("Unable to sample individuals for event.",
                       res[[1]]$message)) > 0)
 
 if (SimInf:::have_openmp()) {
-    res <- tools::assertError(.Call("SISe3_run", model, 2L, NULL,
-                                    PACKAGE = "SimInf"))
+    res <- tools::assertError(.Call("SISe3_run", model, 2L, NULL, PACKAGE = "SimInf"))
     stopifnot(length(grep("Unable to sample individuals for event.",
                           res[[1]]$message)) > 0)
 }
@@ -391,7 +387,7 @@ U_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 0L, 0L, 0L, 0L,
 result <- run(model, threads = 1)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(identical(U(result), U_expected))
+stopifnot(identical(trajectory(result, as.is = TRUE), U_expected))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
@@ -401,7 +397,7 @@ if (SimInf:::have_openmp()) {
     result_omp <- run(model, threads = 2)
     stopifnot(identical(model@G, result_omp@G))
     stopifnot(identical(model@S, result_omp@S))
-    stopifnot(identical(U(result_omp), U_expected))
+    stopifnot(identical(trajectory(result_omp, as.is = TRUE), U_expected))
     stopifnot(identical(model@ldata, result_omp@ldata))
     stopifnot(identical(model@tspan, result_omp@tspan))
     stopifnot(identical(model@u0, result_omp@u0))
@@ -469,7 +465,7 @@ U_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 1L, 0L, 0L, 0L, 0L, 0L,
 result <- run(model, threads = 1)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(identical(U(result), U_expected))
+stopifnot(identical(trajectory(result, as.is = TRUE), U_expected))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
@@ -479,7 +475,7 @@ if (SimInf:::have_openmp()) {
     result_omp <- run(model, threads = 2)
     stopifnot(identical(model@G, result_omp@G))
     stopifnot(identical(model@S, result_omp@S))
-    stopifnot(identical(U(result_omp), U_expected))
+    stopifnot(identical(trajectory(result_omp, as.is = TRUE), U_expected))
     stopifnot(identical(model@ldata, result_omp@ldata))
     stopifnot(identical(model@tspan, result_omp@tspan))
     stopifnot(identical(model@u0, result_omp@u0))
@@ -547,7 +543,7 @@ U_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 2L, 0L, 0L, 0L, 0L, 0L,
 result <- run(model, threads = 1)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(identical(U(result), U_expected))
+stopifnot(identical(trajectory(result, as.is = TRUE), U_expected))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
@@ -557,7 +553,7 @@ if (SimInf:::have_openmp()) {
     result_omp <- run(model, threads = 2)
     stopifnot(identical(model@G, result_omp@G))
     stopifnot(identical(model@S, result_omp@S))
-    stopifnot(identical(U(result_omp), U_expected))
+    stopifnot(identical(trajectory(result_omp, as.is = TRUE), U_expected))
     stopifnot(identical(model@ldata, result_omp@ldata))
     stopifnot(identical(model@tspan, result_omp@tspan))
     stopifnot(identical(model@u0, result_omp@u0))
@@ -623,20 +619,22 @@ U_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 2L, 8L, 0L, 0L, 0L, 0L,
                                            "S_1", "I_1", "S_2", "I_2", "S_3", "I_3"),
                                          c("0", "1", "2")))
 
-result <- run(model, threads = 1, seed = 123L)
+set.seed(1)
+result <- run(model, threads = 1)
 stopifnot(identical(model@G, result@G))
 stopifnot(identical(model@S, result@S))
-stopifnot(identical(U(result), U_expected))
+stopifnot(identical(trajectory(result, as.is = TRUE), U_expected))
 stopifnot(identical(model@ldata, result@ldata))
 stopifnot(identical(model@tspan, result@tspan))
 stopifnot(identical(model@u0, result@u0))
 stopifnot(identical(model@events, result@events))
 
 if (SimInf:::have_openmp()) {
-    result_omp <- run(model, threads = 2, seed = 123L)
+    set.seed(1)
+    result_omp <- run(model, threads = 2)
     stopifnot(identical(model@G, result_omp@G))
     stopifnot(identical(model@S, result_omp@S))
-    stopifnot(identical(U(result_omp), U_expected))
+    stopifnot(identical(trajectory(result_omp, as.is = TRUE), U_expected))
     stopifnot(identical(model@ldata, result_omp@ldata))
     stopifnot(identical(model@tspan, result_omp@tspan))
     stopifnot(identical(model@u0, result_omp@u0))
@@ -774,15 +772,16 @@ model <- SISe3(u0        = u0,
 model@events@E[3, 1] <- 1
 model@events@E[5, 1] <- 1
 
-S_expected <- structure(c(0L, 6L, 3L, 3L, 3L, 3L, 3L, 3L, 3L,
-                          3L, 3L, 3L, 3L, 3L, 3L, 3L, 3L, 3L,
-                          3L, 3L, 3L, 3L),
-                        .Dim = c(2L, 11L), .Dimnames = list(NULL, NULL))
+S_expected <- structure(c(0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
+                        .Names = c("0", "1", "2", "3", "4",
+                                   "5", "6", "7", "8", "9", "10"))
 
 res <- run(model, threads = 1)
-stopifnot(identical(susceptible(res), S_expected))
+S_observed <- colSums(trajectory(res, compartments = c("S_1", "S_2", "S_3"), node = 1, as.is = TRUE))
+stopifnot(identical(S_observed, S_expected))
 
 if (SimInf:::have_openmp()) {
     res <- run(model, threads = 2)
-    stopifnot(identical(susceptible(res), S_expected))
+    S_observed <- colSums(trajectory(res, compartments = c("S_1", "S_2", "S_3"), node = 1, as.is = TRUE))
+    stopifnot(identical(S_observed, S_expected))
 }

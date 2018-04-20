@@ -7,7 +7,9 @@ SIMINF_GSL_INCLUDE = -Igsl/include
 endif
 endif
 
-PKG_CFLAGS = -I. -Icore -Imisc -Imodels $(SIMINF_GSL_INCLUDE) $(SHLIB_OPENMP_CFLAGS)
+PKG_CFLAGS = -I. -Icore -Imisc -Imodels $(SIMINF_GSL_INCLUDE) \
+             $(SHLIB_OPENMP_CFLAGS) -DR_NO_REMAP -DSTRICT_R_HEADERS
+
 PKG_LIBS = $(SIMINF_GSL_LIB) $(SHLIB_OPENMP_CFLAGS) -lm -lgsl -lgslcblas
 
 # List all model files to compile
@@ -19,4 +21,9 @@ OBJECTS.misc = misc/SimInf_arg.o \
                misc/SimInf_ldata.o \
                misc/SimInf_local_spread.o
 
-OBJECTS = init.o SimInf.o core/SimInf_solver.o $(OBJECTS.misc) $(MODELS_OBJ)
+OBJECTS.solvers = solvers/SimInf_solver.o \
+                  solvers/ssm/SimInf_solver_ssm.o \
+                  solvers/aem/SimInf_solver_aem.o \
+                  solvers/aem/binheap.o
+
+OBJECTS = init.o SimInf.o $(OBJECTS.solvers) $(OBJECTS.misc) $(MODELS_OBJ)

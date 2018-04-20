@@ -1,8 +1,9 @@
 /*
  *  SimInf, a framework for stochastic disease spread simulations
- *  Copyright (C) 2015  Pavol Bauer
- *  Copyright (C) 2015 - 2017  Stefan Engblom
- *  Copyright (C) 2015 - 2017  Stefan Widgren
+ *  Copyright (C) 2015 Pavol Bauer
+ *  Copyright (C) 2017 - 2018 Robin Eriksson
+ *  Copyright (C) 2015 - 2018 Stefan Engblom
+ *  Copyright (C) 2015 - 2018 Stefan Widgren
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,7 +20,6 @@
  */
 
 #include <Rdefines.h>
-#include <time.h>
 
 #include "SimInf.h"
 
@@ -33,9 +33,9 @@ int SimInf_arg_check_dgCMatrix(SEXP arg)
 {
     SEXP class_name;
 
-    if (R_NilValue == arg || S4SXP != TYPEOF(arg))
+    if (!Rf_isS4(arg))
         return -1;
-    class_name = getAttrib(arg, R_ClassSymbol);
+    class_name = Rf_getAttrib(arg, R_ClassSymbol);
     if (0 != strcmp(CHAR(STRING_ELT(class_name, 0)), "dgCMatrix"))
         return -1;
     return 0;
@@ -49,8 +49,7 @@ int SimInf_arg_check_dgCMatrix(SEXP arg)
  */
 int SimInf_arg_check_integer(SEXP arg)
 {
-    if (arg == R_NilValue || !isInteger(arg) ||
-        length(arg) != 1  || NA_INTEGER == INTEGER(arg)[0])
+    if (!Rf_isInteger(arg) || Rf_length(arg) != 1 || NA_INTEGER == INTEGER(arg)[0])
         return -1;
     return 0;
 }
@@ -63,7 +62,7 @@ int SimInf_arg_check_integer(SEXP arg)
  */
 int SimInf_arg_check_matrix(SEXP arg)
 {
-    if (arg == R_NilValue || !isMatrix(arg))
+    if (!Rf_isMatrix(arg))
         return -1;
     return 0;
 }
@@ -78,56 +77,10 @@ int SimInf_arg_check_model(SEXP arg)
 {
     static const char *valid[] = {"SimInf_model", ""};
 
-    if (arg == R_NilValue || !IS_S4_OBJECT(arg))
-        return -1;
-
-    if (R_check_class_etc(arg, valid) < 0)
+    if (!Rf_isS4(arg) || R_check_class_etc(arg, valid) < 0)
         return -1;
 
     return 0;
-}
-
-/**
- * Get seed value
- *
- * @param out The seed value.
- * @param seed Random number seed from R.
- * @return 0 if Ok, else error code.
- */
-int SimInf_get_seed(unsigned long int *out, SEXP seed)
-{
-    int err = 0;
-
-    if (seed != R_NilValue) {
-        if (isInteger(seed) || isReal(seed)) {
-            switch (LENGTH(seed)) {
-            case 0:
-                *out = (unsigned long int)time(NULL);
-                break;
-            case 1:
-                if (isInteger(seed)) {
-                    if (INTEGER(seed)[0] == NA_INTEGER)
-                        err = SIMINF_INVALID_SEED_VALUE;
-                    else
-                        *out = (unsigned long int)INTEGER(seed)[0];
-                } else if (!R_finite(REAL(seed)[0])) {
-                    err = SIMINF_INVALID_SEED_VALUE;
-                } else {
-                    *out = (unsigned long int)REAL(seed)[0];
-                }
-                break;
-            default:
-                err = SIMINF_INVALID_SEED_VALUE;
-                break;
-            }
-        } else {
-            err = SIMINF_INVALID_SEED_VALUE;
-        }
-    } else {
-        *out = (unsigned long int)time(NULL);
-    }
-
-    return err;
 }
 
 /**
@@ -139,31 +92,31 @@ int SimInf_get_seed(unsigned long int *out, SEXP seed)
  */
 int SimInf_get_threads(int *out, SEXP threads)
 {
-    int err = 0;
+    int error = 0;
 
-    if (threads == R_NilValue) {
+    if (Rf_isNull(threads)) {
         *out = 0;
-    } else if (isInteger(threads)) {
+    } else if (Rf_isInteger(threads)) {
         if (LENGTH(threads) != 1)
-            err = SIMINF_INVALID_THREADS_VALUE;
+            error = SIMINF_INVALID_THREADS_VALUE;
         else if (INTEGER(threads)[0] == NA_INTEGER)
-            err = SIMINF_INVALID_THREADS_VALUE;
+            error = SIMINF_INVALID_THREADS_VALUE;
         else if (INTEGER(threads)[0] < 0)
-            err = SIMINF_INVALID_THREADS_VALUE;
+            error = SIMINF_INVALID_THREADS_VALUE;
         else
             *out = INTEGER(threads)[0];
-    } else if (isReal(threads)) {
+    } else if (Rf_isReal(threads)) {
         if (LENGTH(threads) != 1)
-            err = SIMINF_INVALID_THREADS_VALUE;
+            error = SIMINF_INVALID_THREADS_VALUE;
         else if (!R_finite(REAL(threads)[0]))
-            err = SIMINF_INVALID_THREADS_VALUE;
+            error = SIMINF_INVALID_THREADS_VALUE;
         else if ((int)(REAL(threads)[0] < 0))
-            err = SIMINF_INVALID_THREADS_VALUE;
+            error = SIMINF_INVALID_THREADS_VALUE;
         else
             *out = (int)(REAL(threads)[0]);
     } else {
-        err = SIMINF_INVALID_THREADS_VALUE;
+        error = SIMINF_INVALID_THREADS_VALUE;
     }
 
-    return err;
+    return error;
 }

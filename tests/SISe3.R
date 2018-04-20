@@ -16,14 +16,14 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-library(SimInf)
+library("SimInf")
 
 ## For debugging
 sessionInfo()
 
 ## Check invalid u0
 res <- tools::assertError(SISe3(u0 = "u0"))
-stopifnot(length(grep("'u0' must be a data.frame",
+stopifnot(length(grep("Missing columns in u0",
                       res[[1]]$message)) > 0)
 
 u0 <- structure(list(S_1 = c(0, 1, 2, 3, 4, 5),
@@ -1174,102 +1174,6 @@ res <- tools::assertError(SISe3(u0        = u0,
 stopifnot(length(grep("'beta_t4' must be of length 1",
                       res[[1]]$message)) > 0)
 
-## Check that length of end_t1 equals 1 or nrow(u0)
-res <- tools::assertError(SISe3(u0        = u0,
-                                tspan     = seq_len(10) - 1,
-                                events    = NULL,
-                                phi       = rep(1, 6),
-                                upsilon_1 = 0.0357,
-                                upsilon_2 = 0.0357,
-                                upsilon_3 = 0.00935,
-                                gamma_1   = 0.1,
-                                gamma_2   = 0.1,
-                                gamma_3   = 0.1,
-                                alpha     = 1.0,
-                                beta_t1   = 0.19,
-                                beta_t2   = 0.085,
-                                beta_t3   = 0.075,
-                                beta_t4   = 0.185,
-                                end_t1    = c(91, 91),
-                                end_t2    = 182,
-                                end_t3    = 273,
-                                end_t4    = 365,
-                                epsilon   = 0.000011))
-stopifnot(length(grep("'end_t1' must be of length 1 or 'nrow\\(u0\\)'",
-                      res[[1]]$message)) > 0)
-
-## Check that length of end_t2 equals 1 or nrow(u0)
-res <- tools::assertError(SISe3(u0        = u0,
-                                tspan     = seq_len(10) - 1,
-                                events    = NULL,
-                                phi       = rep(1, 6),
-                                upsilon_1 = 0.0357,
-                                upsilon_2 = 0.0357,
-                                upsilon_3 = 0.00935,
-                                gamma_1   = 0.1,
-                                gamma_2   = 0.1,
-                                gamma_3   = 0.1,
-                                alpha     = 1.0,
-                                beta_t1   = 0.19,
-                                beta_t2   = 0.085,
-                                beta_t3   = 0.075,
-                                beta_t4   = 0.185,
-                                end_t1    = 91,
-                                end_t2    = c(182, 182),
-                                end_t3    = 273,
-                                end_t4    = 365,
-                                epsilon   = 0.000011))
-stopifnot(length(grep("'end_t2' must be of length 1 or 'nrow\\(u0\\)'",
-                      res[[1]]$message)) > 0)
-
-## Check that length of end_t3 equals 1 or nrow(u0)
-res <- tools::assertError(SISe3(u0        = u0,
-                                tspan     = seq_len(10) - 1,
-                                events    = NULL,
-                                phi       = rep(1, 6),
-                                upsilon_1 = 0.0357,
-                                upsilon_2 = 0.0357,
-                                upsilon_3 = 0.00935,
-                                gamma_1   = 0.1,
-                                gamma_2   = 0.1,
-                                gamma_3   = 0.1,
-                                alpha     = 1.0,
-                                beta_t1   = 0.19,
-                                beta_t2   = 0.085,
-                                beta_t3   = 0.075,
-                                beta_t4   = 0.185,
-                                end_t1    = 91,
-                                end_t2    = 182,
-                                end_t3    = c(273, 273),
-                                end_t4    = 365,
-                                epsilon   = 0.000011))
-stopifnot(length(grep("'end_t3' must be of length 1 or 'nrow\\(u0\\)'",
-                      res[[1]]$message)) > 0)
-
-## Check that length of end_t4 equals 1 or nrow(u0)
-res <- tools::assertError(SISe3(u0        = u0,
-                                tspan     = seq_len(10) - 1,
-                                events    = NULL,
-                                phi       = rep(1, 6),
-                                upsilon_1 = 0.0357,
-                                upsilon_2 = 0.0357,
-                                upsilon_3 = 0.00935,
-                                gamma_1   = 0.1,
-                                gamma_2   = 0.1,
-                                gamma_3   = 0.1,
-                                alpha     = 1.0,
-                                beta_t1   = 0.19,
-                                beta_t2   = 0.085,
-                                beta_t3   = 0.075,
-                                beta_t4   = 0.185,
-                                end_t1    = 91,
-                                end_t2    = 182,
-                                end_t3    = 273,
-                                end_t4    = c(365, 365),
-                                epsilon   = 0.000011))
-stopifnot(length(grep("'end_t4' must be of length 1 or 'nrow\\(u0\\)'",
-                      res[[1]]$message)) > 0)
-
 ## Check that length of epsilon equals 1
 res <- tools::assertError(SISe3(u0        = u0,
                                 tspan     = seq_len(10) - 1,
@@ -1457,7 +1361,8 @@ stopifnot(length(grep(
     "'end_t4' must be less than 'end_t1' or greater than 'end_t3'",
     res[[1]]$message)) > 0)
 
-## Check 'suscpetible' and 'infected' methods
+## Check extraction of data from 'suscpetible', and 'infected'
+## compartments
 model <- SISe3(u0        = u0,
                tspan     = seq_len(10) - 1,
                events    = NULL,
@@ -1479,17 +1384,17 @@ model <- SISe3(u0        = u0,
                end_t4    = 365,
                epsilon   = 0.000011)
 
-result <- run(model, threads = 1, seed = 1)
+result <- run(model, threads = 1)
 
 S_expected <- structure(c(0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L,
                           1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L,
                           2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L,
                           3L, 4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L, 0L, 1L, 2L, 3L,
                           4L, 5L, 0L, 1L, 2L, 3L, 4L, 5L),
-                        .Dim = c(6L, 10L), .Dimnames = list(NULL, NULL))
-
-S_observed <- susceptible(result, age = 1)
-
+                        .Dim = c(6L, 10L),
+                        .Dimnames = list(c("S_1", "S_1", "S_1", "S_1", "S_1", "S_1"),
+                                         c("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")))
+S_observed <- trajectory(result, compartments = "S_1", as.is = TRUE)
 stopifnot(identical(S_observed, S_expected))
 
 I_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
@@ -1497,10 +1402,10 @@ I_expected <- structure(c(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L,
                           0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L),
-                        .Dim = c(6L, 10L), .Dimnames = list(NULL, NULL))
-
-I_observed <- infected(result, age = 1)
-
+                        .Dim = c(6L, 10L),
+                        .Dimnames = list(c("I_1", "I_1", "I_1", "I_1", "I_1", "I_1"),
+                                         c("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")))
+I_observed <- trajectory(result, compartments = "I_1", as.is = TRUE)
 stopifnot(identical(I_observed, I_expected))
 
 ## Check SISe3 plot method
@@ -1512,13 +1417,11 @@ stopifnot(file.exists(pdf_file))
 unlink(pdf_file)
 
 ## Check that C SISe3 run function fails for misspecified SISe3 model
-res <- tools::assertError(.Call("SISe3_run", NULL, NULL, NULL,
-                                PACKAGE = "SimInf"))
+res <- tools::assertError(.Call("SISe3_run", NULL, NULL, NULL, PACKAGE = "SimInf"))
 stopifnot(length(grep("Invalid model.",
                       res[[1]]$message)) > 0)
 
-res <- tools::assertError(.Call("SISe3_run", "SISe3", NULL, NULL,
-                                PACKAGE = "SimInf"))
+res <- tools::assertError(.Call("SISe3_run", "SISe3", NULL, NULL, PACKAGE = "SimInf"))
 stopifnot(length(grep("Invalid model.",
                       res[[1]]$message)) > 0)
 

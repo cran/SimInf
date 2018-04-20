@@ -1,3 +1,68 @@
+SimInf 6.0.0
+------------
+
+IMPROVEMENTS
+
+* The 'print' and 'summary' methods have been improved to include a
+  summary of the data in the model and the number of individuals in
+  each compartment.
+
+* Added the 'trajectory' method to facilitate post-processing of
+  simulation data. See documentation.
+
+* The event type, when specifying the scheduled events from a
+  data.frame, can now be coded either as a numerical value or as a
+  character string, see the documentataion for the 'SimInf_events'
+  method.
+
+* Now SimInf also includes the All Events Method (AEM) solver (Bauer
+  P., Engblom S. (2015) Sensitivity Estimation and Inverse Problems in
+  Spatial Stochastic Models of Chemical Kinetics. In: Abdulle A.,
+  Deparis S., Kressner D., Nobile F., Picasso M. (eds) Numerical
+  Mathematics and Advanced Applications - ENUMATH 2013. Lecture Notes
+  in Computational Science and Engineering, vol 103. Springer,
+  Cham. Doi: 10.1007/978-3-319-10705-9_51).  A core feature of the AEM
+  solver is that reaction events are carried out in channels which
+  access private streams of random numbers, in contrast to the
+  Gillespie direct method where one use only one stream for all
+  events. We have added a new 'solver' argument to the 'run' method.
+
+* The 'package_skeleton' method have been updated to handle the new
+  'solver' argument.
+
+* The event type, when specifying the scheduled events from a
+  data.frame, can now be coded either as a numerical value or as a
+  character string, see the documentataion for the 'SimInf_events'
+  method.
+
+* Added the utility function 'select_matrix' to get/set the E matrix
+  of the events slot of a SimInf_model object.
+
+* Added the utility function 'shift_matrix' to get/set the N matrix
+  of the events slot of a SimInf_model object.
+
+* Added the utility function 'gdata' to get/set parameters in the
+  global data vector that is common to all nodes in a SimInf_model
+  object.
+
+* Added the utility function 'ldata' to get the local data vector of
+  a node in a SimInf_model object.
+
+BREAKING CHANGES
+
+* We have changed 'mparse' method to make it even easier to specify a
+  new model for the Siminf framework, see the documentation.
+
+* Removed the following methods: 'U', 'V', 'recovered', 'susceptible',
+  and 'infected'. Use the new 'trajectory' method instead, see the
+  documentation.
+
+* Renamed the type option 'bnp' to 'nop' in the 'prevalence' method to
+  calculate the proportion of nodes with at least one case.
+
+* Removed the 'seed' argument from the 'run' method. Use 'set.seed'
+  instead.
+
 SimInf 5.1.0
 ------------
 
