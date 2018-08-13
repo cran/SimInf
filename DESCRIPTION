@@ -1,7 +1,7 @@
 Package: SimInf
 Title: A Framework for Data-Driven Stochastic Disease Spread
         Simulations
-Version: 6.0.0
+Version: 6.1.0
 Authors@R: c(person("Stefan", "Widgren", role = c("aut", "cre"),
                     email = "stefan.widgren@gmail.com",
                     comment = c(ORCID = "0000-0001-5745-2284")),
@@ -22,7 +22,7 @@ Description: Provides an efficient and very flexible framework to
     as scheduled events at predefined time-points. Using C code for
     the numerical solvers and 'OpenMP' (if available) to divide work
     over multiple processors ensures high performance when simulating
-    a sample outcome. One of our design goal was to make the package
+    a sample outcome. One of our design goals was to make the package
     extendable and enable usage of the numerical solvers from other R
     extension packages in order to facilitate complex epidemiological
     research. The package contains template models and can be extended
@@ -48,8 +48,9 @@ Collate: 'check_arguments.R' 'SimInf_events.R' 'SimInf_model.R'
         'SEIR.R' 'SIR.R' 'SISe.R' 'SISe3.R' 'SISe3_sp.R' 'SISe_sp.R'
         'SimInf.R' 'SimInf_mparse.R' 'distance.R' 'package_skeleton.R'
         'run_outer.R'
-RoxygenNote: 6.0.1
-Packaged: 2018-04-20 22:02:40 UTC; stefan
+Encoding: UTF-8
+RoxygenNote: 6.1.0
+Packaged: 2018-08-13 11:10:00 UTC; stefan
 Author: Stefan Widgren [aut, cre] (<https://orcid.org/0000-0001-5745-2284>),
   Robin Eriksson [aut] (<https://orcid.org/0000-0002-4291-712X>),
   Stefan Engblom [aut] (<https://orcid.org/0000-0002-3614-1732>),
@@ -57,4 +58,4 @@ Author: Stefan Widgren [aut, cre] (<https://orcid.org/0000-0001-5745-2284>),
   Attractive Chaos [cph] (Author of 'kvec.h', a generic dynamic array)
 Maintainer: Stefan Widgren <stefan.widgren@gmail.com>
 Repository: CRAN
-Date/Publication: 2018-04-20 22:44:15 UTC
+Date/Publication: 2018-08-13 12:10:03 UTC

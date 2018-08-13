@@ -1,3 +1,19 @@
+SimInf 6.1.0
+------------
+
+IMPROVEMENTS
+
+* Print better error message when processing scheduleed events to
+  facilitate debugging.
+
+* Some fixes to the vignette.
+
+* Updated CITATION file.
+
+BUG FIXES
+
+* Fixed broken mparse example.
+
 SimInf 6.0.0
 ------------
 

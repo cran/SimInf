@@ -4,8 +4,8 @@
 \alias{mparse}
 \title{Model parser to define new models to run in \code{SimInf}}
 \usage{
-mparse(transitions = NULL, compartments = NULL, gdata = NULL, u0 = NULL,
-  tspan = NULL, events = NULL, E = NULL, N = NULL)
+mparse(transitions = NULL, compartments = NULL, gdata = NULL,
+  u0 = NULL, tspan = NULL, events = NULL, E = NULL, N = NULL)
 }
 \arguments{
 \item{transitions}{character vector containing transitions on the
@@ -68,7 +68,8 @@ model  <- mparse(transitions = c("S -> b*S*I/(S+I+R) -> I",
                  tspan = 1:100)
 
 ## Run and plot the result
-result <- run(model, threads = 1, seed = 22)
+set.seed(22)
+result <- run(model, threads = 1)
 plot(result)
 }
 }

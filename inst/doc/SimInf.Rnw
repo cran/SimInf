@@ -35,13 +35,13 @@
 \Plainauthor{Stefan Widgren, Pavol Bauer, Robin Eriksson, Stefan
   Engblom}
 
-\title{\pkg{SimInf}: An \proglang{R} package for Data-driven
+\title{\pkg{SimInf}: An \proglang{R} Package for Data-Driven
   Stochastic Disease Spread Simulations}
 
-\Plaintitle{SimInf: An R package for Data-Driven Stochastic Disease
+\Plaintitle{SimInf: An R Package for Data-Driven Stochastic Disease
   Spread Simulations}
 
-\Shorttitle{\pkg{SimInf}: Data-driven Stochastic Disease Spread
+\Shorttitle{\pkg{SimInf}: Data-Driven Stochastic Disease Spread
   Simulations}
 
 \Abstract{
@@ -54,14 +54,14 @@
   stochastic simulation algorithm and incorporates available data such
   as births, deaths and movements as scheduled events at predefined
   time-points.  Using \proglang{C} code for the numerical solvers and
-  \proglang{OpenMP} to divide work over multiple processors ensures
-  high performance when simulating a sample outcome.  One of our
-  design goal was to make \pkg{SimInf} extendable and enable usage of
-  the numerical solvers from other \proglang{R} extension packages in
-  order to facilitate complex epidemiological research.  In this
-  paper, we provide a technical description of the framework and
-  demonstrate its use on some basic examples.  We also discuss how to
-  specify and extend the framework with user-defined models.
+  divide work over multiple processors ensures high performance when
+  simulating a sample outcome.  One of our design goals was to make
+  \pkg{SimInf} extendable and enable usage of the numerical solvers
+  from other \proglang{R} extension packages in order to facilitate
+  complex epidemiological research.  In this paper, we provide a
+  technical description of the framework and demonstrate its use on
+  some basic examples.  We also discuss how to specify and extend the
+  framework with user-defined models.
 
 }
 
@@ -76,7 +76,7 @@
   National Veterinary Institute\\
   SE-751 89 Uppsala, Sweden\\
   E-mail: \email{stefan.widgren@sva.se}\\
-  \textit{and}\\
+  and\\
   Division of Scientific Computing\\
   Department of Information Technology\\
   Uppsala University\\
@@ -106,7 +106,7 @@
 }
 
 <<echo=false, results=hide>>=
-options(prompt = "R> ", continue = "+    ", width = 74, useFancyQuotes = FALSE)
+options(prompt = "R> ", continue = "+  ", width = 70, useFancyQuotes = FALSE)
 @
 
 \begin{document}
@@ -122,7 +122,7 @@ options(prompt = "R> ", continue = "+    ", width = 74, useFancyQuotes = FALSE)
 \section{Introduction}
 
 Cattle can act as a reservoir for \textit{Salmonella} and
-Verotoxin-producing \textit{Escherichia coli} (VTEC), two important
+verotoxin-producing \textit{Escherichia coli} (VTEC), two important
 examples of zoonotic food-borne pathogens.  In order to develop
 effective control strategies, it is necessary to understand the spread
 of zoonotic diseases in the cattle population \citep{Newell2010}.
@@ -163,43 +163,43 @@ a network of about 40,000 subpopulations \citep{Bauer2016,
   Widgren2016, Widgren2018}.  Even if development of \pkg{SimInf} was
 inspired by livestock diseases and models driven by available data,
 the design is of completely general character and applies to arbitrary
-metapopulation models.  One of our design goal was to make
+metapopulation models.  One of our design goals was to make
 \pkg{SimInf} extendable and enable usage of the numerical solvers from
 other \proglang{R} extension packages in order to facilitate complex
 epidemiological research.  To support this, \pkg{SimInf} has
 functionality to generate the required \proglang{C} and \proglang{R}
 code from a model specification.
 
-Various packages in the CRAN repository implement SSA to simulate a
-continuous-time stochastic process.  The \pkg{GillespieSSA} package
-\citep{Pineda-Krch2008}, on CRAN since 2007, but apparently not
-actively maintained after 2012, implements both the direct method and
-three approximate methods.  The \pkg{hybridModels} package
-\citep{hybridModels} uses \pkg{GillespieSSA} internally to simulate
-infections using a metapopulation model coupled with spread among
-subpopulations. Since each outcome of a stochastic process is
-different, it is (generally) necessary to study many realisations of
-the process to see the distribution of outcomes consistent with the
-model structure and parameterization.  Therefore, performance of the
-simulator becomes critical when using these methods in an applied
-context.  Because the algorithms in \pkg{GillespieSSA} are implemented
-in \proglang{R}, the computational efficiency is limited in comparison
-with implementations in a compiled language, for example, \proglang{C}
-or \proglang{C++}. The \pkg{adaptivetau} package \citep{adaptivetau}
-uses a hybrid \proglang{R}/\proglang{C++} strategy to implement the
-direct method and adaptive tau leaping \citep{Cao2007}.
+Various packages available at the Comprehensive \proglang{R} Archive
+Network (CRAN) implement SSA to simulate a continuous-time stochastic
+process.  The \pkg{GillespieSSA} package \citep{Pineda-Krch2008}, on
+CRAN since 2007, but apparently not actively maintained after 2012,
+implements both the direct method and three approximate methods.  The
+\pkg{hybridModels} package \citep{hybridModels} uses
+\pkg{GillespieSSA} internally to simulate infections using a
+metapopulation model coupled with spread among subpopulations. Since
+each outcome of a stochastic process is different, it is (generally)
+necessary to study many realisations of the process to see the
+distribution of outcomes consistent with the model structure and
+parameterization.  Therefore, performance of the simulator becomes
+critical when using these methods in an applied context.  Because the
+algorithms in \pkg{GillespieSSA} are implemented in \proglang{R}, the
+computational efficiency is limited in comparison with implementations
+in a compiled language, for example, \proglang{C} or
+\proglang{C++}. The \pkg{adaptivetau} package \citep{adaptivetau} uses
+a hybrid \proglang{R}/\proglang{C++} strategy to implement the direct
+method and adaptive tau leaping \citep{Cao2007}.
 
 There exists several related \proglang{R} packages for epidemiological
-analysis on the Comprehensive \proglang{R} Archive Network (CRAN).
-For example, the package \pkg{amei} \citep{amei}, designed for finding
-optimal intervention strategies to minimize total expected cost to
-control a disease outbreak.  Another package is \pkg{surveillance}, a
-framework for monitoring, modeling, and regression analysis of
-infectious diseases, \citep{surveillance}.  \pkg{EpiModel}
-\citep{EpiModel} is an \proglang{R} package that, includes a framework
-for modeling spread of diseases on networks.  In \pkg{EpiModel} the
-individual is the unit and transmission between individuals is
-modelled through a contact network in discrete time.
+analysis on CRAN.  For example, the package \pkg{amei} \citep{amei},
+designed for finding optimal intervention strategies to minimize total
+expected cost to control a disease outbreak.  Another package is
+\pkg{surveillance}, a framework for monitoring, modeling, and
+regression analysis of infectious diseases, \citep{surveillance}.
+\pkg{EpiModel} \citep{EpiModel} is an \proglang{R} package that
+includes a framework for modeling spread of diseases on networks.  In
+\pkg{EpiModel} the individual is the unit and transmission between
+individuals is modelled through a contact network in discrete time.
 
 The remainder of this paper is organized as follows.  In
 \S\ref{sec:modeling} we summarize the mathematical foundation for our
@@ -241,14 +241,14 @@ outbreak \citep{King2015}, seasonality of influenza epidemics
   \begin{center}
     \includegraphics{img/temporal-network.pdf}
   \end{center}
-  \caption{Illustration of movements as a temporal network.
-    Each time step depicts movements during one time unit, for
-    example, a day.  The network has $N = 4$ nodes where node $1$ is
-    infected and nodes $2$--$4$ are non-infected.  Arrows indicate
-    movements of individuals from a source node to a destination node and
-    labels denote the size of the shipment.  Here, infection may
-    spread from node $1$ to node $3$ at $t=2$ and then from node $3$
-    to node $2$ at $t=3$.
+  \caption{Illustration of movements as a temporal network.  Each time
+    step depicts movements during one time unit, for example, a day.
+    The network has $N = 4$ nodes where node $1$ is infected and nodes
+    $2$--$4$ are non-infected.  Arrows indicate movements of
+    individuals from a source node to a destination node and labels
+    denote the size of the shipment.  Here, infection may spread from
+    node $1$ to node $3$ at $t=2$ and then from node $3$ to node $2$
+    at $t=3$.
     \label{fig:temporal-network}}
 \end{figure}
 
@@ -260,17 +260,17 @@ infectious individuals between farms over large distances
 \citep{Danon2011}.  The livestock movements create complex dynamic
 interactions among farms that can be represented as a directed
 temporal network \citep{Kempe2002, Bajardi2011, Dutta2014}.  In
-network terminology, each farm is represented by a \textit{node} (also
-called a vertex).  Moreover, each movement forms an \textit{edge}
-(also called a link) between two nodes and following all edges through
-time, an infection may ``flow'' in the network and spread from node to
-node. Let $\Nnodes$ denote the number of nodes in a population, and
-let $i, j, k \in \{1, ..., \Nnodes\}$ denote three distinct nodes.  As
-illustrated in Figure~\ref{fig:temporal-network}, just because there
-exists an edge from $i$ to $j$ does not mean that there exists an edge
-from $j$ to $i$.  Moreover, the existence of an edge from $i$ to $j$
-and one from $j$ to $k$ does not imply there exists a path from $i$ to
-$k$.  Furthermore, note that the order of the edges matter, consider
+network terminology, each farm is represented by a node (also called a
+vertex).  Moreover, each movement forms an edge (also called a link)
+between two nodes and following all edges through time, an infection
+may ``flow'' in the network and spread from node to node. Let
+$\Nnodes$ denote the number of nodes in a population, and let $i, j, k
+\in \{1, ..., \Nnodes\}$ denote three distinct nodes.  As illustrated
+in Figure~\ref{fig:temporal-network}, just because there exists an
+edge from $i$ to $j$ does not mean that there exists an edge from $j$
+to $i$.  Moreover, the existence of an edge from $i$ to $j$ and one
+from $j$ to $k$ does not imply there exists a path from $i$ to $k$.
+Furthermore, note that the order of the edges matter, consider
 swapping the first and second time step in
 Figure~\ref{fig:temporal-network}, then another path for spread is
 possible, namely from node $3$ to node $4$ and then to node $2$.
@@ -297,17 +297,16 @@ numerical approach underlying \pkg{SimInf} is described in
 
 We describe the state of a single node with a \emph{state vector}
 $X(t) \in \Intdom_{+}^{\Ncompartments}$, which counts the number of
-individuals at each of $\Ncompartments$ compartments at time $t$. The
+individuals at each of $\Ncompartments$ compartments at time $t$.  The
 transitions between these compartments are stochastic and are
 described by the transition matrix $\Stoich \in
 \Intdom^{\Ncompartments \times \Ntransitions}$ and the transition
 intensities $R: \Intdom_{+}^{\Ncompartments} \to
 \Realdom_{+}^{\Ntransitions}$, assuming $\Ntransitions$ different
-transitions. We then form a \textit{random counting measure}
-$\mu_{k}(dt) = \mu(R_{k}(X(t-)); \, dt)$ that is associated with a
-Poisson process for the $k$th intensity $R_{k}(X(t-)$, which in turn
-depends on the state prior to any transition at time $t$, that is,
-$X(t-)$.
+transitions.  We then form a random counting measure $\mu_{k}(dt) =
+\mu(R_{k}(X(t-)); \, dt)$ that is associated with a Poisson process
+for the $k$th intensity $R_{k}(X(t-)$, which in turn depends on the
+state prior to any transition at time $t$, that is, $X(t-)$.
 
 The local dynamics can then compactly be described by a pure jump
 stochastic differential equation (SDE),
@@ -323,16 +322,16 @@ occurs, then the state vector is updated according to
   \label{eq:eventupdate}
    X(t)=X(t-)+\Stoich_k,
 \end{align}
-with $\Stoich_k$ the $k$th column of $\Stoich$. In
+with $\Stoich_k$ the $k$th column of $\Stoich$.  In
 \eqref{eq:vectorJSDE} the $\Ntransitions$ different epidemiological
 state transitions are competing in the sense of independent Poisson
-processes. The `winning' process decides what event happens and
-changes the state according to \eqref{eq:eventupdate}. The simulation
+processes.  The ``winning'' process decides what event happens and
+changes the state according to \eqref{eq:eventupdate}.  The simulation
 then proceeds under the Markov assumption where previous events are
 remembered via the state variable $X$ only.
 
 To make this abstract notation a bit more concrete we consider a
-traditional example as follows. In an SIS-model the transitions
+traditional example as follows.  In an SIS-model the transitions
 between a susceptible and an infected compartment can be written as
 \begin{align}
 \label{eq:sirtrans}
@@ -358,20 +357,20 @@ drift, we arrive at
   \label{eq:ODE}
   \frac{dx(t)}{dt} &= \Stoich R(x),
 \end{align}
-where now the state variable $x \in \Realdom^{\Ncompartments}$. The
+where now the state variable $x \in \Realdom^{\Ncompartments}$.  The
 differences between \eqref{eq:vectorJSDE} and \eqref{eq:ODE} are that
 the randomness and discreteness of the state variable are not present
-in the latter formulation. If these features are thought to be
+in the latter formulation.  If these features are thought to be
 important, then \eqref{eq:vectorJSDE} is an accurate stochastic
 alternative to \eqref{eq:ODE}, relying only on the Markovian
 ``memoryless'' assumption.
 
 There are, however, situations where we would like to mix the discrete
-stochastic model with a concentration-type ODE model. In a multi-scale
-description there are typically variables for which a continuous
-description is more natural: a typical example is the concentration of
-bacteria in an infectious environment for which individual counting
-would clearly not be feasible.
+stochastic model with a concentration-type ODE model.  In a
+multi-scale description there are typically variables for which a
+continuous description is more natural: a typical example is the
+concentration of bacteria in an infectious environment for which
+individual counting would clearly not be feasible.
 
 Assuming an additional concentration state vector $Y \in
 \Realdom^{\Nconcentrations}$ a general model which augments
@@ -410,13 +409,13 @@ where $i \in \{1,...,\Nnodes\}$ is the node index.
 We then consider the $\Nnodes$ nodes being the vertices of an
 undirected graph $\mathcal{G}$ with interactions defined in terms of
 the counting measures $\fatnu^{(i,j)} = \fatnu^{(i,j)}(dt)$ and
-$\fatnu^{(j,i)}$. Here $\fatnu^{(i,j)}$ represents the state changes
+$\fatnu^{(j,i)}$.  Here $\fatnu^{(i,j)}$ represents the state changes
 due to an inflow of individuals from node $i$ to node $j$, and
 $\fatnu^{(j,i)}$ represents an inflow of individuals from node $j$ to
 node $i$, assuming node $j$ being in the connected component $C(i)$ of
-node $i$, and vice versa. We denote the connected components of the
-graph $\mathcal{G}$ as the matrix
-$\Connect \in \Intdom_{+}^{\Ncompartments \times \Nnodes}$.
+node $i$, and vice versa.  We denote the connected components of the
+graph $\mathcal{G}$ as the matrix $\Connect \in
+\Intdom_{+}^{\Ncompartments \times \Nnodes}$.
 % At time $t$ the connected compontent matrix $C_t$ describes the
 % network. Collecting $C_t$ in the dimension $t$, we can construct the tensor $\Connect$
 % as the time dependent evolution of $C_t$ as $\Connect = [C_{t_0},C_{t_1}, \dots, C_{t_{max}}]$.
@@ -432,7 +431,7 @@ The network dynamics is then written as
 \end{align}
 
 In \eqref{eq:global2}, $g$ is similarly the ``flow'' of the
-concentration variable $\Y$ between the nodes in the network. For
+concentration variable $\Y$ between the nodes in the network.  For
 example, this could be the natural modeling target for concentration
 variables $\Y$ which are transported via surface water or air.
 
@@ -451,7 +450,7 @@ overall dynamics
 
 Note that $\fatnu^{(i,j)}$ and $\fatnu^{(j,i)}$ may be equivalently
 employed for externally scheduled events given by data using an
-equivalent construction in terms of Dirac measures. This is the case,
+equivalent construction in terms of Dirac measures.  This is the case,
 for example, when intra-nodal transport data of individuals are
 available.
 
@@ -460,11 +459,11 @@ available.
 
 In \pkg{SimInf}, we solve \eqref{eq:master1}--\eqref{eq:master2} by
 splitting the local update scheme \eqref{eq:local1}--\eqref{eq:local2}
-from the global update scheme
-\eqref{eq:global1}--\eqref{eq:global2}. We discretize time as $0 =
-t_{0} < t_{1} < t_2 < \cdots$, which is partially required as external
-data has to be incorporated at some finitely resolved time stamps. The
-numerical method of \pkg{SimInf} can then be written per node $i$ as
+from the global update scheme \eqref{eq:global1}--\eqref{eq:global2}.
+We discretize time as $0 = t_{0} < t_{1} < t_2 < \cdots$, which is
+partially required as external data has to be incorporated at some
+finitely resolved time stamps.  The numerical method of \pkg{SimInf}
+can then be written per node $i$ as
 \begin{align}
   \label{eq:numstep1}
   \tilde{\X}_{n+1}^{(i)} &= \X_{n}^{(i)} + \int^{t_{n+1}}_{t_n}
@@ -484,13 +483,13 @@ numerical method of \pkg{SimInf} can then be written per node $i$ as
 
 In this scheme, \eqref{eq:numstep1} forms the local stochastic step,
 that is in practice simulated by the Gillespie method
-\citep{Gillespie1977}. Equation~\eqref{eq:numstep2} is the data step,
+\citep{Gillespie1977}.  Equation~\eqref{eq:numstep2} is the data step,
 where externally scheduled events are incorporated. Note that the
 stochastic step evolves in continuous time in the interval
 $[t_n,t_{n+1}]$, and the data step operates only on the final state
-$\tilde{\X}$ at $t_{n+1}$. The final step \eqref{eq:numstep3} is just
-the Euler forward method in time with time-step
-$\Delta t_{n} = t_{n+1}-t_{n}$ for the concentration variable $\Y$.
+$\tilde{\X}$ at $t_{n+1}$.  The final step \eqref{eq:numstep3} is just
+the Euler forward method in time with time-step $\Delta t_{n} =
+t_{n+1}-t_{n}$ for the concentration variable $\Y$.
 
 %**************************************************************************
 
@@ -509,7 +508,7 @@ $\Delta t_{n} = t_{n+1}-t_{n}$ for the concentration variable $\Y$.
     \pkg{SimInf} to facilitate analysis and post-processing of
     simulated data, for example, \code{trajectory}, \code{prevalence}
     and \code{plot}.  \pkg{SimInf} supports usage of the numerical
-    solvers from other \proglang{R} packages via the \emph{LinkingTo}
+    solvers from other \proglang{R} packages via the \code{LinkingTo}
     feature in \proglang{R}. \label{fig:overview}}
 \end{figure}
 
@@ -586,6 +585,8 @@ it is loaded in \proglang{R} with the following command
 library("SimInf")
 @
 
+The results reported here are based on \pkg{SimInf} version 6.1.0.
+
 \begin{table}
   \small
   \begin{tabularx}{\textwidth}{l X}
@@ -635,9 +636,9 @@ library("SimInf")
     in every node.  Integer matrix ($\Ncompartments \times
     \Nnodes$).\\
 
-    \code{V} & The result matrix for the real-valued continuous
-    state.  \mbox{\code{V[, j]}} contains the real-valued state of the
-    system at \code{tspan[j]}.  Numeric matrix ($\Nnodes N_{ld} \times
+    \code{V} & The result matrix for the real-valued continuous state.
+    \mbox{\code{V[, j]}} contains the real-valued state of the system
+    at \code{tspan[j]}.  Numeric matrix ($\Nnodes N_{ld} \times
     \text{length}(\text{tspan})$).\\
 
     \code{V\_sparse} & It is possible to run the simulator and write
@@ -732,42 +733,37 @@ concentration variable $\Y$.
     use for each event is specified by the \code{select} vector (see
     below).  \code{E} is a sparse matrix of class \code{dgCMatrix}.\\
 
-    \code{N} & Determines how individuals in \textit{internal
-      transfer} and \textit{external transfer} events are shifted to
-    enter another compartment.  Each row corresponds to one
-    compartment in the model.  The values in a column are added to the
-    current compartment of sampled individuals to specify the
-    destination compartment, for example, a value of \code{1} in an
-    entry means that sampled individuals in this compartment are moved
-    to the next compartment.  Which column to use for each event is
-    specified by the \code{shift} vector (see below).  \code{N} is an
-    integer matrix.\\
+    \code{N} & Determines how individuals in internal transfer and
+    external transfer events are shifted to enter another compartment.
+    Each row corresponds to one compartment in the model.  The values
+    in a column are added to the current compartment of sampled
+    individuals to specify the destination compartment, for example, a
+    value of \code{1} in an entry means that sampled individuals in
+    this compartment are moved to the next compartment.  Which column
+    to use for each event is specified by the \code{shift} vector (see
+    below).  \code{N} is an integer matrix.\\
 
     \code{event} & Four event types are supported by the current
-    solvers: \textit{exit}, \textit{enter}, \textit{internal
-      transfer}, and \textit{external transfer}.  When assigning the
-    events from a \code{data.frame}, they can either be coded as a
-    numerical value or a character string: \textit{exit;} \code{0} or
-    \code{'exit'}, \textit{enter;} \code{1} or \code{'enter'},
-    \textit{internal transfer;} \code{2} or \code{'intTrans'}, and
-    \textit{external transfer;} \code{3} or \code{'extTrans'}.
-    Internally in \pkg{SimInf}, the event type is coded as a numerical
-    value.\\
+    solvers: exit, enter, internal transfer, and external transfer.
+    When assigning the events from a \code{data.frame}, they can
+    either be coded as a numerical value or a character string: exit;
+    \code{0} or \code{'exit'}, enter; \code{1} or \code{'enter'},
+    internal transfer; \code{2} or \code{'intTrans'}, and external
+    transfer; \code{3} or \code{'extTrans'}.  Internally in
+    \pkg{SimInf}, the event type is coded as a numerical value.\\
 
     \code{time} & Time of when the event occurs i.e., the event is
     processed when time is reached in the simulation.  \code{time} is
     an integer vector.\\
 
     \code{node} & The node that the event operates on.  Also the
-    source node for an \textit{external transfer} event.  \code{node}
-    is an integer vector, where $1 \le$ \code{node[i]} $\le
-    \Nnodes$.\\
+    source node for an external transfer event.  \code{node} is an
+    integer vector, where $1 \le$ \code{node[i]} $\le \Nnodes$.\\
 
-    \code{dest} & The destination node for an \textit{external
-      transfer} event i.e., individuals are moved from \code{node} to
-    \code{dest}, where $1 \le$ \code{dest[i]} $\le \Nnodes$.  Set
-    \code{event = 0} for the other event types.  \code{dest} is an
-    integer vector.\\
+    \code{dest} & The destination node for an external transfer event
+    i.e., individuals are moved from \code{node} to \code{dest}, where
+    $1 \le$ \code{dest[i]} $\le \Nnodes$.  Set \code{event = 0} for
+    the other event types.  \code{dest} is an integer vector.\\
 
     \code{n} & The number of individuals affected by the event.
     \code{n} is an integer vector, where \code{n[i]} $\ge 0$.\\
@@ -787,12 +783,12 @@ concentration variable $\Y$.
     corresponding to the non-zero entries in the specified column in
     \code{E[, select[i]]}, where \code{select} is an integer vector.\\
 
-    \code{shift} & Determines how individuals in \textit{internal
-      transfer} and \textit{external transfer} events are shifted to
-    enter another compartment.  The sampled individuals are shifted
-    according to column \code{shift[i]} in matrix \code{N} i.e.,
-    \code{N[, shift[i]]}, where \code{shift} is an integer vector.
-    See above for a description of \code{N}.\\
+    \code{shift} & Determines how individuals in internal transfer and
+    external transfer events are shifted to enter another compartment.
+    The sampled individuals are shifted according to column
+    \code{shift[i]} in matrix \code{N} i.e., \code{N[, shift[i]]},
+    where \code{shift} is an integer vector.  See above for a
+    description of \code{N}.\\
 
     \bottomrule
   \end{tabularx}
@@ -809,7 +805,7 @@ Model-specific data that is passed to the transition-rate functions
 and the post time-step function are stored in the two slots
 \code{ldata} and \code{gdata} in the \code{SimInf\_model} object.  The
 \code{ldata} matrix holds local data for each node where \code{ldata[,
-  i]} is the data vector for node $i$.  Data that is global, i.e.,
+    i]} is the data vector for node $i$.  Data that is global, i.e.,
 shared between nodes, is stored in the \code{gdata} vector.
 
 The \code{events} slot in the \code{SimInf\_model} holds data to
@@ -871,28 +867,25 @@ initial continuous state in node $i$.
 
 The scheduled events are used to modify the discrete state of
 individuals in a node at a pre-defined time $t$.  There are four
-different types of events; \textit{enter}, \textit{internal transfer},
-\textit{external transfer} and \textit{exit}. The \textit{enter} event
-adds individuals to a node, for example, due to births. The
-\textit{internal transfer} event moves individuals between
+different types of events; enter, internal transfer, external transfer
+and exit.  The enter event adds individuals to a node, for example,
+due to births.  The internal transfer event moves individuals between
 compartments within one node.  For example, to simulate vaccination
 and move individuals to a vaccinated compartment (see example in
 \S\ref{sec:mparse-scheduled-events}).  Or ageing according to birth
-records in an age-structured model \citep{Widgren2016}.  The
-\textit{external transfer} event moves individuals from compartments
-in one node to compartments in a destination node. Finally, the
-\textit{exit} event removes individuals from a node, for example, due
-to death. The event types are classified into those that operate on
-the compartments of a single node $E_1 = \{\text{\textit{enter},
-  \textit{internal transfer}, \textit{exit}}\}$ and those that operate
-on the compartments of two nodes $E_2 = \{\text{\textit{external
-    transfer}}\}$.  The parallel algorithm processes these two classes
-of events differently, see Appendix~\ref{sec:pseudo-code} for
-pseudo-code of the core simulation solver.  The scheduled events are
-processed when simulation time reaches the time for any of the events.
-Events that are scheduled at the same time are processed in the
-following order: \textit{exit}, \textit{enter}, \textit{internal
-  transfer} and \textit{external transfer}.
+records in an age-structured model \citep{Widgren2016}.  The external
+transfer event moves individuals from compartments in one node to
+compartments in a destination node. Finally, the exit event removes
+individuals from a node, for example, due to death. The event types
+are classified into those that operate on the compartments of a single
+node $E_1 = \{\text{enter, internal transfer, exit}\}$ and those that
+operate on the compartments of two nodes $E_2 = \{\text{external
+  transfer}\}$.  The parallel algorithm processes these two classes of
+events differently, see Appendix~\ref{sec:pseudo-code} for pseudo-code
+of the core simulation solver.  The scheduled events are processed
+when simulation time reaches the time for any of the events.  Events
+that are scheduled at the same time are processed in the following
+order: exit, enter, internal transfer and external transfer.
 
 The S4 class \code{SimInf\_events} contains slots with data structures
 to process events (Table~\ref{table:scheduled:events}).  The slots
@@ -915,69 +908,67 @@ in Appendix~\ref{sec:illustration-scheduled-events}.
 
 \subsubsection{Processing of an enter event}
 
-The \textit{enter} event adds \code{n[e]} individuals to one
-compartment at \code{node[e]}, where the compartment is specified by a
-non-zero entry in the row for the compartment in column \code{E[, s]}.
-Please note that, if the column \code{E[, s]} contains several
-non-zero entries, the individuals are added to the compartment
-represented by the first non-zero row in column \code{E[, s]}.  The
-values of \code{dest[e]}, \code{proportion[e]} and \code{shift[e]},
-described below, are not used when processing an \textit{enter} event.
-See Figure~\ref{fig:enter} in
+The enter event adds \code{n[e]} individuals to one compartment at
+\code{node[e]}, where the compartment is specified by a non-zero entry
+in the row for the compartment in column \code{E[, s]}.  Please note
+that, if the column \code{E[, s]} contains several non-zero entries,
+the individuals are added to the compartment represented by the first
+non-zero row in column \code{E[, s]}.  The values of \code{dest[e]},
+\code{proportion[e]} and \code{shift[e]}, described below, are not
+used when processing an enter event.  See Figure~\ref{fig:enter} in
 Appendix~\ref{sec:illustration-scheduled-events} for an illustration
-of a scheduled \textit{enter} event.
+of a scheduled enter event.
 
 \subsubsection{Processing of an internal transfer event}
 
-The \textit{internal transfer} event moves \code{n[e]} individuals
-into new compartments within \code{node[e]}.  However, if \code{n[e]}
-equals zero, the number of individuals to move is calculated by
-multiplying the \code{proportion[e]} with the total number of
-individuals in the compartments represented by the non-zero entries in
-column \mbox{\code{E[, s]}}.  The individuals are then proportionally
-sampled and removed from the compartments specified by \code{E[, s]}.
-The next step is to move the sampled individuals to their new
-compartment using the matrix \code{N} and \code{shift[e]}, where
-\code{shift[e]} specifies which column in \code{N} to use.  Each row
-$\{1, 2, ..., \Ncompartments\}$ in \code{N}, represents one
-compartment in the model and the values determine how to move sampled
-individuals before adding them to \code{node[e]} again.  Let \code{q
-  <- shift[e]}, then each non-zero entry in \code{N[, q]} defines the
-number of rows to move sampled individuals from that compartment i.e.,
-sampled individuals from compartment \code{p} are moved to compartment
-\code{N[p, q] + p}, where $1 \leq$ \code{N[p, q] + p} $\le
-\Ncompartments$.  The value of \code{dest[e]}, described below, is not
-used when processing an \textit{internal transfer} event.  See
-Figure~\ref{fig:internal} in
+The internal transfer event moves \code{n[e]} individuals into new
+compartments within \code{node[e]}.  However, if \code{n[e]} equals
+zero, the number of individuals to move is calculated by multiplying
+the \code{proportion[e]} with the total number of individuals in the
+compartments represented by the non-zero entries in column
+\mbox{\code{E[, s]}}.  The individuals are then proportionally sampled
+and removed from the compartments specified by \code{E[, s]}.  The
+next step is to move the sampled individuals to their new compartment
+using the matrix \code{N} and \code{shift[e]}, where \code{shift[e]}
+specifies which column in \code{N} to use.  Each row $\{1, 2, ...,
+\Ncompartments\}$ in \code{N}, represents one compartment in the model
+and the values determine how to move sampled individuals before adding
+them to \code{node[e]} again.  Let \code{q <- shift[e]}, then each
+non-zero entry in \code{N[, q]} defines the number of rows to move
+sampled individuals from that compartment i.e., sampled individuals
+from compartment \code{p} are moved to compartment \code{N[p, q] + p},
+where $1 \leq$ \code{N[p, q] + p} $\le \Ncompartments$.  The value of
+\code{dest[e]}, described below, is not used when processing an
+internal transfer event.  See Figure~\ref{fig:internal} in
 Appendix~\ref{sec:illustration-scheduled-events} for an illustration
-of a scheduled \textit{internal transfer} event.
+of a scheduled internal transfer event.
 
 \subsubsection{Processing of an external transfer event}
 
-The \textit{external transfer} event moves individuals from
-\code{node[e]} to \code{dest[e]}.  The sampling of individuals from
-\code{node[e]} is performed in the same way as for an \textit{internal
-  transfer} event.  The compartments at \code{node[e]} are updated by
-subtracting the sampled individuals while adding them to the
-compartments at \code{dest[e]}.  The sampled individuals are added to
-the same compartments in \code{dest[e]} as in \code{node[e]}, unless
-\code{shift[e]} $> 0$.  In that case, the sampled individuals change
-compartments according to \code{N} as described in processing an
-\textit{internal transfer} event before adding them to \code{dest[e]}.
-See Figures \ref{fig:external} and \ref{fig:external:shift} in
+The external transfer event moves individuals from \code{node[e]} to
+\code{dest[e]}.  The sampling of individuals from \code{node[e]} is
+performed in the same way as for an internal transfer event.  The
+compartments at \code{node[e]} are updated by subtracting the sampled
+individuals while adding them to the compartments at \code{dest[e]}.
+The sampled individuals are added to the same compartments in
+\code{dest[e]} as in \code{node[e]}, unless \code{shift[e]} $> 0$.  In
+that case, the sampled individuals change compartments according to
+\code{N} as described in processing an internal transfer event before
+adding them to \code{dest[e]}.  See Figures \ref{fig:external} and
+\ref{fig:external:shift} in
 Appendix~\ref{sec:illustration-scheduled-events} for illustrations of
-scheduled \textit{external transfer} events.
+scheduled external transfer events.
 
 \subsubsection{Processing of an exit event}
 
-The \textit{exit} event removes individuals from \code{node[e]}.  The
-sampling of individuals from \code{node[e]} is performed in the same
-way as for an \textit{internal transfer} event.  The compartments at
-\code{node[e]} are updated by subtracting the sampled individuals.
-The values of \code{dest[e]} and \code{shift[e]} are not used when
-processing an \textit{exit} event.  See Figure~\ref{fig:exit} in
+The exit event removes individuals from \code{node[e]}.  The sampling
+of individuals from \code{node[e]} is performed in the same way as for
+an internal transfer event.  The compartments at \code{node[e]} are
+updated by subtracting the sampled individuals.  The values of
+\code{dest[e]} and \code{shift[e]} are not used when processing an
+exit event.  See Figure~\ref{fig:exit} in
 Appendix~\ref{sec:illustration-scheduled-events} for an illustration
-of a scheduled \textit{exit} event.
+of a scheduled exit event.
 
 \subsection{Core simulation solvers}
 
@@ -992,14 +983,13 @@ multiple processors and perform computations in parallel.  Two
 numerical solvers are currently supported.  The default solver is a
 split-step method named \code{'ssm'}, that uses direct SSA, but once
 every unit of time, it also processes scheduled events and calls the
-post time step function.  The other solver implements an \textit{``all
-  events method''} \citep{Bauer2015} and is named \code{'aem'}.
-Similarly, it also processes scheduled events and calls the post time
-step function once every unit of time.  A core feature of the
-\code{'aem'} solver is that transition events are carried out in
-channels which access private streams of random numbers, in contrast
-to the \code{'ssm'} solver where one uses only one stream for all
-events.
+post time step function.  The other solver implements an ``all events
+method'' \citep{Bauer2015} and is named \code{'aem'}.  Similarly, it
+also processes scheduled events and calls the post time step function
+once every unit of time.  A core feature of the \code{'aem'} solver is
+that transition events are carried out in channels which access
+private streams of random numbers, in contrast to the \code{'ssm'}
+solver where one uses only one stream for all events.
 
 \subsubsection{Function pointers}
 
@@ -1284,40 +1274,40 @@ Interpret it as follows:
 Now, let us illustrate with a small example, consisting only of five
 nodes, how scheduled events can alter the composition within nodes
 during simulation.  Let us start with empty nodes and then create some
-\textit{enter} events to add susceptible individuals to each node
-during the first ten time-steps.
+enter events to add susceptible individuals to each node during the
+first ten time-steps.
 
 <<SIR-u0-add>>=
 u0 <- data.frame(S = rep(0, 5), I = rep(0, 5), R = rep(0, 5))
 add <- data.frame(event = "enter", time = rep(1:10, each = 5),
-node = 1:5, dest = 0, n = 1:5, proportion = 0, select = 1, shift = 0)
+  node = 1:5, dest = 0, n = 1:5, proportion = 0, select = 1, shift = 0)
 @
 
-We then create one \textit{enter} event to introduce an infected
+We then create one enter event to introduce an infected
 individual to the 5$^{th}$ node at $t = 25$.
 
 <<SIR-infect>>=
 infect <- data.frame(event = "enter", time = 25, node = 5,
-dest = 0, n = 1, proportion = 0, select = 2, shift = 0)
+  dest = 0, n = 1, proportion = 0, select = 2, shift = 0)
 @
 
-Additionally, we create some \textit{external transfer} events to form
+Additionally, we create some external transfer events to form
 interactions among the nodes with movements between $t = 35$ and $t =
 45$.  Each shipment contains $n = 5$ individuals.
 
 <<SIR-move>>=
-move <- data.frame(event = "extTrans", time = 35:45,
-node = c(5, 5, 5, 5, 4, 4, 4, 3, 3, 2, 1), dest = c(4, 3, 3, 1, 3,
-2, 1, 2, 1, 1, 2), n = 5, proportion = 0, select = 4, shift = 0)
+move <- data.frame(event = "extTrans", time = 35:45, node = c(5, 5, 5,
+  5, 4, 4, 4, 3, 3, 2, 1), dest = c(4, 3, 3, 1, 3, 2, 1, 2, 1, 1, 2),
+  n = 5, proportion = 0, select = 4, shift = 0)
 @
 
-Finally, we create \textit{exit} events to remove 20\% of the
-individuals from each node at $t = 70$ and $t = 110$.
+Finally, we create exit events to remove 20\% of the individuals from
+each node at $t = 70$ and $t = 110$.
 
 <<SIR-remove>>=
 remove <- data.frame(event = "exit", time = c(70, 110),
-node = rep(1:5, each = 2), dest = 0, n = 0, proportion = 0.2,
-select = 4, shift = 0)
+  node = rep(1:5, each = 2), dest = 0, n = 0, proportion = 0.2,
+  select = 4, shift = 0)
 @
 
 Figure~\ref{fig:SIR-events} shows one realization of a model
@@ -1331,7 +1321,7 @@ the nodes.
 <<eval=FALSE>>=
 events = rbind(add, infect, move, remove)
 model <- SIR(u0 = u0, tspan = 1:180, events = events, beta = 0.16,
-gamma = 0.077)
+  gamma = 0.077)
 set.seed(3)
 result <- run(model, threads = 1)
 plot(result, node = 1:5, range = FALSE)
@@ -1380,20 +1370,12 @@ from a \code{SimInf_model} object, together with some custom analysis
 of each trajectory.  Here, we find that infection spread from the
 5$^{th}$ node in about half of \code{n = 1000} trajectories.
 
-<<echo=false, results=hide>>=
-options(continue = "+  ")
-@
-
 <<SIR-replicate>>=
 set.seed(123)
 mean(replicate(n = 1000, {
   nI <- trajectory(run(model = model, threads = 1), node = 1:4)$I
   sum(nI) > 0
 }))
-@
-
-<<echo=false, results=hide>>=
-options(continue = "+    ")
 @
 
 \subsubsection[C code for the SIR model]{%
@@ -1509,10 +1491,10 @@ model object).
 
 <<create-SISesp-model>>=
 model <- SISe_sp(u0 = u0, tspan = 1:1460, events = events, phi = 0,
-upsilon = 0.012, gamma = 0.1, alpha = 1, beta_t1 = 0.10,
-beta_t2 = 0.12, beta_t3 = 0.12, beta_t4 = 0.10, end_t1 = 91,
-end_t2 = 182, end_t3 = 273, end_t4 = 365, distance = d_ik,
-coupling = 0.2)
+  upsilon = 0.012, gamma = 0.1, alpha = 1, beta_t1 = 0.10,
+  beta_t2 = 0.12, beta_t3 = 0.12, beta_t4 = 0.10, end_t1 = 91,
+  end_t2 = 182, end_t3 = 273, end_t4 = 365, distance = d_ik,
+  coupling = 0.2)
 @
 
 Let us use the \code{prevalence()} method to explore the proportion of
@@ -1526,8 +1508,8 @@ specify \code{type = "nop"}.  Consult the help page for other
 \code{prevalence()} parameter options.
 
 <<eval=FALSE>>=
-plot(NULL, xlim = c(0, 1500), ylim = c(0, 0.18),
-ylab = "Prevalance", xlab = "Time")
+plot(NULL, xlim = c(0, 1500), ylim = c(0, 0.18), ylab = "Prevalance",
+  xlab = "Time")
 set.seed(123)
 replicate(5, {
   result <- run(model = model, threads = 1)
@@ -1625,7 +1607,7 @@ and \code{tspan}.
 n <- 1000
 u0 <- data.frame(S = rep(99, n), I = rep(5, n), R = rep(0, n))
 model <- mparse(transitions = transitions, compartments = compartments,
-gdata = c(b = 0.16, g = 0.077), u0 = u0, tspan = 1:180)
+  gdata = c(b = 0.16, g = 0.077), u0 = u0, tspan = 1:180)
 @
 
 As in earlier examples, the \code{model} object can now be used to
@@ -1680,9 +1662,9 @@ this model, simply by replicating a node in the initial condition
 <<SIR-mparse-incidence-run, eval=FALSE>>=
 n <- 1000
 u0 <- data.frame(S = rep(99, n), I = rep(1, n), Icum = rep(0, n),
-R = rep(0, n))
+  R = rep(0, n))
 model <- mparse(transitions = transitions, compartments = compartments,
-gdata = c(b = 0.16, g = 0.077), u0 = u0, tspan = 1:150)
+  gdata = c(b = 0.16, g = 0.077), u0 = u0, tspan = 1:150)
 set.seed(123)
 result <- run(model = model, threads = 1)
 @
@@ -1705,7 +1687,7 @@ average.
 
 <<SIR-mparse-incidence-plot, eval=FALSE>>=
 plot(cases, main = "", xlab = "Time", ylab = "Number of cases",
-do.points = FALSE)
+  do.points = FALSE)
 lines(avg_cases, col = "blue", lwd = 2, lty = 2)
 @
 
@@ -1771,37 +1753,36 @@ u0$V <- 0
 events <- events_SIR()
 @
 
-Now generate vaccination events i.e., \textit{internal transfer}
-events.  Use \code{select = 3} and \code{shift = 1} to move animals
-from the susceptible, infectious and recovered compartments to the
-vaccinated compartment, see the definitions of $E$ and $N$ below.  Let
-us start the vaccinations in nodes 1--50 on day twenty-one, and
-continue until all herds are vaccinated on day fifty-two.  Moreover,
-use \code{proportion = 0.8} to vaccinate 80\% of the animals in each
-herd.  We assume, for the sake of simplicity, that vaccinated
-individuals become immune and non-infectious immediately.
+Now generate vaccination events i.e., internal transfer events.  Use
+\code{select = 3} and \code{shift = 1} to move animals from the
+susceptible, infectious and recovered compartments to the vaccinated
+compartment, see the definitions of $E$ and $N$ below.  Let us start
+the vaccinations in nodes 1--50 on day twenty-one, and continue until
+all herds are vaccinated on day fifty-two.  Moreover, use
+\code{proportion = 0.8} to vaccinate 80\% of the animals in each herd.
+We assume, for the sake of simplicity, that vaccinated individuals
+become immune and non-infectious immediately.
 
 <<mparse-scheduled-events-vaccination>>=
-vaccination <- data.frame(event = "intTrans", time = rep(21:52, each = 50),
-node = 1:1600, dest = 0, n = 0, proportion = 0.8, select = 3,
-shift = 1)
+vaccination <- data.frame(event = "intTrans", time = rep(21:52,
+  each = 50), node = 1:1600, dest = 0, n = 0, proportion = 0.8,
+  select = 3, shift = 1)
 @
 
 To simulate from this model, we have to define the select matrix $E$
 to handle which compartments to sample from when processing a
-scheduled event.  Let the first column in $E$ handle \textit{enter}
-events (births); add newborn animals to the susceptible compartment
-$S$.  The second column is for \textit{exit} events (deaths) and
-\textit{external transfer} events (livestock movements); sample
-animals from the $S$, $I$, $R$ and $V$ compartments.  Finally, the
-third column is for \textit{internal transfer} events (vaccination);
-sample individuals from the $S$, $I$ and $R$ compartments.  We must
-also define the shift matrix $N$ to process \textit{internal transfer}
-events (vaccination); move sampled animals from the $S$ compartment
-four steps forward to the $V$ compartment.  Similarly, move sampled
-animals from the $I$ compartment three steps forward to the $V$
-compartment, and finally, move sampled individuals from the $R$
-compartment one step forward.
+scheduled event.  Let the first column in $E$ handle enter events
+(births); add newborn animals to the susceptible compartment $S$.  The
+second column is for exit events (deaths) and external transfer events
+(livestock movements); sample animals from the $S$, $I$, $R$ and $V$
+compartments.  Finally, the third column is for internal transfer
+events (vaccination); sample individuals from the $S$, $I$ and $R$
+compartments.  We must also define the shift matrix $N$ to process
+internal transfer events (vaccination); move sampled animals from the
+$S$ compartment four steps forward to the $V$ compartment.  Similarly,
+move sampled animals from the $I$ compartment three steps forward to
+the $V$ compartment, and finally, move sampled individuals from the
+$R$ compartment one step forward.
 
 {\small
 \[
@@ -1826,10 +1807,10 @@ compartment one step forward.
 
 <<mparse-scheduled-events-E-N>>=
 E <- matrix(c(1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0), nrow = 5,
-ncol = 3, dimnames = list(c("S", "I", "Icum", "R", "V"),
-c("1", "2", "3")))
+  ncol = 3, dimnames = list(c("S", "I", "Icum", "R", "V"),
+  c("1", "2", "3")))
 N <- matrix(c(4, 3, 0, 1, 0), nrow = 5, ncol = 1,
-dimnames = list(c("S", "I", "Icum", "R", "V"), "1"))
+  dimnames = list(c("S", "I", "Icum", "R", "V"), "1"))
 @
 
 Additionally, we have to redefine the \code{select} column in the
@@ -1851,10 +1832,6 @@ value rather than a numeric value.  Run the model and accumulate
 matrix format, to extract \code{Icum} in every node at each time-point
 in \code{tspan}.
 
-<<echo=false, results=hide>>=
-options(continue = "+  ")
-@
-
 <<mparse-scheduled-events-epicurve>>=
 epicurve <- function(model, n = 1000) {
   Icum <- numeric(length(model@tspan))
@@ -1873,17 +1850,13 @@ epicurve <- function(model, n = 1000) {
 }
 @
 
-<<echo=false, results=hide>>=
-options(continue = "+    ")
-@
-
 Generate an epicurve with the average number of cases per day for the
 first three hundred days of the epidemic without vaccination.
 
 <<mparse-scheduled-events-model-no-vac, eval=FALSE>>=
 model_no_vac <- mparse(transitions = transitions,
-compartments = compartments, gdata = c(b = 0.16, g = 0.077),
-u0 = u0, tspan = 1:300, events = events, E = E, N = N)
+  compartments = compartments, gdata = c(b = 0.16, g = 0.077),
+  u0 = u0, tspan = 1:300, events = events, E = E, N = N)
 cases_no_vac <- epicurve(model_no_vac)
 @
 
@@ -1892,9 +1865,9 @@ Similarly, generate an epicurve after incorporating the
 
 <<mparse-scheduled-events-model-vac, eval=FALSE>>=
 model_vac <- mparse(transitions = transitions,
-compartments = compartments, gdata = c(b = 0.16, g = 0.077),
-u0 = u0, tspan = 1:300, events = rbind(events, vaccination),
-E = E, N = N)
+  compartments = compartments, gdata = c(b = 0.16, g = 0.077),
+  u0 = u0, tspan = 1:300, events = rbind(events, vaccination),
+  E = E, N = N)
 cases_vac <- epicurve(model_vac)
 @
 
@@ -1904,11 +1877,11 @@ population (Figure~\ref{fig:mparse-epicurve}).
 
 <<mparse-scheduled-events-plot, eval=FALSE>>=
 plot(cases_no_vac, main = "", xlim = c(0, 300), xlab = "Time",
-ylab = "Number of cases", do.points = FALSE)
+  ylab = "Number of cases", do.points = FALSE)
 lines(cases_vac, col = "blue", do.points = FALSE, lty = 2)
 abline(v = 21, col = "red", lty = 3)
 legend("topright", c("No vaccination", "Vaccination"),
-col = c("black", "blue"), lty = 1:2)
+  col = c("black", "blue"), lty = 1:2)
 @
 
 \begin{figure}
@@ -1946,10 +1919,9 @@ density-dependent growth in the prey and and a nonlinear Type-2
 functional response in the predator \citep{Rosenzweig1963}.  Let $R$
 and $F$ denote the number of prey and predators, respectively.  The
 model consists of five transitions
-(Equation~\eqref{eq:predator-prey}): \textit{i)} prey birth,
-\textit{ii)} prey death due to non-predatory events, \textit{iii)}
-prey death due to predation, \textit{iv)} predator birth, and
-\textit{v)} predator death
+(Equation~\eqref{eq:predator-prey}): i) prey birth, ii) prey death due
+to non-predatory events, iii) prey death due to predation, iv)
+predator birth, and v) predator death
 
 \begin{align}
   \label{eq:predator-prey}
@@ -1961,7 +1933,7 @@ prey death due to predation, \textit{iv)} predator birth, and
       \emptyset & \xrightarrow{b_F \cdot \alpha/(1+w \cdot R) \cdot R \cdot F} & F \\
       F & \xrightarrow{d_F \cdot F} & \emptyset \\
     \end{array}
-  \right\},
+     \right\},
 \end{align}
 
 where $b_R$, $d_R$, $b_F$, and $d_F$ are the per capita birth and
@@ -1973,11 +1945,11 @@ efficiency, and $w$ is the degree of predator saturation
 
 <<mparse-predator-prey-I>>=
 transitions <- c("@ -> bR*R -> R", "R -> (dR+(bR-dR)*R/K)*R -> @",
-"R -> alpha/(1+w*R)*R*F -> @", "@ -> bF*alpha/(1+w*R)*R*F -> F",
-"F -> dF*F -> @")
+  "R -> alpha/(1+w*R)*R*F -> @", "@ -> bF*alpha/(1+w*R)*R*F -> F",
+  "F -> dF*F -> @")
 compartments <- c("R", "F")
 parameters <- c(bR = 2, bF = 2, dR = 1, K = 1000, alpha = 0.007,
-w = 0.0035, dF = 2)
+  w = 0.0035, dF = 2)
 @
 
 Assume the initial population consists of $R = 1000$ prey and $F =
@@ -1990,7 +1962,7 @@ $n$ identical nodes.
 n <- 1000
 u0 = data.frame(R = rep(1000, n), F = rep(100, n))
 model <- mparse(transitions = transitions, compartments = compartments,
-gdata = parameters, u0 = u0, tspan = 1:100)
+  gdata = parameters, u0 = u0, tspan = 1:100)
 @
 
 Now instead of running the model to generate data, let us use it to
@@ -2108,10 +2080,10 @@ the predators in the fourth node (Figure~\ref{fig:predator-prey}).
 <<predator-prey-plot, eval=FALSE>>=
 opar <- par(mfrow = c(1, 2))
 plot(R ~ F, trajectory(model = result), cex = 0.3, pch = 20,
-xlab = "Number of predators", ylab = "Number of prey",
-col = rgb(0, 0, 0, alpha = 0.1))
+  xlab = "Number of predators", ylab = "Number of prey",
+  col = rgb(0, 0, 0, alpha = 0.1))
 plot(R ~ time, trajectory(model = result, node = 4), type = "l",
-xlab = "Time", ylab = "N")
+  xlab = "Time", ylab = "N")
 lines(F ~ time, trajectory(model = result, node = 4), type = "l", lty = 2)
 legend("right", c("Prey", "Predator"), lty = 1:2)
 par(opar)
@@ -2119,7 +2091,7 @@ par(opar)
 
 This example illustrated how \pkg{SimInf} supports usage of the
 numerical solvers from other \proglang{R} packages via the
-\emph{LinkingTo} feature in \proglang{R}.
+\code{LinkingTo} feature in \proglang{R}.
 
 %**************************************************************************
 
@@ -2303,7 +2275,7 @@ This section illustrates how the scheduled events for the
 \code{SISe3\_sp} model are specified
 (Table~\ref{table:SISe3_sp:events}) and how each event type is
 executed
-Figures~\ref{fig:exit},\ref{fig:enter},\ref{fig:external},\ref{fig:internal},\ref{fig:external:shift}
+(Figures~\ref{fig:exit},\ref{fig:enter},\ref{fig:external},\ref{fig:internal},\ref{fig:external:shift})
 
 \begin{table}[!ht]
   \small
@@ -2337,113 +2309,109 @@ Figures~\ref{fig:exit},\ref{fig:enter},\ref{fig:external},\ref{fig:internal},\re
   \begin{center}
     \includegraphics[width=0.67\linewidth]{img/exit.pdf}
   \end{center}
-  \caption{Illustration of a scheduled \textit{exit} event in the
+  \caption{Illustration of a scheduled exit event in the
     \code{SISe3\_sp} model at time = 4.  The removal of one individual
     in the third age category $\{S_3, I_3\}$ from node 14.
-    Interpreting the figure from left to right: \textit{i)} A single
-    row of the event data operating on node 14.  \textit{ii)}
-    \code{u[, 14]} is the current state of node 14; \code{E[, 6]} is
-    the 6$^{th}$ column in the select matrix that determines which
-    compartments (age categories) that are eligible for sampling.
-    \textit{iii)} The operation of randomly sampling one individual (n
-    = 1) to move from the compartments selected in step \textit{ii}.
-    \textit{iv)} The resultant state of node 14 after subtracting the
-    sampled individual in step \textit{iii} from node 14.
-    $^\dag$\code{dest} and $^\S$\code{shift} are not used in a
-    scheduled \textit{exit} event.  $^\ddag$\code{proportion} is not
-    used when $n > 0$.  \label{fig:exit}}
+    Interpreting the figure from left to right: i) A single row of the
+    event data operating on node 14.  ii) \code{u[, 14]} is the
+    current state of node 14; \code{E[, 6]} is the 6$^{th}$ column in
+    the select matrix that determines which compartments (age
+    categories) that are eligible for sampling.  iii) The operation of
+    randomly sampling one individual (n = 1) to move from the
+    compartments selected in step ii).  iv) The resultant state of
+    node 14 after subtracting the sampled individual in step iii from
+    node 14.  $^\dag$\code{dest} and $^\S$\code{shift} are not used in
+    a scheduled exit event.  $^\ddag$\code{proportion} is not used
+    when $n > 0$.  \label{fig:exit}}
 \end{figure}
 
-\begin{figure}[!h]
+\begin{figure}[!ht]
   \begin{center}
     \includegraphics[width=0.6\linewidth]{img/enter.pdf}
   \end{center}
-  \caption{Illustration of a scheduled \textit{enter} event in the
+  \caption{Illustration of a scheduled enter event in the
     \code{SISe3\_sp} model at time = 4.  Add three susceptible
     individuals to the first age category $\{S_1\}$ in node 14.
-    Interpreting the figure from left to right: \textit{i)} A single
-    row of the event data operating on node 14.  \textit{ii)}
-    \code{u[, 14]} is the current state of node 14.  \textit{iii)}
-    \code{E[, 1]} is the first column in the select matrix that
-    determines which compartments (age categories) the new individuals
-    are added.  \textit{iv)} The resultant state of node 14 after
-    adding the individuals in step \textit{iii}.  $^\dag$\code{dest},
-    $^\ddag$\code{proportion} and $^\S$\code{shift} are not used in a
-    scheduled \textit{enter} event.  \label{fig:enter}}
+    Interpreting the figure from left to right: i) A single row of the
+    event data operating on node 14.  ii) \code{u[, 14]} is the
+    current state of node 14.  iii) \code{E[, 1]} is the first column
+    in the select matrix that determines which compartments (age
+    categories) the new individuals are added.  iv) The resultant
+    state of node 14 after adding the individuals in step iii).
+    $^\dag$\code{dest}, $^\ddag$\code{proportion} and
+    $^\S$\code{shift} are not used in a scheduled enter
+    event.  \label{fig:enter}}
 
   \vspace*{\floatsep}
 
   \begin{center}
     \includegraphics[width=0.66\linewidth]{img/external.pdf}
   \end{center}
-  \caption{Illustration of a scheduled \textit{external transfer}
-    event in the \code{SISe3\_sp} model at time = 4.  The movement of
-    one individual in the third age category $\{S_3, I_3\}$ from node
-    14 to destination node 23.  Interpreting the figure from left to
-    right: \textit{i)} A single row of the event data operating on
-    node 14 and destination node 23.  \textit{ii)} \code{u[, 14]} is
-    the current state of node 14; \code{u[, 23]} is the current state
-    of the destination node 23; \code{E[, 6]} is the 6$^{th}$ column
-    in the select matrix that determines which compartments (age
-    categories) that are eligible for sampling.  \textit{iii)} The
-    operation of randomly sampling one individual (n = 1) to move from
-    the compartments selected in step \textit{ii}.  \textit{iv)} The
-    resultant state of node 14 and destination node 23 after
-    subtracting the sampled individuals in step \textit{iii} from node
-    14 and adding them to destination node 23.  $^\dag$\code{shift}
-    can be used in a scheduled \textit{external transfer} event, see
+  \caption{Illustration of a scheduled external transfer event in the
+    \code{SISe3\_sp} model at time = 4.  The movement of one
+    individual in the third age category $\{S_3, I_3\}$ from node 14
+    to destination node 23.  Interpreting the figure from left to
+    right: i) A single row of the event data operating on node 14 and
+    destination node 23.  ii) \code{u[, 14]} is the current state of
+    node 14; \code{u[, 23]} is the current state of the destination
+    node 23; \code{E[, 6]} is the 6$^{th}$ column in the select matrix
+    that determines which compartments (age categories) that are
+    eligible for sampling.  iii) The operation of randomly sampling
+    one individual (n = 1) to move from the compartments selected in
+    step ii).  iv) The resultant state of node 14 and destination node
+    23 after subtracting the sampled individuals in step iii) from
+    node 14 and adding them to destination node 23.
+    $^\dag$\code{shift} can be used in a scheduled external transfer
+    event, see
     Figure~\ref{fig:external:shift}. $^\ddag$\code{proportion} is not
     used when $n > 0$.  \label{fig:external}}
 \end{figure}
 
-\begin{figure}[!h]
+\begin{figure}[!ht]
   \begin{center}
     \includegraphics[width=0.8\linewidth]{img/internal.pdf}
   \end{center}
-  \caption{Illustration of a scheduled \textit{internal transfer}
-    event in the \code{SISe3\_sp} model at time = 4.  The ageing of
-    three individuals in the first age category $\{S_1, I_1\}$.
-    Interpreting the figure from left to right: \textit{i)} A single
-    row of the event data operating on node 14.  \textit{ii)}
-    \code{u[, 14]} is the current state of node 14; \code{E[, 4]} is
-    the 4$^{th}$ column in the select matrix that determines which
-    compartments (age categories) that are eligible for sampling.
-    \textit{iii)} The operation of randomly sampling three individuals
-    (n = 3) to age from the compartments selected in step \textit{ii}.
-    \textit{iv)} The shift operation applies the shift specified in
-    column 1 of the shift matrix (\code{N}) to the individuals sampled
-    in step \textit{iii}.  \textit{v)} The resultant state of node 14
-    after subtracting the sampled individuals in step \textit{iii} and
-    adding the individuals after the shift operation in step
-    \textit{iv}.  $^\dag$\code{dest} is not used in \textit{internal
-      transfers}.  $^\ddag$\code{proportion} is not used when $n >
-    0$.  \label{fig:internal}}
+  \caption{Illustration of a scheduled internal transfer event in the
+    \code{SISe3\_sp} model at time = 4.  The ageing of three
+    individuals in the first age category $\{S_1, I_1\}$.
+    Interpreting the figure from left to right: i) A single row of the
+    event data operating on node 14.  ii) \code{u[, 14]} is the
+    current state of node 14; \code{E[, 4]} is the 4$^{th}$ column in
+    the select matrix that determines which compartments (age
+    categories) that are eligible for sampling.  iii) The operation of
+    randomly sampling three individuals (n = 3) to age from the
+    compartments selected in step ii).  iv) The shift operation
+    applies the shift specified in column 1 of the shift matrix
+    (\code{N}) to the individuals sampled in step iii).  v) The
+    resultant state of node 14 after subtracting the sampled
+    individuals in step iii) and adding the individuals after the
+    shift operation in step iv).  $^\dag$\code{dest} is not used in
+    internal transfers.  $^\ddag$\code{proportion} is not used when $n
+    > 0$.  \label{fig:internal}}
 
   \vspace*{\floatsep}
 
   \begin{center}
     \includegraphics[width=0.66\linewidth]{img/external-shift.pdf}
   \end{center}
-  \caption{Illustration of a scheduled \textit{external transfer}
-    event in the \code{SISe3} model at time = 4.  The ageing of three
-    individuals in the second age category $\{S_2, I_2\}$ that are
-    subsequently moved.  Interpreting the figure from left to right:
-    \textit{i)} A single row of the event data operating on node 14
-    and destination node 23.  \textit{ii)} \code{u[, 14]} is the
-    current state of node 14; \code{u[, 23]} is the current state of
-    the destination node 23; \code{E[, 5]} is the 5$^{th}$ column in
-    the select matrix that determines which compartments (age
-    categories) that are eligible for sampling.  \textit{iii)} The
-    operation of randomly sampling three individuals (n = 3) to move
-    from the compartments selected in step \textit{ii}.  \textit{iv)}
-    The shift operation applies the shift specified in column 2 of the
-    shift matrix (\code{N}) to the individuals sampled in step
-    \textit{iii}.  \textit{v)} The resultant state of node 14 and
-    destination node 23 after subtracting the sampled individuals in
-    step \textit{iii} from node 14 and adding them to the destination
-    node 23 after the shift operation in step \textit{iv}.
-    $^\ddag$\code{proportion} is not used when $n >
-    0$.  \label{fig:external:shift}}
+  \caption{Illustration of a scheduled external transfer event in the
+    \code{SISe3} model at time = 4.  The ageing of three individuals
+    in the second age category $\{S_2, I_2\}$ that are subsequently
+    moved.  Interpreting the figure from left to right: i) A single
+    row of the event data operating on node 14 and destination node
+    23.  ii) \code{u[, 14]} is the current state of node 14; \code{u[,
+        23]} is the current state of the destination node 23;
+    \code{E[, 5]} is the 5$^{th}$ column in the select matrix that
+    determines which compartments (age categories) that are eligible
+    for sampling.  iii) The operation of randomly sampling three
+    individuals (n = 3) to move from the compartments selected in step
+    ii).  iv) The shift operation applies the shift specified in
+    column 2 of the shift matrix (\code{N}) to the individuals sampled
+    in step iii).  v) The resultant state of node 14 and destination
+    node 23 after subtracting the sampled individuals in step iii)
+    from node 14 and adding them to the destination node 23 after the
+    shift operation in step iv).  $^\ddag$\code{proportion} is not
+    used when $n > 0$.  \label{fig:external:shift}}
 \end{figure}
 
 \clearpage

@@ -31,17 +31,6 @@ AC_PROG_CC
 # Check for OpenMP
 AC_OPENMP
 
-# Optional GSL include and library path
-AC_ARG_WITH([gsl-include],
-            AC_HELP_STRING([--with-gsl-include=INCLUDE_PATH],
-                           [the location of gsl header files]),
-            [gsl_include_path=$withval])
-
-AC_ARG_WITH([gsl-lib],
-            AC_HELP_STRING([--with-gsl-lib=LIB_PATH],
-                           [the location of gsl library]),
-            [gsl_lib_path=$withval])
-
 # Find the compiler and compiler flags to use
 : ${R_HOME=`R RHOME`}
 if test -z "${R_HOME}"; then
@@ -50,7 +39,9 @@ if test -z "${R_HOME}"; then
 fi
 RBIN="${R_HOME}/bin/R"
 RSCRIPT="${R_HOME}/bin/Rscript"
-CPPFLAGS=`"${RBIN}" CMD config CPPFLAGS`
+RBIN_CPPFLAGS=`"${RBIN}" CMD config CPPFLAGS`
+CPPFLAGS="${CPPFLAGS} ${RBIN_CPPFLAGS}"
+LIBS="${LIBS}"
 
 # since some systems have broken OMP libraries
 # we also check that the actual package will work
@@ -75,19 +66,6 @@ if test "x${ac_pkg_openmp}" = xno; then
   -----------------------------------------------])
 fi
 
-# Check for GSL.
-have_gsl=yes
-
-# Check for optional GSL include path
-if test [ -n "$gsl_include_path" ] ; then
-    CPPFLAGS="-I${gsl_include_path} ${CPPFLAGS}"
-fi
-
-# Check for optional GSL lib path
-if test [ -n "$gsl_lib_path" ] ; then
-    LIBS="-L${gsl_lib_path} ${LIBS}"
-fi
-
 # Check for gsl
 have_gsl=no
 AC_PATH_PROG([GSL_CONFIG], [gsl-config])
@@ -110,7 +88,7 @@ if test "x${have_gsl}" = xno; then AC_MSG_FAILURE([
    required to build SimInf was not found.
 
    Please install:
-        libgsl0-dev (package on e.g. Debian and Ubuntu)
+     libgsl0-dev (package on e.g. Debian and Ubuntu)
      gsl-devel   (package on e.g. Fedora, CentOS and RHEL)
      gsl         (Homebrew package on OS X)
    and try again.
@@ -120,14 +98,14 @@ if test "x${have_gsl}" = xno; then AC_MSG_FAILURE([
    configuration is unable to find it, you
    can specify the include and lib path to
    GSL with:
-   R CMD INSTALL --configure-args='--with-gsl-include=INCLUDE_PATH --with-gsl-lib=LIB_PATH' SimInf
+   R CMD INSTALL SimInf --configure-vars='LIBS=-L/path/to/libs CPPFLAGS=-I/path/to/headers'
   ---------------------------------------------])
 fi
 
 # List all model files to compile
-MODELS_OBJ=`"${RSCRIPT}" -e "cat(paste0('models/', sub('c$', 'o', list.files('src/models', '[.]c$')), collapse=' '))"`
+MODELS_OBJ=`"${RSCRIPT}" --slave --vanilla -e "cat(paste0('models/', sub('c$', 'o', list.files('src/models', '[.]c$')), collapse=' '))"`
 
-AC_SUBST([PKG_CPPFLAGS], ["-I. -Icore -Imisc -Imodels ${CPPFLAGS} ${GSL_CFLAGS}"])
+AC_SUBST([PKG_CPPFLAGS], ["-I. -Imisc -Imodels ${CPPFLAGS} ${GSL_CFLAGS}"])
 AC_SUBST([PKG_CFLAGS], ["${OPENMP_CFLAGS} -DR_NO_REMAP -DSTRICT_R_HEADERS"])
 AC_SUBST([PKG_LIBS], ["${OPENMP_CFLAGS} ${GSL_LIBS} ${LIBS}"])
 AC_SUBST(MODELS_OBJ)
@@ -137,7 +115,7 @@ AC_CONFIG_FILES([src/Makevars])
 echo "
   ---- Results for the SimInf package configure ----
 
-    PKG_CPPFLAGS..............: -I. -Icore -Imisc -Imodels ${CPPFLAGS} ${GSL_CFLAGS}
+    PKG_CPPFLAGS..............: -I. -Imisc -Imodels ${CPPFLAGS} ${GSL_CFLAGS}
     PKG_LIBS..................: ${OPENMP_CFLAGS} ${GSL_LIBS} ${LIBS}
     PKG_CFLAGS................: ${OPENMP_CFLAGS} -DR_NO_REMAP -DSTRICT_R_HEADERS
     Have support for OpenMP...: ${ac_pkg_openmp}
