@@ -116,8 +116,11 @@ static int SimInf_solver_aem(
                                                         sa.tt);
                     sa.t_rate[node * sa.Nt + j] = rate;
 
-                    if (!isfinite(rate) || rate < 0.0)
+                    if (!isfinite(rate) || rate < 0.0) {
+                        SimInf_print_status(sa.Nc, &sa.u[node * sa.Nc],
+                                            sa.Ni + node, sa.tt, rate, j);
                         sa.error = SIMINF_ERR_INVALID_RATE;
+                    }
 
                     /* calculate time until next transition j event */
                     ma.reactTimes[sa.Nt*node+j] =  -log(gsl_rng_uniform_pos(ma.rng_vec[sa.Nt*node+j]))/rate + sa.tt;
@@ -177,8 +180,12 @@ static int SimInf_solver_aem(
                         /* 1c) Update the state of the node */
                         for (j = sa.jcS[tr]; j < sa.jcS[tr + 1]; j++) {
                             sa.u[node * sa.Nc + sa.irS[j]] += sa.prS[j];
-                            if (sa.u[node * sa.Nc + sa.irS[j]] < 0)
+                            if (sa.u[node * sa.Nc + sa.irS[j]] < 0) {
+                                SimInf_print_status(sa.Nc, &sa.u[node * sa.Nc],
+                                                    sa.Ni + node, sa.t_time[node],
+                                                    0, tr);
                                 sa.error = SIMINF_ERR_NEGATIVE_STATE;
+                            }
                         }
 
 
@@ -195,8 +202,13 @@ static int SimInf_solver_aem(
 
                                 sa.t_rate[node * sa.Nt + j] = rate;
 
-                                if (!isfinite(rate) || rate < 0.0)
+                                if (!isfinite(rate) || rate < 0.0) {
+                                    SimInf_print_status(sa.Nc, &sa.u[node * sa.Nc],
+                                                        sa.Ni + node, sa.t_time[node],
+                                                        rate, j);
                                     sa.error = SIMINF_ERR_INVALID_RATE;
+                                }
+
                                 /* update times and reorder the heap */
                                 calcTimes(&ma.reactTimes[sa.Nt * node + ma.reactHeap[sa.Nt * node + j]],
                                           &ma.reactInf[sa.Nt * node + j],
@@ -217,8 +229,12 @@ static int SimInf_solver_aem(
                                                sa.t_time[node]);
                         sa.t_rate[node * sa.Nt + j] = rate;
 
-                        if (!isfinite(rate) || rate < 0.0)
+                        if (!isfinite(rate) || rate < 0.0) {
+                            SimInf_print_status(sa.Nc, &sa.u[node * sa.Nc],
+                                                sa.Ni + node, sa.t_time[node],
+                                                rate, j);
                             sa.error = SIMINF_ERR_INVALID_RATE;
+                        }
 
                         /* update times and reorder the heap */
                         calcTimes(&ma.reactTimes[sa.Nt * node + ma.reactHeap[sa.Nt * node + j]],
@@ -280,8 +296,11 @@ static int SimInf_solver_aem(
 
                             sa.t_rate[node * sa.Nt + j] = rate;
 
-                            if (!isfinite(rate) || rate < 0.0)
+                            if (!isfinite(rate) || rate < 0.0) {
+                                SimInf_print_status(sa.Nc, &sa.u[node * sa.Nc],
+                                                    sa.Ni + node, sa.tt, rate, j);
                                 sa.error = SIMINF_ERR_INVALID_RATE;
+                            }
 
 			    /* Update times and reorder heap */
 			    calcTimes(&ma.reactTimes[sa.Nt * node + ma.reactHeap[sa.Nt * node + j]],

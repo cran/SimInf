@@ -175,41 +175,30 @@ static int SimInf_sample_select(
  *        transfer event.
  * @param Nn Total number of nodes.
  * @param Nthread Number of threads to use during simulation.
- * @return 0 if Ok, else error code.
  */
-static int SimInf_split_events(
+static void SimInf_split_events(
     SimInf_scheduled_events *out,
     int len, const int *event, const int *time, const int *node,
     const int *dest, const int *n, const double *proportion,
     const int *select, const int *shift, int Nn, int Nthread)
 {
     int i;
-    int chunk_size = Nn / Nthread;
+    const int chunk_size = Nn / Nthread;
 
     for (i = 0; i < len; i++) {
-        int j;
         const SimInf_scheduled_event e = {event[i], time[i], node[i] - 1,
                                           dest[i] - 1, n[i], proportion[i],
                                           select[i] - 1, shift[i] - 1};
 
-        switch (event[i]) {
-        case EXIT_EVENT:
-        case ENTER_EVENT:
-        case INTERNAL_TRANSFER_EVENT:
-            j = (node[i] - 1) / chunk_size;
+        if (event[i] == EXTERNAL_TRANSFER_EVENT) {
+            kv_push(SimInf_scheduled_event, out[0].events, e);
+        } else {
+            int j = (node[i] - 1) / chunk_size;
             if (j >= Nthread)
                 j = Nthread - 1;
             kv_push(SimInf_scheduled_event, out[j].events, e);
-            break;
-        case EXTERNAL_TRANSFER_EVENT:
-            kv_push(SimInf_scheduled_event, out[0].events, e);
-            break;
-        default:
-            return SIMINF_UNDEFINED_EVENT;
         }
     }
-
-    return 0;
 }
 
 /**
@@ -259,12 +248,10 @@ int SimInf_scheduled_events_create(
     }
 
     /* Split scheduled events into E1 and E2 events. */
-    error = SimInf_split_events(
+    SimInf_split_events(
         events, args->len, args->event, args->time, args->node,
         args->dest, args->n, args->proportion, args->select,
         args->shift, args->Nn, args->Nthread);
-    if (error)
-        goto on_error;
 
     *out = events;
     return 0;
@@ -347,69 +334,71 @@ static void SimInf_print_event(
                 n = round(e->proportion * Nindividuals);
 
             if (n > Nindividuals)
-                Rprintf("Cannot sample %i for event from %i individuals.\n",
+                REprintf("Cannot sample %i for event from %i individuals.\n",
                         n, Nindividuals);
 
             if (n < 0)
-                Rprintf("Cannot sample %i individuals for event.\n", n);
+                REprintf("Cannot sample %i individuals for event.\n", n);
 
-            Rprintf("\n");
+            REprintf("\n");
         }
 
         if (u && (node >= 0)) {
-            Rprintf("Current state in node\n");
-            Rprintf("---------------------\n");
+            REprintf("Current state in node\n");
+            REprintf("---------------------\n");
 
-            Rprintf("{");
+            REprintf("{");
             for (i = 0; i < Nc; i++) {
-                Rprintf("%i", u[node * Nc + i]);
+                REprintf("%i", u[node * Nc + i]);
                 if (i < (Nc - 1))
-                    Rprintf(", ");
+                    REprintf(", ");
             }
-            Rprintf("}\n\n");
+            REprintf("}\n\n");
         }
 
         if (u && (dest >= 0)) {
-            Rprintf("Current state in dest\n");
-            Rprintf("---------------------\n");
+            REprintf("Current state in dest\n");
+            REprintf("---------------------\n");
 
-            Rprintf("{");
+            REprintf("{");
             for (i = 0; i < Nc; i++) {
-                Rprintf("%i", u[dest * Nc + i]);
+                REprintf("%i", u[dest * Nc + i]);
                 if (i < (Nc - 1))
-                    Rprintf(", ");
+                    REprintf(", ");
             }
-            Rprintf("}\n\n");
+            REprintf("}\n\n");
         }
 
-        Rprintf("Scheduled event\n");
-        Rprintf("---------------\n");
+        REprintf("Scheduled event\n");
+        REprintf("---------------\n");
 
         switch (e->event) {
         case EXIT_EVENT:
-            Rprintf("event: %i (exit event)\n", e->event);
+            REprintf("event: %i (exit event)\n", e->event);
             break;
         case ENTER_EVENT:
-            Rprintf("event: %i (enter event)\n", e->event);
+            REprintf("event: %i (enter event)\n", e->event);
             break;
         case INTERNAL_TRANSFER_EVENT:
-            Rprintf("event: %i (internal transfer event)\n", e->event);
+            REprintf("event: %i (internal transfer event)\n", e->event);
             break;
         case EXTERNAL_TRANSFER_EVENT:
-            Rprintf("event: %i (external transfer event)\n", e->event);
+            REprintf("event: %i (external transfer event)\n", e->event);
             break;
         default:
-            Rprintf("event: %i (undefined event)\n", e->event);
+            REprintf("event: %i (undefined event)\n", e->event);
             break;
         }
 
-        Rprintf("time: %i\n", e->time);
-        Rprintf("node: %i\n", e->node + 1); /* One based in events data */
-        Rprintf("dest: %i\n", e->dest + 1); /* One based in events data */
-        Rprintf("n: %i\n", e->n);
-        Rprintf("proportion: %g\n", e->proportion);
-        Rprintf("select: %i\n", e->select + 1); /* One based in events data */
-        Rprintf("shift: %i\n\n", e->shift + 1); /* One based in events data */
+        REprintf("time: %i\n", e->time);
+        REprintf("node: %i\n", e->node + 1); /* One based in events data */
+        REprintf("dest: %i\n", e->dest + 1); /* One based in events data */
+        REprintf("n: %i\n", e->n);
+        REprintf("proportion: %g\n", e->proportion);
+        REprintf("select: %i\n", e->select + 1); /* One based in events data */
+        REprintf("shift: %i\n\n", e->shift + 1); /* One based in events data */
+
+        R_FlushConsole();
     }
 }
 
@@ -742,6 +731,7 @@ int SimInf_compartment_model_create(
 
     /* Set continuous state to the initial state in each node. */
     memcpy(model[0].v, args->v0, args->Nn * args->Nd * sizeof(double));
+    memcpy(model[0].v_new, args->v0, args->Nn * args->Nd * sizeof(double));
 
     /* Setup vector to keep track of nodes that must be updated due to
      * scheduled events */
@@ -836,4 +826,55 @@ int SimInf_compartment_model_create(
 on_error:
     SimInf_compartment_model_free(model);
     return SIMINF_ERR_ALLOC_MEMORY_BUFFER;
+}
+
+/**
+ * Print node status/information to facilitate debugging.
+ *
+ * @param Nc Number of compartments in each node.
+ * @param u The state vector with number of individuals in each
+ *        compartment in the node.
+ * @param node Zero-based index to node.
+ * @param tt The current time in node.
+ * @param rate The propensity. Only reported if it's infinite or less
+ *        than zero.
+ * @param transition Zero-based index with the state transition.
+ */
+void SimInf_print_status(
+    const int Nc,
+    const int *u,
+    const int node,
+    const double tt,
+    const double rate,
+    const int transition)
+{
+    #pragma omp critical
+    {
+        if (u && (node >= 0)) {
+            int i;
+
+            REprintf("Status:\n");
+            REprintf("-------\n");
+
+            REprintf("Time: %g\n", tt);
+            REprintf("Node: %i\n", node + 1); /* One based in R */
+
+            REprintf("Current state in node: {");
+            for (i = 0; i < Nc; i++) {
+                REprintf("%i", u[i]);
+                if (i < (Nc - 1))
+                    REprintf(", ");
+            }
+            REprintf("}\n");
+
+            REprintf("Transition: %i\n", transition + 1); /* One based in R */
+
+            if (!isfinite(rate) || rate < 0.0)
+                REprintf("Rate: %g\n", rate);
+
+            REprintf("\n");
+
+            R_FlushConsole();
+        }
+    }
 }

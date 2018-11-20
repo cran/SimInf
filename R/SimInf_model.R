@@ -138,6 +138,7 @@ setClass("SimInf_model",
                  return("Initial state 'u0' must be an integer matrix.")
              if (any(object@u0 < 0L))
                  return("Initial state 'u0' has negative elements.")
+             Nn_u0 <- dim(object@u0)[2]
 
              ## Check U.
              if (!identical(storage.mode(object@U), "integer"))
@@ -152,6 +153,8 @@ setClass("SimInf_model",
                  r <- rownames(object@v0)
                  if (is.null(r) || any(nchar(r) == 0))
                      return("'v0' must have rownames")
+                 if (!identical(dim(object@v0)[2], Nn_u0))
+                     return("The number of nodes in 'u0' and 'v0' must match.")
              }
 
              ## Check V.
@@ -194,15 +197,16 @@ setClass("SimInf_model",
              transitions <- sub("^[[:space:]]*", "", sub("[[:space:]]*$", "", transitions))
              transitions <- unique(transitions)
              transitions <- transitions[transitions != "@"]
+             transitions <- sub("^[[:digit:]]+[*]", "", transitions)
              if (!all(transitions %in% rownames(object@S)))
                  return("'G' and 'S' must have identical compartments")
 
              ## Check ldata.
              if (!is.double(object@ldata))
                  return("'ldata' matrix must be a double matrix.")
-             Nn <- dim(object@u0)[2]
-             if (!identical(dim(object@ldata)[2], Nn))
-                 return("Wrong size of 'ldata' matrix.")
+             Nn_ldata <- dim(object@ldata)[2]
+             if (Nn_ldata > 0 && !identical(Nn_ldata, Nn_u0))
+                 return("The number of nodes in 'u0' and 'ldata' must match.")
 
              ## Check gdata.
              if (!is.double(object@gdata))
@@ -211,6 +215,18 @@ setClass("SimInf_model",
              TRUE
          }
 )
+
+## Utility function to coerce the data.frame to a transposed matrix.
+as_t_matrix <- function(x) {
+    n_col <- ncol(x)
+    n_row <- nrow(x)
+    lbl <- colnames(x)
+    x <- t(data.matrix(x))
+    attributes(x) <- NULL
+    dim(x) <- c(n_col, n_row)
+    rownames(x) <- lbl
+    x
+}
 
 ##' Create a \code{SimInf_model}
 ##'
@@ -284,15 +300,8 @@ SimInf_model <- function(G,
     ## Check u0
     if (is.null(u0))
         stop("'u0' is NULL")
-    if (is.data.frame(u0)) {
-        n_col <- ncol(u0)
-        n_row <- nrow(u0)
-        lbl <- colnames(u0)
-        u0 <- t(data.matrix(u0))
-        attributes(u0) <- NULL
-        dim(u0) <- c(n_col, n_row)
-        rownames(u0) <- lbl
-    }
+    if (is.data.frame(u0))
+        u0 <- as_t_matrix(u0)
     if (!all(is.matrix(u0), is.numeric(u0)))
         stop("u0 must be an integer matrix")
     if (!is.integer(u0)) {
@@ -315,11 +324,18 @@ SimInf_model <- function(G,
 
     ## Check ldata
     if (is.null(ldata))
-        ldata <- matrix(rep(0, ncol(u0)), nrow = 1)
+        ldata <- matrix(numeric(0), nrow = 0, ncol = 0)
+    if (is.data.frame(ldata))
+        ldata <- as_t_matrix(ldata)
 
     ## Check gdata
     if (is.null(gdata))
         gdata <- numeric(0)
+    if (is.data.frame(gdata)) {
+        if (!identical(nrow(gdata), 1L))
+            stop("When 'gdata' is a data.frame, it must have one row.")
+        gdata <- unlist(gdata)
+    }
 
     ## Check U
     if (is.null(U)) {
@@ -342,6 +358,8 @@ SimInf_model <- function(G,
     if (is.null(v0)) {
         v0 <- matrix(numeric(0), nrow = 0, ncol = 0)
     } else {
+        if (is.data.frame(v0))
+            v0 <- as_t_matrix(v0)
         if (!all(is.matrix(v0), is.numeric(v0)))
             stop("v0 must be a numeric matrix")
 
@@ -469,11 +487,7 @@ prevalence <- function(model,
                        node = NULL,
                        as.is = FALSE)
 {
-    ## Check model argument
-    if (missing(model))
-        stop("Missing 'model' argument")
-    if (!is(model, "SimInf_model"))
-        stop("'model' argument is not a 'SimInf_model'")
+    check_model_argument(model)
 
     ## Check 'formula' argument
     if (missing(formula))
@@ -731,11 +745,7 @@ trajectory <- function(model, compartments = NULL, node = NULL, as.is = FALSE)
 {
     ## Check that the arguments are ok...
 
-    ## Check model argument
-    if (missing(model))
-        stop("Missing 'model' argument")
-    if (!is(model, "SimInf_model"))
-        stop("'model' argument is not a 'SimInf_model'")
+    check_model_argument(model)
 
     if (all(identical(dim(model@U), c(0L, 0L)),
             identical(dim(model@U_sparse), c(0L, 0L)),
@@ -1048,11 +1058,7 @@ trajectory <- function(model, compartments = NULL, node = NULL, as.is = FALSE)
 ##' trajectory(result)
 "U<-" <- function(model, value)
 {
-    ## Check model argument
-    if (missing(model))
-        stop("Missing 'model' argument")
-    if (!is(model, "SimInf_model"))
-        stop("'model' argument is not a 'SimInf_model'")
+    check_model_argument(model)
 
     if (!is.null(value)) {
         if (!is.data.frame(value))
@@ -1176,11 +1182,7 @@ trajectory <- function(model, compartments = NULL, node = NULL, as.is = FALSE)
 ##' trajectory(result, compartments = "phi")
 "V<-" <- function(model, value)
 {
-    ## Check model argument
-    if (missing(model))
-        stop("Missing 'model' argument")
-    if (!is(model, "SimInf_model"))
-        stop("'model' argument is not a 'SimInf_model'")
+    check_model_argument(model)
 
     if (!is.null(value)) {
         if (!is.data.frame(value))
@@ -1256,45 +1258,59 @@ trajectory <- function(model, compartments = NULL, node = NULL, as.is = FALSE)
 ##' Nn(model)
 Nn <- function(model)
 {
-    ## Check model argument
-    if (missing(model))
-        stop("Missing 'model' argument")
-    if (!is(model, "SimInf_model"))
-        stop("'model' argument is not a 'SimInf_model'")
+    check_model_argument(model)
     dim(model@u0)[2]
 }
 
 ## Number of compartments
 Nc <- function(model)
 {
-    ## Check model argument
-    if (missing(model))
-        stop("Missing 'model' argument")
-    if (!is(model, "SimInf_model"))
-        stop("'model' argument is not a 'SimInf_model'")
+    check_model_argument(model)
     dim(model@S)[1]
 }
 
 ## Number of transitions
 Nt <- function(model)
 {
-    ## Check model argument
-    if (missing(model))
-        stop("Missing 'model' argument")
-    if (!is(model, "SimInf_model"))
-        stop("'model' argument is not a 'SimInf_model'")
+    check_model_argument(model)
     dim(model@G)[1]
 }
 
 ## Number of continuous state variables
 Nd <- function(model)
 {
-    ## Check model argument
-    if (missing(model))
-        stop("Missing 'model' argument")
-    if (!is(model, "SimInf_model"))
-        stop("'model' argument is not a 'SimInf_model'")
+    check_model_argument(model)
     dim(model@v0)[1]
+}
+
+## Use 'R CMD SHLIB' to compile the C code for the model.
+do_compile_model <- function(filename)
+{
+    ## Include directive for "SimInf.h"
+    include <- system.file("include", package = "SimInf")
+    Sys.setenv(PKG_CPPFLAGS=sprintf("-I%s", shQuote(include)))
+
+    ## Compile the model C code using the running version of R.
+    wd <- setwd(dirname(filename))
+    cmd <- paste(shQuote(file.path(R.home(component="bin"), "R")),
+                 "CMD SHLIB",
+                 shQuote(paste0(basename(filename), ".c")))
+    compiled <- system(cmd, intern = TRUE)
+    setwd(wd)
+
+    lib <- paste0(filename, .Platform$dynlib.ext)
+    if (!file.exists(lib))
+        stop(compiled)
+
+    lib
+}
+
+## Check if model contains C code
+contains_C_code <- function(model)
+{
+    if (nchar(paste0(model@C_code, collapse = "\n")))
+        return(TRUE)
+    FALSE
 }
 
 ##' Run the SimInf stochastic simulation algorithm
@@ -1303,7 +1319,7 @@ Nd <- function(model)
 ##' @param threads Number of threads. Default is NULL, i.e. to use all
 ##'     available processors.
 ##' @param solver Which numerical solver to utilize. Default is 'ssm'.
-##' @return \code{SimInf_model} with result from simulation.
+##' @return \code{\link{SimInf_model}} object with result from simulation.
 ##' @references \itemize{
 ##'   \item Bauer P, Engblom S, Widgren S
 ##'   (2016) "Fast Event-Based Epidemiological Simulations on National Scales"
@@ -1354,29 +1370,14 @@ setMethod("run",
               ## required by the siminf solver and that they make sense
               validObject(model);
 
-              if (nchar(paste0(model@C_code, collapse = "\n"))) {
+              if (contains_C_code(model)) {
                   ## Write the C code to a temporary file
                   filename <- tempfile("SimInf-")
                   on.exit(unlink(paste0(filename,
                                         c(".c", ".o", .Platform$dynlib.ex))))
                   writeLines(model@C_code, con = paste0(filename, ".c"))
 
-                  ## Include directive for "SimInf.h"
-                  include <- system.file("include", package = "SimInf")
-                  Sys.setenv(PKG_CPPFLAGS=sprintf("-I%s", shQuote(include)))
-
-                  ## Compile the model C code using the running version of R.
-                  wd <- setwd(dirname(filename))
-                  cmd <- paste(shQuote(file.path(R.home(component="bin"), "R")),
-                               "CMD SHLIB",
-                               shQuote(paste0(basename(filename), ".c")))
-                  compiled <- system(cmd, intern = TRUE)
-                  setwd(wd)
-
-                  ## Load DLL
-                  lib <- paste0(filename, .Platform$dynlib.ext)
-                  if (!file.exists(lib))
-                      stop(compiled)
+                  lib <- do_compile_model(filename)
                   dll <- dyn.load(lib)
                   on.exit(dyn.unload(lib), add = TRUE)
 
@@ -1744,6 +1745,26 @@ summary_V <- function(object)
     }
 }
 
+summary_ldata <- function(object)
+{
+    ## Local model parameters
+    cat("Local data\n")
+    cat("----------\n")
+
+    if (dim(object@ldata)[1] > 0) {
+        qq <- t(apply(object@ldata, 1, function(x) {
+            qq <- quantile(x)
+            c(qq[1L:3L], mean(x), qq[4L:5L])
+        }))
+        colnames(qq) <- c("Min.", "1st Qu.", "Median",
+                          "Mean", "3rd Qu.", "Max.")
+        rownames(qq) <- paste0(" ", rownames(object@ldata))
+        print.table(qq, digits = 3)
+    } else {
+        cat(" - None\n")
+    }
+}
+
 summary_gdata <- function(object)
 {
     ## Global model parameters
@@ -1911,12 +1932,20 @@ setMethod("show",
               cat("\n")
               summary_gdata(object)
 
+              if (!is.null(rownames(object@ldata))) {
+                  cat("\n")
+                  summary_ldata(object)
+              }
+
               if (Nd(object) > 0) {
                   cat("\n")
                   summary_V(object)
               }
+
               cat("\n")
               summary_U(object)
+
+              invisible(object)
           }
 )
 
@@ -1937,14 +1966,23 @@ setMethod("summary",
               cat(sprintf("Number of nodes: %i\n\n", Nn(object)))
 
               summary_transitions(object)
+
               cat("\n")
               summary_gdata(object)
+
+              if (!is.null(rownames(object@ldata))) {
+                  cat("\n")
+                  summary_ldata(object)
+              }
+
               cat("\n")
               summary_events(object)
+
               if (Nd(object) > 0) {
                   cat("\n")
                   summary_V(object)
               }
+
               cat("\n")
               summary_U(object)
           }
@@ -1971,11 +2009,7 @@ setMethod("summary",
 ##' plot(events(model))
 events <- function(model)
 {
-    ## Check model argument
-    if (missing(model))
-        stop("Missing 'model' argument")
-    if (!is(model, "SimInf_model"))
-        stop("'model' argument is not a 'SimInf_model'")
+    check_model_argument(model)
     model@events
 }
 
@@ -1997,11 +2031,7 @@ events <- function(model)
 ##' shift_matrix(model)
 shift_matrix <- function(model)
 {
-    ## Check model argument
-    if (missing(model))
-        stop("Missing 'model' argument")
-    if (!is(model, "SimInf_model"))
-        stop("'model' argument is not a 'SimInf_model'")
+    check_model_argument(model)
     model@events@N
 }
 
@@ -2027,11 +2057,7 @@ shift_matrix <- function(model)
 ##' shift_matrix(model)
 "shift_matrix<-" <- function(model, value)
 {
-    ## Check model argument
-    if (missing(model))
-        stop("Missing 'model' argument")
-    if (!is(model, "SimInf_model"))
-        stop("'model' argument is not a 'SimInf_model'")
+    check_model_argument(model)
 
     ## Check value
     if (is.null(value))
@@ -2070,11 +2096,7 @@ shift_matrix <- function(model)
 ##' select_matrix(model)
 select_matrix <- function(model)
 {
-    ## Check model argument
-    if (missing(model))
-        stop("Missing 'model' argument")
-    if (!is(model, "SimInf_model"))
-        stop("'model' argument is not a 'SimInf_model'")
+    check_model_argument(model)
     model@events@E
 }
 
@@ -2099,11 +2121,7 @@ select_matrix <- function(model)
 ##' select_matrix(model)
 "select_matrix<-" <- function(model, value)
 {
-    ## Check model argument
-    if (missing(model))
-        stop("Missing 'model' argument")
-    if (!is(model, "SimInf_model"))
-        stop("'model' argument is not a 'SimInf_model'")
+    check_model_argument(model)
 
     if (!is(value, "dgCMatrix"))
         value <- as(value, "dgCMatrix")
@@ -2138,12 +2156,7 @@ select_matrix <- function(model)
 ##' gdata(model)
 gdata <- function(model)
 {
-    ## Check model argument
-    if (missing(model))
-        stop("Missing 'model' argument")
-    if (!is(model, "SimInf_model"))
-        stop("'model' argument is not a 'SimInf_model'")
-
+    check_model_argument(model)
     model@gdata
 }
 
@@ -2169,11 +2182,7 @@ gdata <- function(model)
 ##' gdata(model)
 "gdata<-" <- function(model, parameter, value)
 {
-    ## Check model argument
-    if (missing(model))
-        stop("Missing 'model' argument")
-    if (!is(model, "SimInf_model"))
-        stop("'model' argument is not a 'SimInf_model'")
+    check_model_argument(model)
 
     ## Check paramter argument
     if (missing(parameter))
@@ -2214,11 +2223,7 @@ gdata <- function(model)
 ##' ldata(model, node = 2)
 ldata <- function(model, node)
 {
-    ## Check model argument
-    if (missing(model))
-        stop("Missing 'model' argument")
-    if (!is(model, "SimInf_model"))
-        stop("'model' argument is not a 'SimInf_model'")
+    check_model_argument(model)
 
     ## Check node argument
     if (missing(node))

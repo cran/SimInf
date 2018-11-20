@@ -1,6 +1,6 @@
 ## SimInf, a framework for stochastic disease spread simulations
-## Copyright (C) 2015 - 2017  Stefan Engblom
-## Copyright (C) 2015 - 2017  Stefan Widgren
+## Copyright (C) 2015 - 2018  Stefan Engblom
+## Copyright (C) 2015 - 2018  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -70,55 +70,77 @@ create_model_R_class <- function(name)
       "##'",
       paste0("##' Class to handle the \\code{", name, "} \\code{SimInf_model}."),
       "##' @export",
-      paste0("setClass(\"", name, "\", contains = \"SimInf_model\")"))
+      paste0("setClass(\"", name, "\", contains = \"SimInf_model\")"),
+      "")
 }
 
-##' @importFrom utils capture.output
-##' @noRd
-create_model_R_object <- function(model, name)
+create_model_R_object_roxygen <- function(model)
 {
-    rows <- paste0(rownames(model@S), collapse = "\", \"")
-    parameters <- paste0(names(model@gdata), collapse = "\", \"")
+    lines <- c("##' Create a model for the SimInf framework",
+               "##'",
+               "##' Create a model to be used by the SimInf framework.")
 
-    ## Dependency graph
-    G <- capture.output(dput(as.matrix(model@G)))
-    G <- c(paste0("G <- ", G[1]), G[-1])
-    G <- paste0("    ", G)
+    if (length(rownames(model@ldata)) > 0) {
+        lines <- c(lines,
+                   "##' @param ldata Data specific to each node in the model.",
+                   "##'     Can be specified either as a numeric matrix where",
+                   "##'     column \\code{ldata[, j]} contains the local data",
+                   "##'     vector for the node \\code{j} or as a",
+                   "##'     \\code{data.frame} with one row per node.")
+    }
 
-    ## State change matrix
-    S <- capture.output(dput(as.matrix(model@S)))
-    S <- c(paste0("S <- ", S[1]), S[-1])
-    S <- paste0("    ", S)
+    if (length(names(model@gdata)) > 0) {
+        lines <- c(lines,
+                   "##' @param gdata Data that are common to all nodes in the model.",
+                   "##'     Can be specified either as a named numeric vector or as",
+                   "##'     a one-row data.frame.")
+    }
 
-    ## Select matrix
-    E <- capture.output(dput(as.matrix(model@events@E)))
-    E <- c(paste0("E <- ", E[1]), E[-1])
-    E <- paste0("    ", E)
+    lines <- c(lines,
+               "##' @param u0 A data.frame with the initial state in each node.")
 
-    ## Shift matrix
-    N <- capture.output(dput(as.matrix(model@events@N)))
-    N <- c(paste0("N <- ", N[1]), N[-1])
-    N <- paste0("    ", N)
+    if (length(rownames(model@v0)) > 0) {
+        lines <- c(lines,
+                   "##' @param v0 Data with the initial continuous state in each",
+                   "##'     node. Can be specified either as a \\code{data.frame}",
+                   "##'     with one row per node or as a numeric matrix where",
+                   "##'     column \\code{v0[, j]} contains the initial state",
+                   "##'     vector for the node \\code{j}.")
+    }
 
-    c("##' Create a model for the SimInf framework",
-      "##'",
-      "##' Create a model to be used by the SimInf framework.",
-      "##' @param u0 A data.frame with the initial state in each node.",
-      "##' @param tspan A vector (length >= 2) of increasing time points",
-      "##'     where the state of each node is to be returned.",
-      "##' @param events A data.frame with scheduled events.",
-      "##' @param gdata A named numeric vector with rate-constants for the",
-      "##'     model.",
-      "##' @import SimInf",
-      "##' @import methods",
-      "##' @export",
-      "##' @examples",
-      "##' ## Please add example(s) how to use the model",
-      paste0(name, " <- function(u0 = NULL, tspan = NULL, events = NULL, gdata = NULL) {"),
-      paste0("    compartments <- c(\"", rows, "\")"),
-      paste0("    parameters <- c(\"", parameters, "\")"),
-      "",
-      "    ## Check u0",
+    lines <- c(lines,
+               "##' @param tspan A vector (length >= 2) of increasing time points",
+               "##'     where the state of each node is to be returned.",
+               "##' @param events A data.frame with scheduled events.",
+               "##' @import SimInf",
+               "##' @import methods",
+               "##' @export",
+               "##' @examples",
+               "##' ## Please add example(s) how to use the model")
+
+    lines
+}
+
+create_model_R_object_function <- function(model, name)
+{
+    fn <- paste0(name, " <- function(")
+    if (length(rownames(model@ldata)) > 0)
+        fn <- paste0(fn, "ldata = NULL, ")
+    if (length(names(model@gdata)) > 0)
+        fn <- paste0(fn, "gdata = NULL, ")
+    fn <- paste0(fn, "u0 = NULL, ")
+    if (length(rownames(model@v0)) > 0)
+        fn <- paste0(fn, "v0 = NULL, ")
+    fn <- paste0(fn, "tspan = NULL, events = NULL)")
+}
+
+create_model_R_object_u0 <- function(model)
+{
+    compartments <- paste0(rownames(model@S), collapse = "\", \"")
+    compartments <- paste0("    compartments <- c(\"", compartments, "\")")
+
+    c("    ## Check u0",
+      compartments,
       "    if (is.null(u0))",
       "        stop(\"'u0' must be specified.\")",
       "    if (!is.data.frame(u0))",
@@ -126,29 +148,148 @@ create_model_R_object <- function(model, name)
       "    if (!all(compartments %in% names(u0)))",
       "        stop(\"Missing columns in u0\")",
       "    u0 <- u0[, compartments, drop = FALSE]",
-      "",
-      "    ## Check gdata",
-      "    if (is.null(gdata))",
-      "        stop(\"'gdata' must be specified.\")",
-      "    if (!is.numeric(gdata))",
-      "        stop(\"'gdata' must be a named numeric vector.\")",
-      "    if (!all(parameters %in% names(gdata)))",
-      "        stop(\"Missing parameters in 'gdata'\")",
-      "    gdata <- gdata[parameters]",
-      "",
-      G,
-      "",
-      S,
-      "",
-      E,
-      "",
-      N,
-      "",
-      "    model <- SimInf_model(G = G, S = S, E = E, N = N, tspan = tspan,",
-      "                          events = events, u0 = u0, gdata = gdata)",
-      "",
-      paste0("    as(model, \"", name, "\")"),
-      "}")
+      "")
+}
+
+create_model_R_object_ldata <- function(model)
+{
+    if (length(rownames(model@ldata)) < 1)
+        return(NULL)
+
+    ldata_names <- paste0(rownames(model@ldata), collapse = "\", \"")
+    ldata_names <- paste0("    ldata_names <- c(\"", ldata_names, "\")")
+
+    c("    ## Check ldata",
+      ldata_names,
+      "    if (is.data.frame(ldata)) {",
+      "        if (!all(ldata_names %in% colnames(ldata)))",
+      "            stop(\"Missing parameter(s) in 'ldata'\")",
+      "        ldata <- ldata[, ldata_names, drop = FALSE]",
+      "    } else if (is.matrix(ldata)) {",
+      "        if (!all(ldata_names %in% rownames(ldata)))",
+      "            stop(\"Missing parameter(s) in 'ldata'\")",
+      "        ldata <- ldata[ldata_names, , drop = FALSE]",
+      "    } else {",
+      "        stop(\"'ldata' must either be a 'data.frame' or a 'matrix'.\")",
+      "    }",
+      "")
+}
+
+create_model_R_object_gdata <- function(model)
+{
+    if (length(names(model@gdata)) < 1)
+        return(NULL)
+
+    gdata_names <- paste0(names(model@gdata), collapse = "\", \"")
+    gdata_names <- paste0("    gdata_names <- c(\"", gdata_names, "\")")
+
+    c("    ## Check gdata",
+      gdata_names,
+      "    if (is.data.frame(gdata)) {",
+      "        if (!all(gdata_names %in% colnames(gdata)))",
+      "            stop(\"Missing parameter(s) in 'gdata'\")",
+      "        gdata <- gdata[, gdata_names, drop = FALSE]",
+      "    } else if (is.atomic(gdata) && is.numeric(gdata)) {",
+      "        if (!all(gdata_names %in% names(gdata)))",
+      "            stop(\"Missing parameter(s) in 'gdata'\")",
+      "        gdata <- gdata[gdata_names]",
+      "    } else {",
+      "        stop(\"'gdata' must either be a 'data.frame' or a 'numeric' vector.\")",
+      "    }",
+      "")
+}
+
+create_model_R_object_v0 <- function(model)
+{
+    if (length(rownames(model@v0)) < 1)
+        return(NULL)
+
+    v0_names <- paste0(rownames(model@v0), collapse = "\", \"")
+    v0_names <- paste0("    v0_names <- c(\"", v0_names, "\")")
+
+    c("    ## Check v0",
+      v0_names,
+      "    if (is.data.frame(v0)) {",
+      "        if (!all(v0_names %in% colnames(v0)))",
+      "            stop(\"Missing parameter(s) in 'v0'\")",
+      "        v0 <- v0[, v0_names, drop = FALSE]",
+      "    } else if (is.matrix(v0)) {",
+      "        if (!all(v0_names %in% rownames(v0)))",
+      "            stop(\"Missing parameter(s) in 'v0'\")",
+      "        v0 <- v0[v0_names, , drop = FALSE]",
+      "    } else {",
+      "        stop(\"'v0' must either be a 'data.frame' or a 'matrix'.\")",
+      "    }",
+      "")
+}
+
+## Dependency graph
+create_model_R_object_G <- function(model)
+{
+    G <- capture.output(dput(as.matrix(model@G)))
+    G <- c(paste0("G <- ", G[1]), G[-1])
+    c(paste0("    ", G), "")
+}
+
+## State change matrix
+create_model_R_object_S <- function(model)
+{
+    S <- capture.output(dput(as.matrix(model@S)))
+    S <- c(paste0("S <- ", S[1]), S[-1])
+    c(paste0("    ", S), "")
+}
+
+## Select matrix
+create_model_R_object_E <- function(model)
+{
+    E <- capture.output(dput(as.matrix(model@events@E)))
+    E <- c(paste0("E <- ", E[1]), E[-1])
+    c(paste0("    ", E), "")
+}
+
+## Shift matrix
+create_model_R_object_N <- function(model)
+{
+    N <- capture.output(dput(as.matrix(model@events@N)))
+    N <- c(paste0("N <- ", N[1]), N[-1])
+    c(paste0("    ", N), "")
+}
+
+create_model_R_object_SimInf_model <- function(model, name)
+{
+    lines <- "    model <- SimInf_model("
+    if (length(rownames(model@ldata)) > 0)
+        lines <- paste0(lines, "ldata = ldata, ")
+    if (length(names(model@gdata)) > 0)
+        lines <- paste0(lines, "gdata = gdata, ")
+    if (length(rownames(model@v0)) > 0)
+        lines <- paste0(lines, "v0 = v0, ")
+    lines <- paste0(lines, "G = G, S = S, E = E, N = N,")
+    lines <- c(lines,
+               "                          tspan = tspan, events = events, u0 = u0)",
+               "",
+               paste0("    as(model, \"", name, "\")"))
+    lines
+}
+
+##' @importFrom utils capture.output
+##' @noRd
+create_model_R_object <- function(model, name)
+{
+    c(create_model_R_object_roxygen(model),
+      create_model_R_object_function(model, name),
+      "{",
+      create_model_R_object_ldata(model),
+      create_model_R_object_gdata(model),
+      create_model_R_object_u0(model),
+      create_model_R_object_v0(model),
+      create_model_R_object_G(model),
+      create_model_R_object_S(model),
+      create_model_R_object_E(model),
+      create_model_R_object_N(model),
+      create_model_R_object_SimInf_model(model, name),
+      "}",
+      "")
 }
 
 create_model_run_fn <- function(name)
@@ -174,18 +315,21 @@ create_model_run_fn <- function(name)
       "    })")
 }
 
+create_model_R_SimInf_timestamp <- function()
+{
+    c(sprintf("## Generated by SimInf (v%s) %s",
+            packageVersion("SimInf"),
+            format(Sys.time(), "%Y-%m-%d %H:%M")),
+      "")
+}
+
 ##' @importFrom utils packageVersion
 ##' @noRd
 create_model_R_file <- function(path, model, name)
 {
-    lines <- c(sprintf("## Generated by SimInf (v%s) %s */",
-                       packageVersion("SimInf"),
-                       format(Sys.time(), "%Y-%m-%d %H:%M")),
-               "",
+    lines <- c(create_model_R_SimInf_timestamp(),
                create_model_R_class(name),
-               "",
                create_model_R_object(model, name),
-               "",
                create_model_run_fn(name))
 
     writeLines(lines, con = file.path(path, "R", "model.R"))
@@ -208,22 +352,60 @@ create_model_class_man_file <- function(path, name)
     invisible(NULL)
 }
 
-create_model_man_file <- function(path, name)
+create_model_man_file <- function(path, model, name)
 {
     lines <- c(paste0("\\name{", name, "}"),
                paste0("\\alias{", name, "}"),
                "\\title{Create a model for the SimInf framework}",
-               "\\usage{",
-               paste0(name, "(u0 = NULL, tspan = NULL, events = NULL, gdata = NULL)"),
+               "\\usage{")
+
+    fn <- paste0(name, "(")
+    if (length(rownames(model@ldata)) > 0)
+        fn <- paste0(fn, "ldata = NULL, ")
+    if (length(names(model@gdata)) > 0)
+        fn <- paste0(fn, "gdata = NULL, ")
+    fn <- paste0(fn, "u0 = NULL, ")
+    if (length(rownames(model@v0)) > 0)
+        fn <- paste0(fn, "v0 = NULL, ")
+    fn <- paste0(fn, "tspan = NULL, events = NULL)")
+
+    lines <- c(lines,
+               fn,
                "}",
-               "\\arguments{",
-               "\\item{u0}{A \\code{data.frame} with the initial state in each node.}",
-               "",
+               "\\arguments{")
+
+    if (length(rownames(model@ldata)) > 0) {
+        lines <- c(lines,
+                   "\\item{ldata}{Data specific to each node in the model.",
+                   "Can be specified either as a numeric matrix where column",
+                   "\\code{ldata[, j]} contains the local data vector for the",
+                   "node \\code{j} or as a \\code{data.frame} with one row per",
+                   "node.}")
+    }
+
+    if (length(names(model@gdata)) > 0) {
+        lines <- c(lines,
+                   "\\item{gdata}{Data that are common to all nodes in the model.",
+                   "Can be specified either as a named numeric vector or as a",
+                   "one-row data.frame.}")
+    }
+
+    lines <- c(lines,
+               "\\item{u0}{A \\code{data.frame} with the initial state in each node.}")
+
+    if (length(rownames(model@v0)) > 0) {
+        lines <- c(lines,
+                   "\\item{v0}{Data with the initial continuous state in each",
+                   "node. Can be specified either as a \\code{data.frame} with",
+                   "one row per node or as a numeric matrix where column",
+                   "\\code{v0[, j]} contains the initial state vector for the",
+                   "node \\code{j}.}")
+    }
+
+    lines <- c(lines,
                "\\item{tspan}{A vector (length >= 2) of increasing time points",
                "where the state of each node is to be returned.}",
                "\\item{events}{A data.frame with scheduled events.}",
-               "\\item{gdata}{A named numeric vector with rate-constants for the",
-               "model.}",
                "}",
                "\\description{",
                "Create a model to be used by the SimInf framework.",
@@ -294,11 +476,7 @@ package_skeleton <- function(model, name = NULL, path = ".",
                              author = NULL, email = NULL,
                              maintainer = NULL, license = "GPL-3")
 {
-    ## Check model argument
-    if (missing(model))
-        stop("Missing 'model' argument")
-    if (!is(model, "SimInf_model"))
-        stop("'model' argument is not a 'SimInf_model' object")
+    check_model_argument(model)
 
     stopifnot(!is.null(name), is.character(name), length(name) == 1,
               nchar(name) > 0)
@@ -338,7 +516,7 @@ package_skeleton <- function(model, name = NULL, path = ".",
     message("Creating R file ...", domain = NA)
     create_model_R_file(path, model, name)
     message("Creating help files ...", domain = NA)
-    create_model_man_file(path, name)
+    create_model_man_file(path, model, name)
     create_model_class_man_file(path, name)
     create_model_run_man_file(path, name)
 

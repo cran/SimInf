@@ -241,8 +241,8 @@ res <- tools::assertError(new("SimInf_model",
                               ldata = ldata,
                               tspan = as.numeric(1:10),
                               u0    = u0))
-stopifnot(length(grep("Wrong size of 'ldata' matrix.",
-                      res[[1]]$message)) > 0)
+stopifnot(length(grep("The number of nodes in 'u0' and 'ldata' must match.",
+                      res[[1]]$message, fixed = TRUE)) > 0)
 
 ## Check initial state
 u0 <- structure(list(S_1 = c(0, 1, 2, 3, 4, 5),
@@ -283,6 +283,7 @@ show_expected <- c("Model: SISe",
                    "Number of scheduled events: 0",
                    "")
 
+stopifnot(identical(show(model), model))
 show_observed <- capture.output(show(model))
 
 stopifnot(identical(show_observed[1:5], show_expected))
