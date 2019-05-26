@@ -16,7 +16,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include <Rdefines.h>
@@ -31,7 +31,7 @@ SEXP SISe_run(SEXP, SEXP, SEXP);
 SEXP SISe3_run(SEXP, SEXP, SEXP);
 SEXP SISe3_sp_run(SEXP, SEXP, SEXP);
 SEXP SISe_sp_run(SEXP, SEXP, SEXP);
-SEXP SimInf_ldata_sp(SEXP, SEXP, SEXP, SEXP);
+SEXP SimInf_ldata_sp(SEXP, SEXP, SEXP);
 
 /**
  * Is OpenMP available

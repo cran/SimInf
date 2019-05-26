@@ -1,7 +1,7 @@
 ## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015 - 2017  Stefan Engblom
-## Copyright (C) 2015 - 2017  Stefan Widgren
+## Copyright (C) 2015 - 2019  Stefan Engblom
+## Copyright (C) 2015 - 2019  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
 ## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ##' Definition of the \code{SISe} model
 ##'
@@ -71,12 +71,8 @@ SISe <- function(u0,
 
     ## Check arguments.
 
-    ## Check u0
-    if (!is.data.frame(u0))
-        u0 <- as.data.frame(u0)
-    if (!all(compartments %in% names(u0)))
-        stop("Missing columns in u0")
-    u0 <- u0[, compartments, drop = FALSE]
+    ## Check u0 and compartments
+    u0 <- check_u0(u0, compartments)
 
     ## Check initial infectious pressure
     if (is.null(phi))
@@ -102,7 +98,9 @@ SISe <- function(u0,
                 dimnames = list(compartments, c("1", "2")))
 
     G <- matrix(c(1, 1, 1, 1), nrow = 2, ncol = 2,
-                dimnames = list(c("S -> I", "I -> S"), c("1", "2")))
+                dimnames = list(c("S -> upsilon*phi*S -> I",
+                                  "I -> gamma*I -> S"),
+                                c("1", "2")))
 
     S <- matrix(c(-1,  1, 1, -1), nrow = 2, ncol = 2,
                 dimnames = list(compartments, c("1", "2")))
@@ -173,7 +171,8 @@ SISe <- function(u0,
 ##' ## Summarize the trajectory. The summary includes the number of
 ##' ## events by event type.
 ##' summary(result)
-events_SISe <- function() {
+events_SISe <- function()
+{
     data("events_SISe3", package = "SimInf", envir = environment())
     events_SISe3$select[events_SISe3$event == "exit"] <- 2
     events_SISe3$select[events_SISe3$event == "enter"] <- 1
@@ -226,7 +225,8 @@ events_SISe <- function() {
 ##' ## Plot the proportion of nodes with at least one infected
 ##' ## individual.
 ##' plot(prevalence(result, I~S+I, "nop"), type = "l")
-u0_SISe <- function() {
+u0_SISe <- function()
+{
     data("u0_SISe3", package = "SimInf", envir = environment())
     u0_SISe3$S <- u0_SISe3$S_1 + u0_SISe3$S_2 + u0_SISe3$S_3
     u0_SISe3$I <- u0_SISe3$I_1 + u0_SISe3$I_2 + u0_SISe3$I_3

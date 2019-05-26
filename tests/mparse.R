@@ -1,6 +1,6 @@
 ## SimInf, a framework for stochastic disease spread simulations
-## Copyright (C) 2015 - 2018  Stefan Engblom
-## Copyright (C) 2015 - 2018  Stefan Widgren
+## Copyright (C) 2015 - 2019  Stefan Engblom
+## Copyright (C) 2015 - 2019  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
 ## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 library("SimInf")
 
@@ -143,10 +143,41 @@ res <- tools::assertError(
                   mparse(transitions = c("@->c1->D", "D->c2*D->D+D",
                                          "D+W->c3*D*W->W+W","W->c4*W->@"),
                          compartments = c("D","W"),
+                         v0 = 1:5,
+                         gdata = c(c1 = 0.5, c2 = 1, c3 = 0.005, c4 = 0.6),
+                         u0 = data.frame(D = rep(10, 5), W = 10), tspan = 1:5))
+stopifnot(length(grep("'v0' must either be a 'data.frame' or a 'matrix'.",
+                      res[[1]]$message, fixed = TRUE)) > 0)
+
+res <- tools::assertError(
+                  mparse(transitions = c("@->c1->D", "D->c2*D->D+D",
+                                         "D+W->c3*D*W->W+W","W->c4*W->@"),
+                         compartments = c("D","W"),
+                         v0 = matrix(rep(0, 10), nrow = 2, ncol = 5,
+                                     dimnames = list(c("c1", "c1"))),
+                         gdata = c(c2 = 1, c3 = 0.005, c4 = 0.6),
+                         u0 = data.frame(D = rep(10, 5), W = 10), tspan = 1:5))
+stopifnot(length(grep("'v0' must have non-duplicated parameter names.",
+                      res[[1]]$message, fixed = TRUE)) > 0)
+
+res <- tools::assertError(
+                  mparse(transitions = c("@->c1->D", "D->c2*D->D+D",
+                                         "D+W->c3*D*W->W+W","W->c4*W->@"),
+                         compartments = c("D","W"),
                          ldata = matrix(1:5,, nrow = 1, dimnames = list("c4", NULL)),
                          gdata = c(c1 = 0.5, c2 = 1, c3 = 0.005, c4 = 0.6),
                          u0 = data.frame(D = rep(10, 5), W = 10), tspan = 1:5))
 stopifnot(length(grep("'u0', 'gdata', 'ldata' and 'v0' have names in common.",
+                      res[[1]]$message, fixed = TRUE)) > 0)
+
+res <- tools::assertError(
+                  mparse(transitions = c("@->c1->D", "D->c2*D->D+D",
+                                         "D+W->c3*D*W->W+W","W->c4*W->@"),
+                         compartments = c("D","W"),
+                         gdata = c(c1 = 0.5, c2 = 1, c3 = 0.005, c4 = 0.6),
+                         u0 = data.frame(D = 10, W = 10), tspan = 1:5,
+                         pts_fun = 5))
+stopifnot(length(grep("'pts_fun' must be a character vector.",
                       res[[1]]$message, fixed = TRUE)) > 0)
 
 ## Check mparse
@@ -160,8 +191,8 @@ G <- new("dgCMatrix",
          i = c(1L, 2L, 1L, 2L, 1L, 2L, 3L, 2L, 3L),
          p = c(0L, 2L, 4L, 7L, 9L),
          Dim = c(4L, 4L),
-         Dimnames = list(c("@ -> D", "@ -> D",
-                           "D -> W", "W -> @"),
+         Dimnames = list(c("@ -> c1 -> D", "D -> c2*D -> 2*D",
+                           "D + W -> c3*D*W -> 2*W", "W -> c4*W -> @"),
                          c("1", "2", "3", "4")),
          x = c(1, 1, 1, 1, 1, 1, 1, 1, 1),
          factors = list())
@@ -242,6 +273,7 @@ C_code <- c(
     "}",
     "")
 stopifnot(identical(m@C_code[-1], C_code)) ## Skip first line that contains time
+stopifnot(identical(m@C_code, C_code(m)))
 
 ## Check mparse with both gdata and ldata
 m <- mparse(transitions = c("@->c1->D", "D->c2*D->D+D",
@@ -325,8 +357,9 @@ stopifnot(
     identical(SimInf:::rewrite_propensity("beta*S*I/(S+I+R)", c("S", "I", "R"),
                                           NULL, "beta", NULL),
               structure(list(propensity = "gdata[0]*u[0]*u[1]/(u[0]+u[1]+u[2])",
-                             depends = c(1, 1, 1)),
-                        .Names = c("propensity", "depends"))))
+                             depends = c(1, 1, 1),
+                             G_rowname = "beta*S*I/(S+I+R)"),
+                        .Names = c("propensity", "depends", "G_rowname"))))
 
 ## Check init function
 model <- mparse(transitions = c("S -> b*S*I/(S+I+R) -> I",
@@ -440,7 +473,7 @@ S <- new("dgCMatrix", i = 0L, p = 0:1, Dim = 2:1,
 stopifnot(identical(m@S, S))
 
 G <- new("dgCMatrix", i = integer(0), p = c(0L, 0L),
-         Dim = c(1L, 1L), Dimnames = list("2*S -> @", "1"),
+         Dim = c(1L, 1L), Dimnames = list("2*S -> mu -> @", "1"),
          x = numeric(0), factors = list())
 stopifnot(identical(m@G, G))
 
@@ -457,7 +490,7 @@ S <- new("dgCMatrix", i = integer(0), p = c(0L, 0L),
 stopifnot(identical(m@S, S))
 
 G <- new("dgCMatrix", i = integer(0), p = c(0L, 0L),
-         Dim = c(1L, 1L), Dimnames = list("@ -> @", "1"),
+         Dim = c(1L, 1L), Dimnames = list("2*S -> mu -> 2*S", "1"),
          x = numeric(0), factors = list())
 stopifnot(identical(m@G, G))
 
@@ -474,10 +507,26 @@ S <- new("dgCMatrix", i = 0L, p = 0:1, Dim = 2:1,
 stopifnot(identical(m@S, S))
 
 G <- new("dgCMatrix", i = integer(0), p = c(0L, 0L),
-         Dim = c(1L, 1L), Dimnames = list("@ -> 2*S", "1"),
+         Dim = c(1L, 1L), Dimnames = list("@ -> mu -> 2*S", "1"),
          x = numeric(0), factors = list())
 stopifnot(identical(m@G, G))
 
 ## Check parsing replicates of compartments
 stopifnot(identical(SimInf:::parse_compartments("S + 2*S", c("S", "I")),
                     c(3L, 0L)))
+
+## Check mparse with a compartment name that contains '.', for
+## example, '.S.S' (this is a valid column name in a data.frame).
+m  <- mparse(transitions = ".S.S -> 1.2*.S.S -> @",
+             compartments = c(".S.S"),
+             u0 = data.frame(.S.S = 100),
+             tspan = 1:100)
+stopifnot(identical(m@C_code[13], "    return 1.2*u[0];"))
+
+## Check mparse with a propensity that contains '->' to handle a case
+## where a pointer is used in the propensity.
+m  <- mparse(transitions = "S -> a->data[2]*1.2*S -> @",
+             compartments = c("S"),
+             u0 = data.frame(S = 100),
+             tspan = 1:100)
+stopifnot(identical(m@C_code[13], "    return a->data[2]*1.2*u[0];"))

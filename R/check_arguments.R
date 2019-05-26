@@ -1,7 +1,7 @@
 ## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015 - 2016  Stefan Engblom
-## Copyright (C) 2015 - 2016  Stefan Widgren
+## Copyright (C) 2015 - 2019  Stefan Engblom
+## Copyright (C) 2015 - 2019  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
 ## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ##' Check integer arguments
 ##'
@@ -23,7 +23,8 @@
 ##' @param ... The arguments to check
 ##' @return invisible(NULL)
 ##' @noRd
-check_infectious_pressure_arg <- function(len, ...) {
+check_infectious_pressure_arg <- function(len, ...)
+{
     arg <- list(...)
     for (i in seq_len(length(arg))) {
         if (!is.numeric(arg[[i]])) {
@@ -60,7 +61,8 @@ check_infectious_pressure_arg <- function(len, ...) {
 ##' @param ... The arguments to check
 ##' @return invisible(NULL)
 ##' @noRd
-check_integer_arg <- function(...) {
+check_integer_arg <- function(...)
+{
     arg <- list(...)
     for (i in seq_len(length(arg))) {
         if (is.null(arg[[i]])) {
@@ -91,7 +93,8 @@ check_integer_arg <- function(...) {
 ##' @param ... The arguments to check
 ##' @return invisible(NULL)
 ##' @noRd
-check_gdata_arg <- function(...) {
+check_gdata_arg <- function(...)
+{
     arg <- list(...)
     for (i in seq_len(length(arg))) {
         if (is.null(arg[[i]])) {
@@ -124,7 +127,8 @@ check_gdata_arg <- function(...) {
 ##' @param ... The arguments to check
 ##' @return invisible(NULL)
 ##' @noRd
-check_end_t_arg <- function(len, ...) {
+check_end_t_arg <- function(len, ...)
+{
     arg <- list(...)
     names(arg) <- match.call(expand.dots = FALSE)$'...'
 
@@ -161,11 +165,96 @@ check_end_t_arg <- function(len, ...) {
 ##' @param model the model to check.
 ##' @return invisible(NULL)
 ##' @noRd
-check_model_argument <- function(model) {
+check_model_argument <- function(model)
+{
     if (missing(model))
         stop("Missing 'model' argument")
     if (!is(model, "SimInf_model"))
         stop("'model' argument is not a 'SimInf_model'")
 
     invisible(NULL)
+}
+
+##' Check if wholenumbers
+##'
+##' Check that all values are wholenumbers, see example in integer {base}
+##' @param x Value to check
+##' @param tol Tolerance of the check
+##' @return logical vector
+##' @noRd
+is_wholenumber <- function(x, tol = .Machine$double.eps^0.5)
+{
+    abs(x - round(x)) < tol
+}
+
+##' Check the 'node' argument
+##'
+##' Raise an error if the node argument is not ok.
+##' @param model the model with nodes.
+##' @param node the node vector to check
+##' @return the node vector with unique nodes sorted in order.
+##' @noRd
+check_node_argument <- function(model, node)
+{
+    if (is.null(node))
+        return(NULL)
+
+    if (!is.numeric(node))
+        stop("'node' must be integer")
+    if (!all(is_wholenumber(node)))
+        stop("'node' must be integer")
+    if (min(node) < 1)
+        stop("'node' must be integer > 0")
+    if (max(node) > Nn(model))
+        stop("'node' must be integer <= number of nodes")
+
+    as.integer(sort(unique(node)))
+}
+
+##' Check the shift matrix 'N'
+##'
+##' Raise an error if the 'N' argument is not ok.
+##' @param model the model with nodes.
+##' @param N the shift matrix to check
+##' @return the shift matrix.
+##' @noRd
+check_N <- function(N)
+{
+    if (is.null(N))
+        return(matrix(integer(0), nrow = 0, ncol = 0))
+
+    if (!all(is.matrix(N), is.numeric(N)))
+        stop("'N' must be an integer matrix")
+
+    if (!is.integer(N)) {
+        if (!all(is_wholenumber(N)))
+            stop("'N' must be an integer matrix")
+        storage.mode(N) <- "integer"
+    }
+
+    N
+}
+
+##' Check u0
+##'
+##' Raise an error if any of the 'u0' or 'compartments' arguments are
+##' invalid.
+##' @param u0 the initial state for the model.
+##' @param compartments the compartments in u0.
+##' @return u0 with columns ordered by the compartments.
+##' @noRd
+check_u0 <- function(u0, compartments)
+{
+    ## Check compartments
+    if (!is.atomic(compartments) || !is.character(compartments) ||
+        !identical(compartments, make.names(compartments, unique = TRUE)))
+        stop("'compartments' must be specified in a character vector.")
+
+    ## Check u0
+    if (!is.data.frame(u0))
+        u0 <- as.data.frame(u0)
+    if (!all(compartments %in% names(u0)))
+        stop("Missing columns in u0")
+
+    u0[, compartments, drop = FALSE]
 }

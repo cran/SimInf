@@ -1,7 +1,7 @@
 Package: SimInf
 Title: A Framework for Data-Driven Stochastic Disease Spread
         Simulations
-Version: 6.2.0
+Version: 6.3.0
 Authors@R: c(person("Stefan", "Widgren", role = c("aut", "cre"),
                     email = "stefan.widgren@gmail.com",
                     comment = c(ORCID = "0000-0001-5745-2284")),
@@ -46,11 +46,12 @@ Depends: R(>= 3.1)
 Imports: graphics, grDevices, methods, stats, utils, Matrix
 Collate: 'check_arguments.R' 'SimInf_events.R' 'SimInf_model.R'
         'SEIR.R' 'SIR.R' 'SISe.R' 'SISe3.R' 'SISe3_sp.R' 'SISe_sp.R'
-        'SimInf.R' 'SimInf_mparse.R' 'distance.R' 'package_skeleton.R'
-        'run_outer.R'
+        'SimInf.R' 'degree.R' 'distance.R' 'mparse.R'
+        'package_skeleton.R' 'plot.R' 'prevalence.R' 'print.R'
+        'punchcard.R' 'run.R' 'run_outer.R' 'trajectory.R'
 Encoding: UTF-8
 RoxygenNote: 6.1.1
-Packaged: 2018-11-20 06:10:50 UTC; stefan
+Packaged: 2019-05-26 10:34:23 UTC; stefan
 Author: Stefan Widgren [aut, cre] (<https://orcid.org/0000-0001-5745-2284>),
   Robin Eriksson [aut] (<https://orcid.org/0000-0002-4291-712X>),
   Stefan Engblom [aut] (<https://orcid.org/0000-0002-3614-1732>),
@@ -58,4 +59,4 @@ Author: Stefan Widgren [aut, cre] (<https://orcid.org/0000-0001-5745-2284>),
   Attractive Chaos [cph] (Author of 'kvec.h', a generic dynamic array)
 Maintainer: Stefan Widgren <stefan.widgren@gmail.com>
 Repository: CRAN
-Date/Publication: 2018-11-20 09:30:03 UTC
+Date/Publication: 2019-05-26 15:10:14 UTC

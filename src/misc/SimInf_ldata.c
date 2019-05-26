@@ -15,12 +15,11 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "SimInf.h"
 #include "SimInf_arg.h"
-#include "SimInf_ldata.h"
 
 /**
  * Combine local model parameters and spatial coupling to neighbors in

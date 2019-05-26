@@ -1,7 +1,7 @@
 ## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015 - 2018  Stefan Engblom
-## Copyright (C) 2015 - 2018  Stefan Widgren
+## Copyright (C) 2015 - 2019  Stefan Engblom
+## Copyright (C) 2015 - 2019  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -14,18 +14,7 @@
 ## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-##' Check if wholenumbers
-##'
-##' Check that all values are wholenumbers, see example in integer {base}
-##' @param x Value to check
-##' @param tol Tolerance of the check
-##' @return logical vector
-##' @noRd
-is_wholenumber <- function(x, tol = .Machine$double.eps^0.5) {
-    abs(x - round(x)) < tol
-}
+## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ##' Class \code{"SimInf_events"}
 ##'
@@ -120,49 +109,56 @@ setClass("SimInf_events",
                    n          = "integer",
                    proportion = "numeric",
                    select     = "integer",
-                   shift      = "integer"),
-         validity = function(object) {
-             ## Check that E and N have identical compartments
-             if ((dim(object@E)[1] > 0) && (dim(object@N)[1] > 0)) {
-                 if (!identical(rownames(object@E), rownames(object@N)))
-                     return("'E' and 'N' must have identical compartments")
-             }
+                   shift      = "integer"))
 
-             if (!identical(length(unique(c(length(object@event),
-                                            length(object@time),
-                                            length(object@node),
-                                            length(object@dest),
-                                            length(object@n),
-                                            length(object@proportion),
-                                            length(object@select),
-                                            length(object@shift)))) , 1L)) {
-                 return("All scheduled events must have equal length.")
-             }
+## Check if the SimInf_events object is valid.
+valid_SimInf_events_object <- function(object)
+{
+    ## Check that E and N have identical compartments
+    if ((dim(object@E)[1] > 0) && (dim(object@N)[1] > 0)) {
+        if (any(is.null(rownames(object@E)), is.null(rownames(object@N))))
+            return("'E' and 'N' must have rownames matching the compartments.")
+        if (!identical(rownames(object@E), rownames(object@N)))
+            return("'E' and 'N' must have identical compartments.")
+    }
 
-             if (!all(object@time > 0))
-                 return("time must be greater than 0")
+    if (!identical(length(unique(c(length(object@event),
+                                   length(object@time),
+                                   length(object@node),
+                                   length(object@dest),
+                                   length(object@n),
+                                   length(object@proportion),
+                                   length(object@select),
+                                   length(object@shift)))) , 1L)) {
+        return("All scheduled events must have equal length.")
+    }
 
-             if (any(object@event < 0, object@event > 3))
-                 return("event must be in the range 0 <= event <= 3")
+    if (!all(object@time > 0))
+        return("time must be greater than 0")
 
-             if (any(object@node < 1))
-                 return("'node' must be greater or equal to 1")
+    if (any(object@event < 0, object@event > 3))
+        return("event must be in the range 0 <= event <= 3")
 
-             if (any(object@dest[object@event == 3] < 1))
-                 return("'dest' must be greater or equal to 1")
+    if (any(object@node < 1))
+        return("'node' must be greater or equal to 1")
 
-             if (any(object@proportion < 0, object@proportion > 1))
-                 return("prop must be in the range 0 <= prop <= 1")
+    if (any(object@dest[object@event == 3] < 1))
+        return("'dest' must be greater or equal to 1")
 
-             if (any(object@select < 1, object@select > dim(object@E)[2]))
-                 return("select must be in the range 1 <= select <= Nselect")
+    if (any(object@proportion < 0, object@proportion > 1))
+        return("prop must be in the range 0 <= prop <= 1")
 
-             if (any(object@shift[object@event == 2] < 1))
-                 return("'shift' must be greater or equal to 1")
+    if (any(object@select < 1, object@select > dim(object@E)[2]))
+        return("select must be in the range 1 <= select <= Nselect")
 
-             TRUE
-         }
-)
+    if (any(object@shift[object@event == 2] < 1))
+        return("'shift' must be greater or equal to 1")
+
+    TRUE
+}
+
+## Assign the function as the validity method for the class.
+setValidity("SimInf_events", valid_SimInf_events_object)
 
 ##' Create a \code{\linkS4class{SimInf_events}} object
 ##'
@@ -255,6 +251,7 @@ setClass("SimInf_events",
 ##'     \code{events$time} is a numeric vector, then \code{t0} must be
 ##'     \code{NULL}.
 ##' @return S4 class \code{SimInf_events}
+##' @include check_arguments.R
 ##' @export
 ##' @importFrom methods as
 ##' @importFrom methods is
@@ -274,15 +271,7 @@ SimInf_events <- function(E      = NULL,
     }
 
     ## Check N
-    if (is.null(N))
-        N <- matrix(integer(0), nrow = 0, ncol = 0)
-    if (!all(is.matrix(N), is.numeric(N)))
-        stop("'N' must be an integer matrix")
-    if (!is.integer(N)) {
-        if (!all(is_wholenumber(N)))
-            stop("'N' must be an integer matrix")
-        storage.mode(N) <- "integer"
-    }
+    N <- check_N(N)
 
     ## Check events
     if (is.null(events)) {
@@ -547,3 +536,145 @@ setMethod("summary",
               }
           }
 )
+
+##' Extract the events from a \code{SimInf_model} object
+##'
+##' Extract the scheduled events from a \code{SimInf_model} object.
+##' @param model The \code{model} to extract the events from.
+##' @return \code{\linkS4class{SimInf_events}} object.
+##' @export
+##' @examples
+##' ## Create an SIR model that includes scheduled events.
+##' model <- SIR(u0     = u0_SIR(),
+##'              tspan  = 1:(4 * 365),
+##'              events = events_SIR(),
+##'              beta   = 0.16,
+##'              gamma  = 0.077)
+##'
+##' ## Extract the scheduled events from the model and display summary
+##' summary(events(model))
+##'
+##' ## Extract the scheduled events from the model and plot them
+##' plot(events(model))
+events <- function(model)
+{
+    check_model_argument(model)
+    model@events
+}
+
+##' Extract the shift matrix from a \code{SimInf_model} object
+##'
+##' Utility function to extract the shift matrix \code{events@@N} from
+##' a \code{SimInf_model} object, see
+##' \code{\linkS4class{SimInf_events}}
+##' @param model The \code{model} to extract the shift matrix
+##'     \code{events@@N} from.
+##' @return A mtrix.
+##' @export
+##' @examples
+##' ## Create an SIR model
+##' model <- SIR(u0 = data.frame(S = 99, I = 1, R = 0),
+##'              tspan = 1:5, beta = 0.16, gamma = 0.077)
+##'
+##' ## Extract the shift matrix from the model
+##' shift_matrix(model)
+shift_matrix <- function(model)
+{
+    check_model_argument(model)
+    model@events@N
+}
+
+##' Set the shift matrix for a \code{SimInf_model} object
+##'
+##' Utility function to set \code{events@@N} in a \code{SimInf_model}
+##' object, see \code{\linkS4class{SimInf_events}}
+##' @param model The \code{model} to set the shift matrix
+##'     \code{events@@N}.
+##' @param value A matrix.
+##' @return \code{SimInf_model} object
+##' @export
+##' @importFrom methods is
+##' @examples
+##' ## Create an SIR model
+##' model <- SIR(u0 = data.frame(S = 99, I = 1, R = 0),
+##'              tspan = 1:5, beta = 0.16, gamma = 0.077)
+##'
+##' ## Set the shift matrix
+##' shift_matrix(model) <- matrix(c(2, 1, 0), nrow = 3)
+##'
+##' ## Extract the shift matrix from the model
+##' shift_matrix(model)
+"shift_matrix<-" <- function(model, value)
+{
+    check_model_argument(model)
+
+    model@events@N <- check_N(value)
+
+    if (nrow(model@events@N) > 0 && is.null(rownames(model@events@N)))
+        rownames(model@events@N) <- rownames(model@events@E)
+    if (ncol(model@events@N))
+        colnames(model@events@N) <- as.character(seq_len(ncol(model@events@N)))
+
+    validObject(model)
+
+    model
+}
+
+##' Extract the select matrix from a \code{SimInf_model} object
+##'
+##' Utility function to extract \code{events@@E} from a
+##' \code{SimInf_model} object, see \code{\linkS4class{SimInf_events}}
+##' @param model The \code{model} to extract the select matrix
+##'     \code{E} from.
+##' @return \code{\linkS4class{dgCMatrix}} object.
+##' @export
+##' @examples
+##' ## Create an SIR model
+##' model <- SIR(u0 = data.frame(S = 99, I = 1, R = 0),
+##'              tspan = 1:5, beta = 0.16, gamma = 0.077)
+##'
+##' ## Extract the select matrix from the model
+##' select_matrix(model)
+select_matrix <- function(model)
+{
+    check_model_argument(model)
+    model@events@E
+}
+
+##' Set the select matrix for a \code{SimInf_model} object
+##'
+##' Utility function to set \code{events@@E} in a \code{SimInf_model}
+##' object, see \code{\linkS4class{SimInf_events}}
+##' @param model The \code{model} to set the select matrix for.
+##' @param value A matrix.
+##' @export
+##' @importFrom methods as
+##' @importFrom methods is
+##' @examples
+##' ## Create an SIR model
+##' model <- SIR(u0 = data.frame(S = 99, I = 1, R = 0),
+##'              tspan = 1:5, beta = 0.16, gamma = 0.077)
+##'
+##' ## Set the select matrix
+##' select_matrix(model) <- matrix(c(1, 0, 0, 1, 1, 1, 0, 0, 1), nrow = 3)
+##'
+##' ## Extract the select matrix from the model
+##' select_matrix(model)
+"select_matrix<-" <- function(model, value)
+{
+    check_model_argument(model)
+
+    if (!is(value, "dgCMatrix"))
+        value <- as(value, "dgCMatrix")
+
+    if (!identical(Nc(model), dim(value)[1]))
+        stop("'value' must have one row for each compartment in the model")
+
+    dimnames(value) <- list(rownames(model@events@E),
+                            as.character(seq_len(dim(value)[2])))
+    model@events@E <- value
+
+    validObject(model)
+
+    model
+}

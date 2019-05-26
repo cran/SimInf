@@ -1,7 +1,7 @@
 ## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015 - 2018  Stefan Engblom
-## Copyright (C) 2015 - 2018  Stefan Widgren
+## Copyright (C) 2015 - 2019  Stefan Engblom
+## Copyright (C) 2015 - 2019  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
 ## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 library("SimInf")
 library("Matrix")
@@ -31,7 +31,9 @@ E <- Matrix(c(1, 0, 0, 1, 0, 0,
             nrow   = 6,
             ncol   = 6,
             byrow  = TRUE,
-            sparse = TRUE)
+            sparse = TRUE,
+            dimnames = list(c("S_1", "I_1", "S_2", "I_2", "S_3", "I_3"),
+                            c("1", "2", "3", "4", "5", "6")))
 
 N <- matrix(c(2, 0,
               2, 0,
@@ -41,7 +43,109 @@ N <- matrix(c(2, 0,
               0, 0),
             nrow   = 6,
             ncol   = 2,
-            byrow  = TRUE)
+            byrow  = TRUE,
+            dimnames = list(c("S_1", "I_1", "S_2", "I_2", "S_3", "I_3"),
+                            c("1", "2")))
+
+## Check valid_SimInf_events_object
+events <- SimInf_events(E = E, N = N)
+stopifnot(isTRUE(SimInf:::valid_SimInf_events_object(events)))
+
+rownames(events@E) <- tolower(rownames(events@E))
+stopifnot(identical(SimInf:::valid_SimInf_events_object(events),
+                    "'E' and 'N' must have identical compartments."))
+rownames(events@E) <- NULL
+stopifnot(identical(SimInf:::valid_SimInf_events_object(events),
+                    "'E' and 'N' must have rownames matching the compartments."))
+
+events <- SimInf_events(E = E, N = N)
+events@event <- 3L
+stopifnot(identical(SimInf:::valid_SimInf_events_object(events),
+                    "All scheduled events must have equal length."))
+
+events@event <- 3L
+events@time <- 1L
+events@node <- 2L
+events@dest <- 1L
+events@n <- 1L
+events@proportion <- 0
+events@select <- 1L
+events@shift <- 1L
+
+events@time <- 0L
+stopifnot(identical(SimInf:::valid_SimInf_events_object(events),
+                    "time must be greater than 0"))
+events@time <- 1L
+
+events@event <- -1L
+stopifnot(identical(SimInf:::valid_SimInf_events_object(events),
+                    "event must be in the range 0 <= event <= 3"))
+events@event <- 4L
+stopifnot(identical(SimInf:::valid_SimInf_events_object(events),
+                    "event must be in the range 0 <= event <= 3"))
+events@event <- 3L
+
+events@node <- 0L
+stopifnot(identical(SimInf:::valid_SimInf_events_object(events),
+                    "'node' must be greater or equal to 1"))
+events@node <- 2L
+
+events@dest <- 0L
+stopifnot(identical(SimInf:::valid_SimInf_events_object(events),
+                    "'dest' must be greater or equal to 1"))
+events@dest <- 1L
+
+events@proportion <- -1
+stopifnot(identical(SimInf:::valid_SimInf_events_object(events),
+                    "prop must be in the range 0 <= prop <= 1"))
+events@proportion <- 2
+stopifnot(identical(SimInf:::valid_SimInf_events_object(events),
+                    "prop must be in the range 0 <= prop <= 1"))
+events@proportion <- 0
+
+events@select <- 0L
+stopifnot(identical(SimInf:::valid_SimInf_events_object(events),
+                    "select must be in the range 1 <= select <= Nselect"))
+events@select <- 7L
+stopifnot(identical(SimInf:::valid_SimInf_events_object(events),
+                    "select must be in the range 1 <= select <= Nselect"))
+events@select <- 1L
+
+events@event <- 2L
+events@shift <- 0L
+stopifnot(identical(SimInf:::valid_SimInf_events_object(events),
+                    "'shift' must be greater or equal to 1"))
+
+## Check that an error is raised when E is NULL and events is
+## non-NULL.
+events <- data.frame(event = 3, time = 1, node = 2, dest = 1, n = 1,
+                     proportion = 1, select = 0, shift = 1)
+res <- tools::assertError(SimInf_events(events = events))
+stopifnot(length(grep("events is not NULL when E is NULL",
+                      res[[1]]$message, fixed = TRUE)) > 0)
+
+## Check that an error is raised when N is not an integer matrix.
+res <- tools::assertError(SimInf_events(N = c("a", "b")))
+stopifnot(length(grep("'N' must be an integer matrix",
+                      res[[1]]$message, fixed = TRUE)) > 0)
+
+## Check that an error is raised when N is not an integer matrix.
+res <- tools::assertError(SimInf_events(N = matrix(c(1.5, 1.5), nrow = 2)))
+stopifnot(length(grep("'N' must be an integer matrix",
+                      res[[1]]$message, fixed = TRUE)) > 0)
+
+## Check that an error is raised when events is not a data.frame.
+res <- tools::assertError(SimInf_events(E = E, events = c("a", "b")))
+stopifnot(length(grep("events must be a data.frame",
+                      res[[1]]$message, fixed = TRUE)) > 0)
+
+## Check that an error is raised when events contains a non-numeric
+## value.
+events <- data.frame(event = 3, time = 1, node = 2, dest = 1, n = 1,
+                     proportion = "1", select = 0, shift = 1)
+res <- tools::assertError(SimInf_events(E = E, events = events))
+stopifnot(length(grep("Columns in events must be numeric",
+                      res[[1]]$message, fixed = TRUE)) > 0)
 
 ## Check missing columns in events
 ## Iterate over each column and rename it
@@ -414,29 +518,9 @@ events <- new("SimInf_events",
 str(events)
 stopifnot(identical(SimInf_events(), events))
 
-## Check SimInf_events plot method
-E <- Matrix(c(1, 0, 0, 1, 0, 0,
-              0, 0, 0, 1, 0, 0,
-              0, 1, 0, 0, 1, 0,
-              0, 0, 0, 0, 1, 0,
-              0, 0, 1, 0, 0, 1,
-              0, 0, 0, 0, 0, 1),
-            nrow   = 6,
-            ncol   = 6,
-            byrow  = TRUE,
-            sparse = TRUE)
-E <- as(E, "dgCMatrix")
-N <- matrix(c(2, 0,
-              2, 0,
-              0, 2,
-              0, 2,
-              0, 0,
-              0, 0),
-            nrow   = 6,
-            ncol   = 2,
-            byrow  = TRUE)
+## Check the SimInf_events plot method. Reduce the run-time by only
+## using one year of data
 data(events_SISe3)
-## Save run-time by only using one year of data
 events_SISe3 <- events_SISe3[events_SISe3$time < 366,]
 events <- SimInf_events(E = E, N = N, events = events_SISe3)
 stopifnot(identical(events, show(events)))
@@ -457,9 +541,19 @@ summary_expected <-
 summary_observed <- capture.output(summary(events))
 stopifnot(identical(summary_observed, summary_expected))
 
-## Check if converting events to data.frame results in the same as the
-## events data submitted to the SimInf_events function
+## Test summary method with no scheduled events
+events <- SimInf_events(E = E, N = N)
+summary_expected <-
+    c("Number of scheduled events: 0",
+      " - Exit: 0",
+      " - Enter: 0",
+      " - Internal transfer: 0",
+      " - External transfer: 0")
+summary_observed <- capture.output(summary(events))
+stopifnot(identical(summary_observed, summary_expected))
 
+## Check if converting the events to a data.frame results in the same
+## as the events data submitted to the SimInf_events function.
 events <- structure(list(
     event = c(3L, 3L, 3L, 3L, 3L, 3L, 3L, 3L, 3L,
               3L, 3L, 3L, 3L, 3L, 3L),
@@ -547,17 +641,21 @@ N_observed <- shift_matrix(model)
 
 stopifnot(identical(N_expected, N_observed))
 
-m <- matrix(c(1, 0), nrow = 2)
+shift_matrix(model) <- NULL
+stopifnot(identical(shift_matrix(model),
+                    matrix(integer(0), nrow = 0, ncol = 0)))
+
+m <- matrix(c(1, 0), nrow = 2, dimnames = list(c("S", "I")))
 res <- tools::assertError(select_matrix(model) <- m)
 stopifnot(length(grep("'value' must have one row for each compartment in the model",
                       res[[1]]$message)) > 0)
 
 m <- matrix(c("1", "0", "0"), nrow = 3)
 res <- tools::assertError(shift_matrix(model) <- m)
-stopifnot(length(grep("'value' must be an integer matrix",
+stopifnot(length(grep("'N' must be an integer matrix",
                       res[[1]]$message)) > 0)
 
 m <- matrix(c(1.3, 0, 0), nrow = 3)
 res <- tools::assertError(shift_matrix(model) <- m)
-stopifnot(length(grep("'value' must be an integer matrix",
+stopifnot(length(grep("'N' must be an integer matrix",
                       res[[1]]$message)) > 0)

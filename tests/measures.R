@@ -1,7 +1,7 @@
 ## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015 - 2017  Stefan Engblom
-## Copyright (C) 2015 - 2017  Stefan Widgren
+## Copyright (C) 2015 - 2019  Stefan Engblom
+## Copyright (C) 2015 - 2019  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
 ## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 library("SimInf")
 
@@ -49,6 +49,9 @@ stopifnot(length(grep("Please run the model first, the trajectory is empty",
 
 result <- run(model, threads = 1)
 result
+
+res <- tools::assertError(trajectory(result, I ~ S, as.is = TRUE))
+stopifnot(res[[1]]$message == "Invalid formula specification of 'compartments'")
 
 stopifnot(identical(length(trajectory(result, compartments = "S", as.is = TRUE)), 1001L))
 stopifnot(identical(length(trajectory(result, compartments = "I", as.is = TRUE)), 1001L))

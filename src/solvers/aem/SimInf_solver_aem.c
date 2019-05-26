@@ -16,7 +16,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include <float.h>
@@ -338,7 +338,7 @@ static int SimInf_solver_aem(
                 /* Copy continuous state to V */
                 while (sa.V && sa.V_it < sa.tlen && sa.tt > sa.tspan[sa.V_it])
                     memcpy(&sa.V[sa.Nd * ((sa.Ntot * sa.V_it++) + sa.Ni)],
-                           sa.v_new, sa.Nn * sa.Nd * sizeof(double));
+                           sa.v, sa.Nn * sa.Nd * sizeof(double));
 
                 *&model[i] = sa;
                 *&method[i] = ma;

@@ -12,7 +12,7 @@
 ## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ##' Definition of the \acronym{SIR} model
 ##'
@@ -90,12 +90,8 @@ SIR <- function(u0,
 
     ## Check arguments.
 
-    ## Check u0
-    if (!is.data.frame(u0))
-        u0 <- as.data.frame(u0)
-    if (!all(compartments %in% names(u0)))
-        stop("Missing columns in u0")
-    u0 <- u0[, compartments, drop = FALSE]
+    ## Check u0 and compartments
+    u0 <- check_u0(u0, compartments)
 
     ## Check for non-numeric parameters
     check_gdata_arg(beta, gamma)
@@ -107,7 +103,9 @@ SIR <- function(u0,
                 dimnames = list(compartments, c("1", "2", "3", "4")))
 
     G <- matrix(c(1, 1, 1, 1), nrow = 2, ncol = 2,
-                dimnames = list(c("S -> I", "I -> R"), c("1", "2")))
+                dimnames = list(c("S -> beta*S*I/(S+I+R) -> I",
+                                  "I -> gamma*I -> R"),
+                                c("1", "2")))
 
     S <- matrix(c(-1, 1, 0, 0, -1, 1), nrow = 3, ncol = 2,
                 dimnames = list(compartments, c("1", "2")))
@@ -169,7 +167,8 @@ SIR <- function(u0,
 ##' ## Summarize the trajectory. The summary includes the number of
 ##' ## events by event type.
 ##' summary(result)
-events_SIR <- function() {
+events_SIR <- function()
+{
     data("events_SISe3", package = "SimInf", envir = environment())
     events_SISe3$select[events_SISe3$event == "exit"] <- 4
     events_SISe3$select[events_SISe3$event == "enter"] <- 1
@@ -209,7 +208,8 @@ events_SIR <- function() {
 ##'
 ##' ## Summarize trajectory
 ##' summary(result)
-u0_SIR <- function() {
+u0_SIR <- function()
+{
     data("u0_SISe3", package = "SimInf", envir = environment())
     u0_SISe3$S <- u0_SISe3$S_1 + u0_SISe3$S_2 + u0_SISe3$S_3
     u0_SISe3$I <- u0_SISe3$I_1 + u0_SISe3$I_2 + u0_SISe3$I_3

@@ -1,7 +1,7 @@
 ## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015 - 2017  Stefan Engblom
-## Copyright (C) 2015 - 2017  Stefan Widgren
+## Copyright (C) 2015 - 2019  Stefan Engblom
+## Copyright (C) 2015 - 2019  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
 ## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ##' Definition of the \sQuote{SISe3} model
 ##'
@@ -88,12 +88,8 @@ SISe3 <- function(u0,
 
     ## Check arguments.
 
-    ## Check u0
-    if (!is.data.frame(u0))
-        u0 <- as.data.frame(u0)
-    if (!all(compartments %in% names(u0)))
-        stop("Missing columns in u0")
-    u0 <- u0[, compartments, drop = FALSE]
+    ## Check u0 and compartments
+    u0 <- check_u0(u0, compartments)
 
     ## Check initial infectious pressure
     if (is.null(phi))
@@ -127,9 +123,12 @@ SISe3 <- function(u0,
     G <- matrix(c(1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
                   0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1),
                 nrow   = 6, ncol   = 6,
-                dimnames = list(c("S_1 -> I_1", "I_1 -> S_1",
-                                  "S_2 -> I_2", "I_2 -> S_2",
-                                  "S_3 -> I_3", "I_3 -> S_3"),
+                dimnames = list(c("S_1 -> upsilon_1*phi*S_1 -> I_1",
+                                  "I_1 -> gamma_1*I_1 -> S_1",
+                                  "S_2 -> upsilon_2*phi*S_2 -> I_2",
+                                  "I_2 -> gamma_2*I_2 -> S_2",
+                                  "S_3 -> upsilon_3*phi*S_3 -> I_3",
+                                  "I_3 -> gamma_3*I_3 -> S_3"),
                                 c("1", "2", "3", "4", "5", "6")))
 
     S <- matrix(c(-1, 1, 0, 0, 0, 0, 1, -1, 0, 0, 0, 0, 0, 0, -1, 1, 0, 0,

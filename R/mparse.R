@@ -1,6 +1,6 @@
 ## SimInf, a framework for stochastic disease spread simulations
-## Copyright (C) 2015 - 2018  Stefan Engblom
-## Copyright (C) 2015 - 2018  Stefan Widgren
+## Copyright (C) 2015 - 2019  Stefan Engblom
+## Copyright (C) 2015 - 2019  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
 ## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ## C code: heading
 C_heading <- function()
@@ -58,6 +58,13 @@ C_ptsFun <- function(pts_fun)
     if (is.null(pts_fun))
         pts_fun <- "    return 0;"
 
+    if (!is.character(pts_fun))
+        stop("'pts_fun' must be a character vector.")
+
+    f <- textConnection(pts_fun)
+    lines <- readLines(f)
+    close(f)
+
     c("int ptsFun(",
       "    double *v_new,",
       "    const int *u,",
@@ -67,7 +74,7 @@ C_ptsFun <- function(pts_fun)
       "    int node,",
       "    double t)",
       "{",
-           pts_fun,
+           lines,
       "}",
       "")
 }
@@ -103,10 +110,10 @@ C_code_mparse <- function(transitions, pts_fun)
 tokens <- function(propensity)
 {
     ## List of valid preprocessor operator or punctuator tokens.
-    operators <- c("...", "<<=", ">>=", "!=", "%=", "##", "&&", "&=", "*=",
+    operators <- c("<<=", ">>=", "!=", "%=", "##", "&&", "&=", "*=",
                    "++", "+=", "--", "-=", "->", "/=", "<<", "<=", "==",
                    ">=", ">>", "^=", "|=", "||", "!", "~", "%", "&", "(",
-                   ")", "*", "+", ",", "-", ".", "/", ":", ";", "<", "=",
+                   ")", "*", "+", ",", "-", "/", ":", ";", "<", "=",
                    ">", "?", "[", "]", "^", "{", "|", "}", "#")
 
     ## Create a matrix (1 x 2) of the propensity, where the first
@@ -171,6 +178,7 @@ rewrite_propensity <- function(propensity, compartments, ldata_names,
                                gdata_names, v0_names)
 {
     propensity <- tokens(propensity)
+    G_rowname <- paste0(propensity, collapse = "")
     depends <- integer(length(compartments))
 
     ## Find compartments in propensity
@@ -192,7 +200,9 @@ rewrite_propensity <- function(propensity, compartments, ldata_names,
     i <- match(propensity, v0_names)
     propensity <- ifelse(is.na(i), propensity, sprintf("v[%i]", i-1L))
 
-    list(propensity = paste0(propensity, collapse = ""), depends = depends)
+    list(propensity = paste0(propensity, collapse = ""),
+         depends    = depends,
+         G_rowname  = G_rowname)
 }
 
 ## Generate the 'from' or 'dest' labels in the G rownames.
@@ -210,13 +220,9 @@ G_label <- function(x)
 }
 
 ## Generate rownames from the parsed transitions
-G_rownames <- function(S)
+G_rownames <- function(transitions)
 {
-    as.character(apply(S, 2, function(x) {
-        from  <- G_label(x[which(x < 0)])
-        dest  <- G_label(x[which(x > 0)])
-        paste(from, "->", dest)
-    }))
+    as.character(do.call("rbind", lapply(transitions, "[[", "G_rowname")))
 }
 
 parse_compartments <- function(x, compartments)
@@ -253,27 +259,72 @@ parse_compartments <- function(x, compartments)
 parse_transitions <- function(transitions, compartments, ldata_names,
                               gdata_names, v0_names)
 {
-    lapply(strsplit(transitions, "->"), function(x) {
-        if (!identical(length(x), 3L))
+    lapply(strsplit(transitions, "->", fixed = TRUE), function(x) {
+        if (length(x) < 3)
             stop("Invalid transition: '", paste0(x, collapse = "->"), "'")
 
         ## Remove spaces
-        propensity <- gsub(" ", "", x[2])
+        propensity <- gsub(" ", "", x[c(-1, -length(x))])
+        propensity <- paste0(propensity, collapse = "->")
 
         ## Determine the corresponding column in the state change
         ## vector S.
         from <- parse_compartments(x[1], compartments)
-        dest <- parse_compartments(x[3], compartments)
+        dest <- parse_compartments(x[length(x)], compartments)
         S <- dest - from
 
         propensity <- rewrite_propensity(propensity, compartments,
                                          ldata_names, gdata_names,
                                          v0_names)
 
+        ## Determine the G rowname
+        names(from) <- compartments
+        names(dest) <- compartments
+        from <- G_label(from[which(from > 0)])
+        dest <- G_label(dest[which(dest > 0)])
+        G_rowname <- paste(from, "->", propensity$G_rowname, "->", dest)
+
         list(propensity = propensity$propensity,
              depends    = propensity$depends,
-             S          = S)
+             S          = S,
+             G_rowname  = G_rowname)
     })
+}
+
+##' Extract variable names from data
+##'
+##' @param x data to extract the variable names from.
+##' @param is_vector_ok TRUE if x can be a numeric vector, else FALSE.
+##' @noRd
+variable_names <- function(x, is_vector_ok) {
+    if (is.null(x))
+        return(NULL)
+
+    if (is.data.frame(x)) {
+        lbl <- colnames(x)
+    } else if (isTRUE(is_vector_ok)) {
+        if (is.atomic(x) && is.numeric(x)) {
+            lbl <- names(x)
+        } else {
+            stop(paste0("'",
+                        as.character(substitute(x)),
+                        "' must either be a 'data.frame' or a 'numeric' vector."))
+        }
+    } else if (is.matrix(x)) {
+        lbl <- rownames(x)
+    } else {
+        stop(paste0("'",
+                    as.character(substitute(x)),
+                    "' must either be a 'data.frame' or a 'matrix'."))
+    }
+
+    if (any(duplicated(lbl)) || any(nchar(lbl) == 0)) {
+        stop(paste0("'",
+                    as.character(substitute(x)),
+                    "' must have non-duplicated parameter names."))
+    }
+
+    lbl
 }
 
 ##' Model parser to define new models to run in \code{SimInf}
@@ -348,65 +399,13 @@ mparse <- function(transitions = NULL, compartments = NULL, ldata = NULL,
         any(nchar(transitions) == 0))
         stop("'transitions' must be specified in a character vector.")
 
-    ## Check compartments
-    if (!is.atomic(compartments) || !is.character(compartments) ||
-        any(duplicated(compartments)) || any(nchar(compartments) == 0))
-        stop("'compartments' must be specified in a character vector.")
+    ## Check u0 and compartments
+    u0 <- check_u0(u0, compartments)
 
-    ## Check u0
-    if (!is.data.frame(u0))
-        u0 <- as.data.frame(u0)
-    if (!all(compartments %in% names(u0)))
-        stop("Missing columns in u0")
-    u0 <- u0[, compartments, drop = FALSE]
-
-    ## Check ldata
-    ldata_names <- NULL
-    if (!is.null(ldata)) {
-        if (is.data.frame(ldata)) {
-            ldata_names <- colnames(ldata)
-        } else if (is.matrix(ldata)) {
-            ldata_names <- rownames(ldata)
-        } else {
-            stop("'ldata' must either be a 'data.frame' or a 'matrix'.")
-        }
-
-        if (is.null(ldata_names) || any(duplicated(ldata_names)) ||
-            any(nchar(ldata_names) == 0))
-            stop("'ldata' must have non-duplicated parameter names.")
-    }
-
-    ## Check gdata
-    gdata_names <- NULL
-    if (!is.null(gdata)) {
-        if (is.data.frame(gdata)) {
-            gdata_names <- colnames(gdata)
-        } else if (is.atomic(gdata) && is.numeric(gdata)) {
-            gdata_names <- names(gdata)
-        } else {
-            stop("'gdata' must either be a 'data.frame' or a 'numeric' vector.")
-        }
-
-        if (is.null(gdata_names) || any(duplicated(gdata_names)) ||
-            any(nchar(gdata_names) == 0))
-            stop("'gdata' must have non-duplicated parameter names.")
-    }
-
-    ## Check v0
-    v0_names <- NULL
-    if (!is.null(v0)) {
-        if (is.data.frame(v0)) {
-            v0_names <- colnames(v0)
-        } else if (is.matrix(v0)) {
-            v0_names <- rownames(v0)
-        } else {
-            stop("'v0' must either be a 'data.frame' or a 'matrix'.")
-        }
-
-        if (is.null(v0_names) || any(duplicated(v0_names)) ||
-            any(nchar(v0_names) == 0))
-            stop("'v0' must have non-duplicated parameter names.")
-    }
+    ## Extract variable names from data.
+    ldata_names <- variable_names(ldata, FALSE)
+    gdata_names <- variable_names(gdata, TRUE)
+    v0_names <- variable_names(v0, FALSE)
 
     if (any(duplicated(c(compartments, gdata_names, ldata_names, v0_names))))
         stop("'u0', 'gdata', 'ldata' and 'v0' have names in common.")
@@ -426,7 +425,7 @@ mparse <- function(transitions = NULL, compartments = NULL, ldata = NULL,
     depends <- do.call("rbind", lapply(transitions, "[[", "depends"))
     G <- as(((depends %*% abs(S)) > 0) * 1, "dgCMatrix")
     colnames(G) <- as.character(seq_len(dim(G)[2]))
-    rownames(G) <- G_rownames(S)
+    rownames(G) <- G_rownames(transitions)
 
     SimInf_model(G      = G,
                  S      = S,

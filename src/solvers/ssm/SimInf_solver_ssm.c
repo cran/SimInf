@@ -16,7 +16,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include <string.h>
@@ -258,7 +258,7 @@ static int SimInf_solver_ssm(
                 /* Copy continuous state to V */
                 while (m.V && m.V_it < m.tlen && m.tt > m.tspan[m.V_it])
                     memcpy(&m.V[m.Nd * ((m.Ntot * m.V_it++) + m.Ni)],
-                           m.v_new, m.Nn * m.Nd * sizeof(double));
+                           m.v, m.Nn * m.Nd * sizeof(double));
 
                 *&model[i] = m;
             }

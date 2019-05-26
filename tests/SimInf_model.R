@@ -1,7 +1,7 @@
 ## SimInf, a framework for stochastic disease spread simulations
 ## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015 - 2017  Stefan Engblom
-## Copyright (C) 2015 - 2017  Stefan Widgren
+## Copyright (C) 2015 - 2019  Stefan Engblom
+## Copyright (C) 2015 - 2019  Stefan Widgren
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
 ## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 library("SimInf")
 library("Matrix")
@@ -54,6 +54,155 @@ storage.mode(u0) <- "integer"
 
 U <- matrix(nrow = 0, ncol = 0)
 storage.mode(U) <- "integer"
+
+## Check valid_SimInf_model_object
+m <- SISe(u0 = data.frame(S = 10, I = 0), tspan = 1:10, phi = 0, upsilon = 0.1,
+          gamma = 0.1, alpha = 1.0, beta_t1 = 0.1, beta_t2 = 0.1, beta_t3 = 0.1,
+          beta_t4 = 0.1, end_t1  = 91, end_t2  = 182, end_t3  = 273, end_t4  = 365,
+          epsilon = 0.1)
+stopifnot(isTRUE(SimInf:::valid_SimInf_model_object(m)))
+
+## Check valid_SimInf_model_object with invalid tspan.
+m <- SIR(u0 = data.frame(S = 10, I = 0, R = 0),
+         tspan = 1:10, beta = 0.1, gamma = 0.1)
+m@tspan <- 1L
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "Input time-span must be a double vector."))
+m@tspan <- 1
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "Input time-span must be an increasing vector."))
+
+## Check valid_SimInf_model_object with invalid u0.
+m <- SIR(u0 = data.frame(S = 10, I = 0, R = 0),
+         tspan = 1:10, beta = 0.1, gamma = 0.1)
+storage.mode(m@u0) <- "double"
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "Initial state 'u0' must be an integer matrix."))
+m <- SIR(u0 = data.frame(S = 10, I = 0, R = 0),
+         tspan = 1:10, beta = 0.1, gamma = 0.1)
+m@u0[1, 1] <- -1L
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "Initial state 'u0' has negative elements."))
+
+## Check valid_SimInf_model_object with invalid U.
+m <- SIR(u0 = data.frame(S = 10, I = 0, R = 0),
+         tspan = 1:10, beta = 0.1, gamma = 0.1)
+storage.mode(m@U) <- "double"
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "Output state 'U' must be an integer matrix."))
+m <- SIR(u0 = data.frame(S = 10, I = 0, R = 0),
+         tspan = 1:10, beta = 0.1, gamma = 0.1)
+m@U <- matrix(-1L)
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "Output state 'U' has negative elements."))
+
+## Check valid_SimInf_model_object with invalid v0.
+m <- SIR(u0 = data.frame(S = 10, I = 0, R = 0),
+         tspan = 1:10, beta = 0.1, gamma = 0.1)
+m@v0 <- matrix(1L)
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "Initial model state 'v0' must be a double matrix."))
+m@v0 <- matrix(1)
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "'v0' must have rownames"))
+m@v0 <- matrix(c(1, 1), ncol = 2)
+rownames(m@v0) <- "test"
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "The number of nodes in 'u0' and 'v0' must match."))
+
+## Check valid_SimInf_model_object with invalid V.
+m <- SIR(u0 = data.frame(S = 10, I = 0, R = 0),
+         tspan = 1:10, beta = 0.1, gamma = 0.1)
+storage.mode(m@V) <- "integer"
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "Output model state 'V' must be a double matrix."))
+
+## Check valid_SimInf_model_object with invalid S.
+m <- SIR(u0 = data.frame(S = 10, I = 0, R = 0),
+         tspan = 1:10, beta = 0.1, gamma = 0.1)
+m@S@x <- m@S@x * 0.5
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "'S' matrix must be an integer matrix."))
+
+## Check valid_SimInf_model_object with different rownames in S and E.
+m <- SIR(u0 = data.frame(S = 10, I = 0, R = 0),
+         tspan = 1:10, beta = 0.1, gamma = 0.1,
+         events = data.frame(event = 1, node = 1, n = 1, time = 1, dest = 0,
+                             proportion = 0, select = 1, shift = 0))
+rownames(m@events@E) <- NULL
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "'S' and 'E' must have rownames matching the compartments."))
+rownames(m@events@E) <- rownames(m@S)
+rownames(m@events@E)[1] <- "Z"
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "'S' and 'E' must have identical compartments"))
+
+## Check valid_SimInf_model_object with invalid G.
+m <- SIR(u0 = data.frame(S = 10, I = 0, R = 0),
+         tspan = 1:10, beta = 0.1, gamma = 0.1)
+m@G <- m@G[1, , drop = FALSE]
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "Wrong size of dependency graph."))
+
+m <- SIR(u0 = data.frame(S = 10, I = 0, R = 0),
+         tspan = 1:10, beta = 0.1, gamma = 0.1)
+rownames(m@G) <- NULL
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "'G' must have rownames that specify transitions."))
+
+m <- SIR(u0 = data.frame(S = 10, I = 0, R = 0),
+         tspan = 1:10, beta = 0.1, gamma = 0.1)
+rownames(m@G)[1] <- ""
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "'G' must have rownames that specify transitions."))
+
+m <- SIR(u0 = data.frame(S = 10, I = 0, R = 0),
+         tspan = 1:10, beta = 0.1, gamma = 0.1)
+rownames(m@G)[1] <- "A"
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "'G' rownames have invalid transitions."))
+
+m <- SIR(u0 = data.frame(S = 10, I = 0, R = 0),
+         tspan = 1:10, beta = 0.1, gamma = 0.1)
+rownames(m@G)[1] <- "Z -> beta*Z*I/(S+I+R) -> I"
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "'G' and 'S' must have identical compartments"))
+
+## Check valid_SimInf_model_object with invalid ldata.
+m <- SIR(u0 = data.frame(S = 10, I = 0, R = 0),
+         tspan = 1:10, beta = 0.1, gamma = 0.1)
+m@ldata <- matrix(1L)
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "'ldata' matrix must be a double matrix."))
+m@ldata <- matrix(c(1, 2), ncol = 2)
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "The number of nodes in 'u0' and 'ldata' must match."))
+
+## Check valid_SimInf_model_object with invalid gdata.
+m <- SIR(u0 = data.frame(S = 10, I = 0, R = 0),
+         tspan = 1:10, beta = 0.1, gamma = 0.1)
+m@gdata <- as.integer(m@gdata)
+names(m@gdata) <- c("beta", "gamma")
+stopifnot(identical(SimInf:::valid_SimInf_model_object(m),
+                    "'gdata' must be a double vector."))
+
+## Check v0
+res <- tools::assertError(SimInf_model(G     = G,
+                                       S     = S,
+                                       U     = U,
+                                       ldata = matrix(rep(0, Nn), nrow = 1),
+                                       tspan = c(1, 2),
+                                       u0    = u0,
+                                       v0    = 1))
+stopifnot(res[[1]]$message == "v0 must be a numeric matrix")
+res <- SimInf_model(G     = G,
+                    S     = S,
+                    U     = U,
+                    ldata = matrix(rep(0, Nn), nrow = 1),
+                    tspan = c(1, 2),
+                    u0    = u0,
+                    v0    = matrix(rep(1L, Nn), nrow = 1,
+                                   dimnames = list("phi")))
 
 ## Check tspan
 res <- tools::assertError(new("SimInf_model",
@@ -136,6 +285,15 @@ res <- tools::assertError(SimInf_model(G     = G,
                                        u0    = u0_double))
 stopifnot(length(grep("u0 must be an integer matrix",
                       res[[1]]$message)) > 0)
+
+## Change u0 to vector. Should raise an error.
+res <- tools::assertError(SimInf_model(G     = G,
+                                       S     = S,
+                                       U     = U,
+                                       ldata = matrix(rep(0, Nn), nrow = 1),
+                                       tspan = as.numeric(1:10),
+                                       u0    = as.numeric(u0)))
+stopifnot(res[[1]]$message == "u0 must be an integer matrix")
 
 ## Check S
 res <- tools::assertError(new("SimInf_model",
@@ -565,13 +723,13 @@ model <- SISe(u0 = u0, tspan = 1:10,
               end_t4  = 365,
               epsilon = 0.000011)
 
-U(model) <- data.frame(time = c(5, 6, 7, 8, 9, 10),
-                       node = c(1, 1, 2, 2, 3, 3),
-                       S = c(TRUE, FALSE, TRUE, FALSE, TRUE, FALSE),
-                       I = c(FALSE, TRUE, FALSE, TRUE, FALSE, TRUE))
-V(model) <- data.frame(time = 5:10,
-                       node = 1:6,
-                       phi = rep(TRUE, 6))
+punchcard(model) <- data.frame(time = c(5, 6, 7, 8, 9, 10),
+                               node = c(1, 1, 2, 2, 3, 3),
+                               S = c(TRUE, FALSE, TRUE, FALSE, TRUE, FALSE),
+                               I = c(FALSE, TRUE, FALSE, TRUE, FALSE, TRUE))
+punchcard(model) <- data.frame(time = 5:10,
+                               node = 1:6,
+                               phi = rep(TRUE, 6))
 result <- run(model, threads = 1)
 stopifnot(identical(colnames(trajectory(result, as.is = TRUE)), as.character(1:10)))
 stopifnot(identical(colnames(trajectory(result, "phi", as.is = TRUE)), as.character(1:10)))
@@ -593,16 +751,13 @@ model <- SISe(u0 = u0, tspan = tspan,
               end_t4  = 365,
               epsilon = 0.000011)
 
-U(model) <- data.frame(time = c(5, 6, 7, 8, 9, 10),
-                       node = c(1, 1, 2, 2, 3, 3),
-                       S = c(TRUE, FALSE, TRUE, FALSE, TRUE, FALSE),
-                       I = c(FALSE, TRUE, FALSE, TRUE, FALSE, TRUE))
-V(model) <- data.frame(time = 5:10,
-                       node = 1:6,
-                       phi = rep(TRUE, 6))
-V(model) <- data.frame(time = 5:10,
-                       node = 1:6,
-                       phi = rep(TRUE, 6))
+punchcard(model) <- data.frame(time = c(5, 6, 7, 8, 9, 10),
+                               node = c(1, 1, 2, 2, 3, 3),
+                               S = c(TRUE, FALSE, TRUE, FALSE, TRUE, FALSE),
+                               I = c(FALSE, TRUE, FALSE, TRUE, FALSE, TRUE))
+punchcard(model) <- data.frame(time = 5:10,
+                               node = 1:6,
+                               phi = rep(TRUE, 6))
 result <- run(model, threads = 1)
 stopifnot(identical(colnames(trajectory(result, as.is = TRUE)), as.character(tspan)))
 stopifnot(identical(colnames(trajectory(result, "phi", as.is = TRUE)), as.character(tspan)))
@@ -659,3 +814,19 @@ gdata(model, "beta") <- 6
 stopifnot(identical(gdata(model), structure(c(6, 4), .Names = c("beta", "gamma"))))
 tools::assertError(gdata(model) <- 6)
 tools::assertError(gdata(model, "beta") <- "6")
+tools::assertError(gdata(model, 5) <- 6)
+tools::assertError("gdata<-"(model, "beta"))
+
+## Check 'ldata'
+model@ldata <- matrix(1, dimnames = list("test", NULL))
+res <- tools::assertError(ldata(5))
+stopifnot(res[[1]]$message == "'model' argument is not a 'SimInf_model'")
+res <- tools::assertError(ldata(model))
+stopifnot(res[[1]]$message == "Missing 'node' argument")
+res <- tools::assertError(ldata(model, "0"))
+stopifnot(res[[1]]$message == "Invalid 'node' argument")
+res <- tools::assertError(ldata(model, 0))
+stopifnot(res[[1]]$message == "Invalid 'node' argument")
+res <- tools::assertError(ldata(model, c(0, 0)))
+stopifnot(res[[1]]$message == "Invalid 'node' argument")
+ldata(model, 1)
