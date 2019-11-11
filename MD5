@@ -1,6 +1,6 @@
-683d155c4c57ad3c714216460e43133f *DESCRIPTION
+336e1a39aa5df7cf5a290ade0574dc1f *DESCRIPTION
 9e869a8aacfcee6710a9deec6e342db5 *NAMESPACE
-6b8368d583f573bd0d7c1b9a4131c47d *NEWS
+87415b32ab3386cb8354b8b13ea41d92 *NEWS.md
 a3f45bef295df36fe703285eb517d306 *R/SEIR.R
 90950ff5e4990949e5e3b6f9ee4216cf *R/SIR.R
 a3987b9127c29bd73e98cbdf76e52b08 *R/SISe.R
@@ -23,7 +23,7 @@ e86e7138f001a69b35bb2dae8fd4dc49 *R/run.R
 e4a24eb3088f77999c1946382587e2bc *R/run_outer.R
 c3fd95374bd35d7a370b5ea72091b7dd *R/trajectory.R
 26b681ef6ca0397867645abef6144c50 *README.md
-b38b64fbbba59f2d14c82d2d42ac18c3 *build/vignette.rds
+2ea7b5eb5f67e66e5bce10cbe63e021d *build/vignette.rds
 2f827bf880da06156f16b13a6d1652bc *cleanup
 87a88dbe3610b7b7dc36192c6126eed4 *cleanup.win
 b12a4a6184252907ae4da8d0300f10c6 *configure
@@ -32,10 +32,10 @@ e246b4ebc994e29beffef77ac784b12b *configure.win
 92d07847d90e0c2a505f41140889d1dc *data/events_SISe3.rda
 ff4c69bfaa0057b4469c8784f825f329 *data/nodes.rda
 25fd46ad094359f08eb7c3678455b515 *data/u0_SISe3.rda
-92ee60299765986a73eb719913280a73 *inst/CITATION
-7b6b10a8bceccaa675599c8848333cea *inst/doc/SimInf.R
-0b3205dc96d00bf24203149c7e3659a4 *inst/doc/SimInf.Rnw
-f5a2869f80f169ecd5f9388a4af12c17 *inst/doc/SimInf.pdf
+b02e5cd1ef2d8a43b24c8ad1b7716bfd *inst/CITATION
+3915e189f38744671620825ab093cd77 *inst/doc/SimInf.R
+a04de55cd5580f11e1886e28c7277aff *inst/doc/SimInf.Rnw
+3563f02bc3c6795e46460a4669215dc4 *inst/doc/SimInf.pdf
 9a86561985cd6944791b1f74187f0e57 *inst/include/SimInf.h
 73f63cfb00c6d0325030949da8bdcd04 *man/C_code.Rd
 dfd62ca59457ada5b99848d5c3118c4c *man/Nn.Rd
@@ -129,7 +129,7 @@ cc69ccdf2ffb16bef2eca3565cbccc9e *tests/SISe_sp.R
 ff8f69aa2e115a4d11f1179530b52302 *tests/SimInf_model.R
 90b5e7859d4c264cd7c3b8f6bce1b1c7 *tests/ldata_sp.R
 943a71acc371a94e9aeec49a462e7efb *tests/measures.R
-3f878bd141af56a81f39dc022e8a9871 *tests/mparse.R
+e2b0603ebd9a7d4b72dbab3b05edcf77 *tests/mparse.R
 f8998146ce1eb3ce7acbc72a3f735085 *tests/package_skeleton.R
 94a775bf9cf7e786f44e14f32d2d9b8f *tests/phi.R
 088157a74a2d1f2c3c3fb676d8a13f13 *tests/prevalence.R
@@ -137,8 +137,8 @@ cf862f6a4ebd0add2f88c2fb9e8bdfaa *tests/punchcard.R
 d200514f5b09b911359718c0985558b8 *tests/run_outer.R
 9de61f1de4aaa3db7510b6190b86cdc1 *tests/sample_select.R
 93bfc062897aa01cb4eff9ec7a3ed464 *tests/solver_aem.R
-0b3205dc96d00bf24203149c7e3659a4 *vignettes/SimInf.Rnw
-041f50705891182cec0d6450761779c1 *vignettes/SimInf.bib
+a04de55cd5580f11e1886e28c7277aff *vignettes/SimInf.Rnw
+d8c3bb0f406a2d2031d7ef9b42943953 *vignettes/SimInf.bib
 5c04c8b8a805c78e452c7b7e9c23479e *vignettes/img/SISe_sp-prevalence.pdf
 79dda74236a5213b9c0f36df73846ae8 *vignettes/img/enter.pdf
 8e4592483c76825ee1f56177845973f5 *vignettes/img/exit.pdf

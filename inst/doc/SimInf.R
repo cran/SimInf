@@ -124,7 +124,7 @@ remove <- data.frame(event = "exit", time = c(70, 110),
 
 
 ###################################################
-### code chunk number 18: SimInf.Rnw:1321-1327 (eval = FALSE)
+### code chunk number 18: SimInf.Rnw:1345-1351 (eval = FALSE)
 ###################################################
 ## events = rbind(add, infect, move, remove)
 ## model <- SIR(u0 = u0, tspan = 1:180, events = events, beta = 0.16,
@@ -204,7 +204,7 @@ model <- SISe_sp(u0 = u0, tspan = 1:1460, events = events, phi = 0,
 
 
 ###################################################
-### code chunk number 26: SimInf.Rnw:1510-1518 (eval = FALSE)
+### code chunk number 26: SimInf.Rnw:1538-1546 (eval = FALSE)
 ###################################################
 ## plot(NULL, xlim = c(0, 1500), ylim = c(0, 0.18), ylab = "Prevalance",
 ##   xlab = "Time")
@@ -217,7 +217,7 @@ model <- SISe_sp(u0 = u0, tspan = 1:1460, events = events, phi = 0,
 
 
 ###################################################
-### code chunk number 27: SimInf.Rnw:1527-1533 (eval = FALSE)
+### code chunk number 27: SimInf.Rnw:1555-1561 (eval = FALSE)
 ###################################################
 ## gdata(model, "coupling") <- 0.1
 ## replicate(5, {
