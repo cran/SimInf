@@ -1,14 +1,17 @@
-## SimInf, a framework for stochastic disease spread simulations
-## Copyright (C) 2015  Pavol Bauer
-## Copyright (C) 2015 - 2019  Stefan Engblom
-## Copyright (C) 2015 - 2019  Stefan Widgren
+## This file is part of SimInf, a framework for stochastic
+## disease spread simulations.
 ##
-## This program is free software: you can redistribute it and/or modify
+## Copyright (C) 2015 Pavol Bauer
+## Copyright (C) 2017 -- 2019 Robin Eriksson
+## Copyright (C) 2015 -- 2019 Stefan Engblom
+## Copyright (C) 2015 -- 2019 Stefan Widgren
+##
+## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
 ## the Free Software Foundation, either version 3 of the License, or
 ## (at your option) any later version.
 ##
-## This program is distributed in the hope that it will be useful,
+## SimInf is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ## GNU General Public License for more details.
@@ -17,15 +20,14 @@
 ## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ## Use 'R CMD SHLIB' to compile the C code for the model.
-do_compile_model <- function(filename)
-{
+do_compile_model <- function(filename) {
     ## Include directive for "SimInf.h"
     include <- system.file("include", package = "SimInf")
-    Sys.setenv(PKG_CPPFLAGS=sprintf("-I%s", shQuote(include)))
+    Sys.setenv(PKG_CPPFLAGS = sprintf("-I%s", shQuote(include)))
 
     ## Compile the model C code using the running version of R.
     wd <- setwd(dirname(filename))
-    cmd <- paste(shQuote(file.path(R.home(component="bin"), "R")),
+    cmd <- paste(shQuote(file.path(R.home(component = "bin"), "R")),
                  "CMD SHLIB",
                  shQuote(paste0(basename(filename), ".c")))
     compiled <- system(cmd, intern = TRUE)
@@ -33,14 +35,13 @@ do_compile_model <- function(filename)
 
     lib <- paste0(filename, .Platform$dynlib.ext)
     if (!file.exists(lib))
-        stop(compiled)
+        stop(compiled, call. = FALSE)
 
     lib
 }
 
 ## Check if model contains C code
-contains_C_code <- function(model)
-{
+contains_C_code <- function(model) {
     if (nchar(paste0(model@C_code, collapse = "\n")))
         return(TRUE)
     FALSE
@@ -78,7 +79,7 @@ contains_C_code <- function(model)
 ##'              gamma = 0.077)
 ##'
 ##' ## Run the model and save the result.
-##' result <- run(model, threads = 1)
+##' result <- run(model)
 ##'
 ##' ## Plot the proportion of susceptible, infected and recovered
 ##' ## individuals.
@@ -96,9 +97,17 @@ setGeneric("run",
 ##' @importFrom methods validObject
 setMethod("run",
           signature(model = "SimInf_model"),
-          function(model, threads, solver)
-          {
+          function(model, threads, solver) {
               solver <- match.arg(solver)
+
+              ## FIXME: The 'threads' argument can be dropped with the
+              ##  new function 'set_num_threads' added. That also
+              ##  means that 'threads' should be removed from the
+              ##  expression to parse (below). However, since it is a
+              ##  breaking change to remove the 'threads' argument in
+              ##  '.Call', just use 'set_num_threads' for now.
+              if (!is.null(threads))
+                  set_num_threads(threads)
 
               ## Check that SimInf_model contains all data structures
               ## required by the siminf solver and that they make sense
@@ -125,7 +134,7 @@ setMethod("run",
                   run_fn <- paste0(name, "_run")
 
                   ## Create expression to parse
-                  expr <- ".Call(run_fn, model, threads, solver, PACKAGE = 'SimInf')"
+                  expr <- ".Call(run_fn, model, threads, solver)"
               }
 
               ## Run the model. Re-throw any error without the call

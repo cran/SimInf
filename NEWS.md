@@ -1,11 +1,58 @@
-# SimInf 6.3.0
+# SimInf 6.5.0
+
+## IMPROVEMENTS
+
+* It's now possible to have a 'tspan' vector of length one to simulate
+  over one time-unit only i.e. [t, t+1).
+
+* The `trajectory` function has been ported to C and parallelized to
+  efficiently transform simulated data from a model to a `data.frame`.
+
+* Static code analysis of the codebase has been performed using the
+  `lintr` package in order to improve code style, consistency and
+  readability.
+
+* It's now possible to specify what type of plot should be drawn from
+  the simulated data, see the documentation.
+
+* Better documentation of the SISe, SISe3, SISe_sp, and SISe3_sp
+  models.
+
+## CHANGES
+
+* The way to specify the number of threads to use in parallelized
+  functions has been changed to fix that specifying the number of
+  threads should only affect SimInf and not other packages using
+  OpenMP. Use `set_num_threads` to specify the number of threads, see
+  documentation. It still works to pass the number of threads to the
+  `run()` function, however, the `threads` argument will be removed
+  from `run()` in a future release.
+
+* Updated the vignette to use the 'set_num_threads' function.
+
+* To avoid cluttering the error message, the name of the internal
+  function that generated the error has been removed from the error
+  message (use `traceback` to print the call stack of the last
+  uncaught error). Additionally, all error messages now ends with a
+  `.` (full stop).
+
+* Removed the row and column names from the internal matrices U and V
+  because they were not used anywhere in the code.
+
+## BUG FIXES
+
+* Fix storing solution of the state vectors of the first time point
+  until after simulated time has passed the the first time point in
+  tspan.
+
+# SimInf 6.4.0
 
 ## CHANGES
 
 * Updated the vignette, the CITATION file and added the DOI for the
   JSS publication to DESCRIPTION/Description.
 
-* Renamed the `NEWS` file to `NEWS.md` and changed to use markdown
+* Renamed the NEWS file to NEWS.md and changed to use markdown
   format style.
 
 ## BUG FIX

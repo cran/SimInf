@@ -37,7 +37,8 @@ tspan <- seq(from = 1, to = 180, by = 7)
 ###################################################
 model <- SIR(u0 = u0, tspan = tspan, beta = 0.16, gamma = 0.077)
 set.seed(123)
-result <- run(model = model, threads = 1)
+set_num_threads(1)
+result <- run(model = model)
 
 
 ###################################################
@@ -124,13 +125,14 @@ remove <- data.frame(event = "exit", time = c(70, 110),
 
 
 ###################################################
-### code chunk number 18: SimInf.Rnw:1345-1351 (eval = FALSE)
+### code chunk number 18: SimInf.Rnw:1352-1359 (eval = FALSE)
 ###################################################
 ## events = rbind(add, infect, move, remove)
 ## model <- SIR(u0 = u0, tspan = 1:180, events = events, beta = 0.16,
 ##   gamma = 0.077)
 ## set.seed(3)
-## result <- run(model, threads = 1)
+## set_num_threads(1)
+## result <- run(model)
 ## plot(result, node = 1:5, range = FALSE)
 
 
@@ -141,7 +143,8 @@ events = rbind(add, infect, move, remove)
 model <- SIR(u0 = u0, tspan = 1:180, events = events, beta = 0.16,
 gamma = 0.077)
 set.seed(3)
-result <- run(model, threads = 1)
+set_num_threads(1)
+result <- run(model)
 pdf("SimInf-SIR-events-I.pdf", width = 10, height = 5)
 plot(result, node = 1:5, range = FALSE)
 dev.off()
@@ -154,7 +157,8 @@ model_no_infected <- SIR(u0 = u0, tspan = 1:180,
 events = rbind(add, move, remove), beta = 0.16,
 gamma = 0.077)
 set.seed(3)
-result_no_infected <- run(model_no_infected, threads = 1)
+set_num_threads(1)
+result_no_infected <- run(model_no_infected)
 pdf("SimInf-SIR-events-II.pdf", width = 10, height = 5)
 plot(result_no_infected, node = 1:5, range = FALSE)
 dev.off()
@@ -164,8 +168,9 @@ dev.off()
 ### code chunk number 21: SIR-replicate
 ###################################################
 set.seed(123)
+set_num_threads(1)
 mean(replicate(n = 1000, {
-  nI <- trajectory(run(model = model, threads = 1), node = 1:4)$I
+  nI <- trajectory(run(model = model), node = 1:4)$I
   sum(nI) > 0
 }))
 
@@ -204,24 +209,25 @@ model <- SISe_sp(u0 = u0, tspan = 1:1460, events = events, phi = 0,
 
 
 ###################################################
-### code chunk number 26: SimInf.Rnw:1538-1546 (eval = FALSE)
+### code chunk number 26: SimInf.Rnw:1549-1558 (eval = FALSE)
 ###################################################
 ## plot(NULL, xlim = c(0, 1500), ylim = c(0, 0.18), ylab = "Prevalance",
 ##   xlab = "Time")
 ## set.seed(123)
+## set_num_threads(1)
 ## replicate(5, {
-##   result <- run(model = model, threads = 1)
+##   result <- run(model = model)
 ##   p <- prevalence(model = result, formula = I ~ S + I, type = "nop")
 ##   lines(p)
 ## })
 
 
 ###################################################
-### code chunk number 27: SimInf.Rnw:1555-1561 (eval = FALSE)
+### code chunk number 27: SimInf.Rnw:1567-1573 (eval = FALSE)
 ###################################################
 ## gdata(model, "coupling") <- 0.1
 ## replicate(5, {
-##   result <- run(model = model, threads = 1)
+##   result <- run(model = model)
 ##   p <- prevalence(model = result, formula = I ~ S + I, type = "nop")
 ##   lines(p, col = "blue", lty = 2)
 ## })
@@ -247,7 +253,8 @@ model <- mparse(transitions = transitions, compartments = compartments,
 ### code chunk number 30: SIR-mparse-III (eval = FALSE)
 ###################################################
 ## set.seed(123)
-## result <- run(model = model, threads = 1)
+## set_num_threads(1)
+## result <- run(model = model)
 ## plot(result)
 
 
@@ -255,7 +262,8 @@ model <- mparse(transitions = transitions, compartments = compartments,
 ### code chunk number 31: SIR-mparse-IV
 ###################################################
 set.seed(123)
-result <- run(model = model, threads = 1)
+set_num_threads(1)
+result <- run(model = model)
 plot(result)
 
 
@@ -275,7 +283,8 @@ plot(result)
 ## model <- mparse(transitions = transitions, compartments = compartments,
 ##   gdata = c(b = 0.16, g = 0.077), u0 = u0, tspan = 1:150)
 ## set.seed(123)
-## result <- run(model = model, threads = 1)
+## set_num_threads(1)
+## result <- run(model = model)
 
 
 ###################################################
@@ -305,7 +314,8 @@ R = rep(0, n))
 model <- mparse(transitions = transitions, compartments = compartments,
 gdata = c(b = 0.16, g = 0.077), u0 = u0, tspan = 1:150)
 set.seed(123)
-result <- run(model = model, threads = 1)
+set_num_threads(1)
+result <- run(model = model)
 traj <- trajectory(model = result, compartments = "Icum")
 cases <- stepfun(result@tspan[-1], diff(c(0, traj$Icum[traj$node == 1])))
 avg_cases <- c(0, diff(by(traj, traj$time, function(x) sum(x$Icum))) / n)
@@ -449,7 +459,8 @@ model <- mparse(transitions = transitions, compartments = compartments,
 ###################################################
 ## model <- PredatorPrey(u0 = u0, tspan = 1:100, gdata = parameters)
 ## set.seed(123)
-## result <- run(model, threads = 1)
+## set_num_threads(1)
+## result <- run(model)
 
 
 ###################################################
