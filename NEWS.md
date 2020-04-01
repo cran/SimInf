@@ -1,4 +1,12 @@
-# SimInf 6.5.0
+# SimInf 6.5.1 (2020-04-01)
+
+## BUG FIXES
+
+* Fixed a memory access error in the internal C code that was
+  introduced in the recently released 6.5.0 version. Detected by the
+  CRAN gcc-UBSAN tests (Undefined Behavior Sanitizer).
+
+# SimInf 6.5.0 (2020-03-29)
 
 ## IMPROVEMENTS
 
@@ -45,7 +53,7 @@
   until after simulated time has passed the the first time point in
   tspan.
 
-# SimInf 6.4.0
+# SimInf 6.4.0 (2019-11-12)
 
 ## CHANGES
 
@@ -59,7 +67,7 @@
 
 * Removed a timestamp from a test to avoid a possible test failure.
 
-# SimInf 6.3.0
+# SimInf 6.3.0 (2019-05-26)
 
 ## IMPROVEMENTS
 
@@ -88,7 +96,7 @@
 * Fix a link-type optimization type mismatch in the internal C
   function `SimInf_ldata_sp` (detected by the CRAN checks).
 
-# SimInf 6.2.0
+# SimInf 6.2.0 (2018-11-20)
 
 ## IMPROVEMENTS
 
@@ -109,7 +117,7 @@
 * Better error message when an invalid rate or a negative state is
   detected during a simulation.
 
-# SimInf 6.1.0
+# SimInf 6.1.0 (2018-08-13)
 
 ## IMPROVEMENTS
 
@@ -124,7 +132,7 @@
 
 * Fixed broken mparse example.
 
-# SimInf 6.0.0
+# SimInf 6.0.0 (2018-04-21)
 
 ## IMPROVEMENTS
 
@@ -188,7 +196,7 @@
 * Removed the `seed` argument from the `run` method. Use `set.seed`
   instead.
 
-# SimInf 5.1.0
+# SimInf 5.1.0 (2017-10-18)
 
 ## BUG FIXES
 
@@ -203,7 +211,7 @@
 
 * Improvements in the vignette.
 
-# SimInf 5.0.0
+# SimInf 5.0.0 (2017-06-13)
 
 ## NEW FEATURES
 
@@ -240,7 +248,7 @@
 * Added missing call to `PROTECT` to protect newly created matrices (R
   objects) from the garbage collector.
 
-# SimInf 4.0.0
+# SimInf 4.0.0 (2017-03-21)
 
 ## NEW FEATURES
 
@@ -295,7 +303,7 @@
   respectively. Prior to this change, the state was copied after the
   first time step.
 
-# SimInf 3.0.0
+# SimInf 3.0.0 (2017-01-29)
 
 ## NEW FEATURES
 
@@ -314,7 +322,7 @@
 * Added a parameter with a pointer to a random number generator to the
   post time step function.
 
-# SimInf 2.0.0
+# SimInf 2.0.0 (2016-05-04)
 
 ## NEW FEATURES
 
@@ -355,6 +363,6 @@
   avoid 0 in the direct SSA. If zero was randomly selected and the
   first compartment empty, the simulator could enter a negative state.
 
-# SimInf 1.0.0
+# SimInf 1.0.0 (2016-01-08)
 
 * First release.

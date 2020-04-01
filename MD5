@@ -1,6 +1,6 @@
-eb1ff919bb81a707ac2d41e0f4d39f3a *DESCRIPTION
+c8526044b0b1126cc7c01c1791c1fd40 *DESCRIPTION
 228040580835f6d8de51a64a5f5b5eb8 *NAMESPACE
-dd7b74a89653ceb34b4c88f2296bd3d4 *NEWS.md
+f17f1cdc1694173d450e256845801e56 *NEWS.md
 38c1f6ff824e70437bd83e2f7daee48d *R/SEIR.R
 bb0b55db1f46eec7d9f477a40aec9086 *R/SIR.R
 7e22f6de4506b67f1afc79d16559cc0b *R/SISe.R
@@ -36,7 +36,7 @@ e246b4ebc994e29beffef77ac784b12b *configure.win
 b02e5cd1ef2d8a43b24c8ad1b7716bfd *inst/CITATION
 33ec3be9581e342324abfc4a8134a1fa *inst/doc/SimInf.R
 58fa6fa6f6149e0d1826f1c2cb8b00f5 *inst/doc/SimInf.Rnw
-389bbebe5d6ca6f519e84ba3de7fc774 *inst/doc/SimInf.pdf
+bad3d5f7f1938b1cf7c0c1f4e514f214 *inst/doc/SimInf.pdf
 bfe4d47e88ede6fba32d87582e0676e8 *inst/include/SimInf.h
 73f63cfb00c6d0325030949da8bdcd04 *man/C_code.Rd
 dfd62ca59457ada5b99848d5c3118c4c *man/Nn.Rd
@@ -108,10 +108,9 @@ ff1d6deb75c4c21dd5948451e23090ec *src/misc/SimInf_local_spread.c
 4c37f5131a072810c885848cf4a3abb9 *src/misc/SimInf_local_spread.h
 0defb883e7426357bd413876b5dbd685 *src/misc/SimInf_openmp.c
 d48c5974b6d7ca4322cadda02e69b18a *src/misc/SimInf_openmp.h
-af3b52e097d8f2b325f2eea875c8f773 *src/misc/SimInf_trajectory.c
+2d0b04fbeb2bef682a14eaa259efde0b *src/misc/SimInf_trajectory.c
 bd5575388c2d229bef8b921941c123d8 *src/misc/binheap.c
 c8ca0fc44d539f89267da60825eecb28 *src/misc/binheap.h
-d235e861d3bfd9c49f9eb431713ab267 *src/misc/kbtree.h
 5683514edd18c8089bc059ed3b5a9bdc *src/misc/kvec.h
 b6f964a6a54a0916a53c2892c4cab597 *src/models/SEIR.c
 b03c315fc390fbf7787bc3f652175808 *src/models/SIR.c
