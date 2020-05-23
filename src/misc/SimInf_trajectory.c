@@ -22,7 +22,7 @@
  */
 
 #include <Rdefines.h>
-
+#include <R_ext/Visibility.h>
 #include "SimInf.h"
 #include "SimInf_openmp.h"
 #include "kvec.h"
@@ -131,7 +131,8 @@ static void SimInf_sparse2df_int(
         int *p_vec = INTEGER(vec);
 
         if (ri) {
-            R_xlen_t p_vec_i = 0, j = 0, k = 0;
+            size_t k = 0;
+            R_xlen_t p_vec_i = 0, j = 0;
 
             while (k < kv_size(*ri)) {
                 R_xlen_t p_time = kv_A(*ri, k).time;
@@ -210,7 +211,8 @@ static void SimInf_sparse2df_real(
         double *p_vec = REAL(vec);
 
         if (ri) {
-            R_xlen_t p_vec_i = 0, j = 0, k = 0;
+            size_t k = 0;
+            R_xlen_t p_vec_i = 0, j = 0;
 
             while (k < kv_size(*ri)) {
                 R_xlen_t p_time = kv_A(*ri, k).time;
@@ -372,7 +374,7 @@ static void SimInf_dense2df_real(
  *        indices of the nodes to include in the data.frame.
  * @return A data.frame.
  */
-SEXP SimInf_trajectory(
+SEXP attribute_hidden SimInf_trajectory(
     SEXP dm,
     SEXP dm_i,
     SEXP dm_lbl,
@@ -457,7 +459,7 @@ SEXP SimInf_trajectory(
     PROTECT(vec = Rf_allocVector(INTSXP, nrow));
     p_vec = INTEGER(vec);
     if (ri) {
-        for (R_xlen_t i = 0; i < kv_size(*ri); i++)
+        for (size_t i = 0; i < kv_size(*ri); i++)
             p_vec[i] = kv_A(*ri, i).id + 1;
     } else if (p_nodes != NULL) {
         #pragma omp parallel for num_threads(SimInf_num_threads())
@@ -482,7 +484,7 @@ SEXP SimInf_trajectory(
         p_vec = INTEGER(vec);
 
         if (ri) {
-            for (R_xlen_t i = 0; i < kv_size(*ri); i++)
+            for (size_t i = 0; i < kv_size(*ri); i++)
                 p_vec[i] = p_tspan[kv_A(*ri, i).time];
         } else {
             #pragma omp parallel for num_threads(SimInf_num_threads())
@@ -500,7 +502,7 @@ SEXP SimInf_trajectory(
         PROTECT(vec = Rf_allocVector(STRSXP, nrow));
 
         if (ri) {
-            for (R_xlen_t i = 0; i < kv_size(*ri); i++)
+            for (size_t i = 0; i < kv_size(*ri); i++)
                 SET_STRING_ELT(vec, i, STRING_ELT(lbl_tspan, kv_A(*ri, i).time));
         } else {
             for (R_xlen_t t = 0; t < tlen; t++) {

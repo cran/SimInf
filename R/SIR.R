@@ -4,7 +4,7 @@
 ## Copyright (C) 2015 Pavol Bauer
 ## Copyright (C) 2017 -- 2019 Robin Eriksson
 ## Copyright (C) 2015 -- 2019 Stefan Engblom
-## Copyright (C) 2015 -- 2019 Stefan Widgren
+## Copyright (C) 2015 -- 2020 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -71,8 +71,8 @@ setClass("SIR", contains = c("SimInf_model"))
 ##' @template u0-param
 ##' @template tspan-param
 ##' @template events-param
-##' @param beta The transmission rate from susceptible to infected.
-##' @param gamma The recovery rate from infected to recovered.
+##' @template beta-param
+##' @template gamma-param
 ##' @return A \code{\link{SimInf_model}} of class \code{SIR}
 ##' @include check_arguments.R
 ##' @export
@@ -100,7 +100,9 @@ SIR <- function(u0,
     u0 <- check_u0(u0, compartments)
 
     ## Check for non-numeric parameters
-    check_gdata_arg(beta, gamma)
+    check_ldata_arg(nrow(u0), beta, gamma)
+    beta <- rep(beta, length.out = nrow(u0))
+    gamma <- rep(gamma, length.out = nrow(u0))
 
     ## Arguments seem ok...go on
 
@@ -116,15 +118,16 @@ SIR <- function(u0,
     S <- matrix(c(-1, 1, 0, 0, -1, 1), nrow = 3, ncol = 2,
                 dimnames = list(compartments, c("1", "2")))
 
-    gdata <- as.numeric(c(beta, gamma))
-    names(gdata) <- c("beta", "gamma")
+    ldata <- matrix(as.numeric(c(beta, gamma)),
+                    nrow  = 2, byrow = TRUE,
+                    dimnames = list(c("beta", "gamma")))
 
     model <- SimInf_model(G      = G,
                           S      = S,
                           E      = E,
                           tspan  = tspan,
                           events = events,
-                          gdata  = gdata,
+                          ldata  = ldata,
                           u0     = u0)
 
     as(model, "SIR")

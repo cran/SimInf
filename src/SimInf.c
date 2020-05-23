@@ -5,7 +5,7 @@
  * Copyright (C) 2015 Pavol Bauer
  * Copyright (C) 2017 -- 2019 Robin Eriksson
  * Copyright (C) 2015 -- 2019 Stefan Engblom
- * Copyright (C) 2015 -- 2019 Stefan Widgren
+ * Copyright (C) 2015 -- 2020 Stefan Widgren
  *
  * SimInf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,26 +22,81 @@
  */
 
 #include <Rdefines.h>
-
+#include <R_ext/Visibility.h>
 #include "SimInf_arg.h"
 #include "SimInf_openmp.h"
 #include "solvers/SimInf_solver.h"
 #include "solvers/ssm/SimInf_solver_ssm.h"
 #include "solvers/aem/SimInf_solver_aem.h"
 
+static void SimInf_raise_error(int error)
+{
+    switch (error) {
+    case SIMINF_ERR_NEGATIVE_STATE:
+        Rf_error("Negative state detected.");
+        break;
+    case SIMINF_ERR_ALLOC_MEMORY_BUFFER:
+        Rf_error("Unable to allocate memory buffer.");
+        break;
+    case SIMINF_UNDEFINED_EVENT:
+        Rf_error("Undefined event type.");
+        break;
+    case SIMINF_INVALID_THREADS_VALUE:
+        Rf_error("Invalid 'threads' value.");
+        break;
+    case SIMINF_ERR_V_IS_NOT_FINITE:
+        Rf_error("The continuous state 'v' is not finite.");
+        break;
+    case SIMINF_ERR_SAMPLE_SELECT:
+        Rf_error("Unable to sample individuals for event.");
+        break;
+    case SIMINF_ERR_INVALID_MODEL:
+        Rf_error("Invalid model.");
+        break;
+    case SIMINF_ERR_V_IS_NEGATIVE:
+        Rf_error("The continuous state 'v' is negative.");
+        break;
+    case SIMINF_ERR_INVALID_RATE:
+        Rf_error("Invalid rate detected (non-finite or < 0.0).");
+        break;
+    case SIMINF_ERR_UNKNOWN_SOLVER:
+        Rf_error("Invalid 'solver' value.");
+        break;
+    case SIMINF_ERR_DEST_OUT_OF_BOUNDS:
+        Rf_error("'dest' is out of bounds.");
+        break;
+    case SIMINF_ERR_NODE_OUT_OF_BOUNDS:
+        Rf_error("'node' is out of bounds.");
+        break;
+    case SIMINF_ERR_EVENTS_N:
+        Rf_error("'N' is invalid.");
+        break;
+    case SIMINF_ERR_EVENT_SHIFT:
+        Rf_error("'shift' is invalid.");
+        break;
+    case SIMINF_ERR_SHIFT_OUT_OF_BOUNDS:
+        Rf_error("'shift' is out of bounds.");
+        break;
+    case SIMINF_ERR_INVALID_PROPORTION:
+        Rf_error("Invalid proportion detected (< 0.0 or > 1.0).");
+        break;
+    default:
+        Rf_error("Unknown error code: %i.", error);
+        break;
+    }
+}
+
 /**
  * Initiate and run the simulation
  *
  * @param model The SimInf_model
- * @param threads Number of threads
  * @param solver The numerical solver.
  * @param tr_fun Vector of function pointers to transition rate functions.
  * @param pts_fun Function pointer to callback after each time step
  *        e.g. update infectious pressure.
  */
-SEXP SimInf_run(
+SEXP attribute_hidden SimInf_run(
     SEXP model,
-    SEXP threads,
     SEXP solver,
     TRFun *tr_fun,
     PTSFun pts_fun)
@@ -120,13 +175,19 @@ SEXP SimInf_run(
     args.proportion = REAL(GET_SLOT(ext_events, Rf_install("proportion")));
     args.select = INTEGER(GET_SLOT(ext_events, Rf_install("select")));
     args.shift = INTEGER(GET_SLOT(ext_events, Rf_install("shift")));
+
+    /* Select matrix. */
     PROTECT(E = GET_SLOT(ext_events, Rf_install("E")));
     nprotect++;
     args.irE = INTEGER(GET_SLOT(E, Rf_install("i")));
     args.jcE = INTEGER(GET_SLOT(E, Rf_install("p")));
+    args.prE = REAL(GET_SLOT(E, Rf_install("x")));
+
+    /* Shift matrix. */
     PROTECT(N = GET_SLOT(ext_events, Rf_install("N")));
     nprotect++;
-    args.N = INTEGER(N);
+    if (Rf_nrows(N) == INTEGER(GET_SLOT(E, Rf_install("Dim")))[0])
+        args.N = INTEGER(N);
 
     /* Constants */
     args.Nn = INTEGER(GET_SLOT(GET_SLOT(result, Rf_install("u0")), R_DimSymbol))[1];
@@ -194,58 +255,8 @@ SEXP SimInf_run(
         error = SIMINF_ERR_UNKNOWN_SOLVER;
 
 cleanup:
-    if (error) {
-        switch (error) {
-        case SIMINF_ERR_NEGATIVE_STATE:
-            Rf_error("Negative state detected.");
-            break;
-        case SIMINF_ERR_ALLOC_MEMORY_BUFFER:
-            Rf_error("Unable to allocate memory buffer.");
-            break;
-        case SIMINF_UNDEFINED_EVENT:
-            Rf_error("Undefined event type.");
-            break;
-        case SIMINF_INVALID_THREADS_VALUE:
-            Rf_error("Invalid 'threads' value.");
-            break;
-        case SIMINF_ERR_V_IS_NOT_FINITE:
-            Rf_error("The continuous state 'v' is not finite.");
-            break;
-        case SIMINF_ERR_SAMPLE_SELECT:
-            Rf_error("Unable to sample individuals for event.");
-            break;
-        case SIMINF_ERR_INVALID_MODEL:
-            Rf_error("Invalid model.");
-            break;
-        case SIMINF_ERR_V_IS_NEGATIVE:
-            Rf_error("The continuous state 'v' is negative.");
-            break;
-        case SIMINF_ERR_INVALID_RATE:
-            Rf_error("Invalid rate detected (non-finite or < 0.0).");
-            break;
-        case SIMINF_ERR_UNKNOWN_SOLVER:
-            Rf_error("Invalid 'solver' value.");
-            break;
-        case SIMINF_ERR_DEST_OUT_OF_BOUNDS:
-            Rf_error("'dest' is out of bounds.");
-            break;
-        case SIMINF_ERR_NODE_OUT_OF_BOUNDS:
-            Rf_error("'node' is out of bounds.");
-            break;
-        case SIMINF_ERR_EVENTS_N:
-            Rf_error("'N' is invalid.");
-            break;
-        case SIMINF_ERR_EVENT_SHIFT:
-            Rf_error("'shift' is invalid.");
-            break;
-        case SIMINF_ERR_SHIFT_OUT_OF_BOUNDS:
-            Rf_error("'shift' is out of bounds.");
-            break;
-        default:
-            Rf_error("Unknown error code: %i.", error);
-            break;
-        }
-    }
+    if (error)
+        SimInf_raise_error(error);
 
     if (nprotect)
         UNPROTECT(nprotect);

@@ -21,8 +21,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <R_ext/Visibility.h>
 #include "SimInf.h"
-#include "SimInf_forward_euler_linear_decay.h"
 
 /* Offset in integer compartment state vector */
 enum {S, I};
@@ -46,13 +46,16 @@ enum {UPSILON, GAMMA, ALPHA, BETA_T1, BETA_T2, BETA_T3, BETA_T4, EPSILON};
  * @param t Current time.
  * @return propensity.
  */
-double SISe_S_to_I(
+static double SISe_S_to_I(
     const int *u,
     const double *v,
     const double *ldata,
     const double *gdata,
     double t)
 {
+    SIMINF_UNUSED(ldata);
+    SIMINF_UNUSED(t);
+
     return gdata[UPSILON] * v[PHI] * u[S];
 }
 
@@ -66,13 +69,17 @@ double SISe_S_to_I(
  * @param t Current time.
  * @return propensity.
  */
-double SISe_I_to_S(
+static double SISe_I_to_S(
     const int *u,
     const double *v,
     const double *ldata,
     const double *gdata,
     double t)
 {
+    SIMINF_UNUSED(v);
+    SIMINF_UNUSED(ldata);
+    SIMINF_UNUSED(t);
+
     return gdata[GAMMA] * u[I];
 }
 
@@ -91,7 +98,7 @@ double SISe_I_to_S(
  * transition rates, or 0 when it doesn't need to update the
  * transition rates.
  */
-int SISe_post_time_step(
+static int SISe_post_time_step(
     double *v_new,
     const int *u,
     const double *v,
@@ -104,6 +111,8 @@ int SISe_post_time_step(
     const double I_n = u[I];
     const double n = u[S] + I_n;
     const double phi = v[PHI];
+
+    SIMINF_UNUSED(node);
 
     /* Time dependent beta in each of the four intervals of the
      * year. Forward Euler step. */
@@ -128,13 +137,12 @@ int SISe_post_time_step(
  * Run simulation with the SISe model
  *
  * @param model The SISe model.
- * @param threads Number of threads.
  * @param solver The numerical solver.
  * @return The simulated trajectory.
  */
-SEXP SISe_run(SEXP model, SEXP threads, SEXP solver)
+SEXP attribute_hidden SISe_run(SEXP model, SEXP solver)
 {
     TRFun tr_fun[] = {&SISe_S_to_I, &SISe_I_to_S};
 
-    return SimInf_run(model, threads, solver, tr_fun, &SISe_post_time_step);
+    return SimInf_run(model, solver, tr_fun, &SISe_post_time_step);
 }

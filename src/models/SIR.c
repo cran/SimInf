@@ -21,6 +21,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <R_ext/Visibility.h>
 #include "SimInf.h"
 
 /* Offset in integer compartment state vector */
@@ -39,7 +40,7 @@ enum {BETA, GAMMA};
  * @param t Current time.
  * @return propensity.
  */
-double SIR_S_to_I(
+static double SIR_S_to_I(
     const int *u,
     const double *v,
     const double *ldata,
@@ -50,8 +51,12 @@ double SIR_S_to_I(
     const double I_n = u[I];
     const double n = S_n + I_n + u[R];
 
+    SIMINF_UNUSED(v);
+    SIMINF_UNUSED(gdata);
+    SIMINF_UNUSED(t);
+
     if (n > 0.0)
-        return (gdata[BETA] * S_n * I_n) / n;
+        return (ldata[BETA] * S_n * I_n) / n;
     return 0.0;
 }
 
@@ -65,14 +70,18 @@ double SIR_S_to_I(
  * @param t Current time.
  * @return propensity.
  */
-double SIR_I_to_R(
+static double SIR_I_to_R(
     const int *u,
     const double *v,
     const double *ldata,
     const double *gdata,
     double t)
 {
-    return gdata[GAMMA] * u[I];
+    SIMINF_UNUSED(v);
+    SIMINF_UNUSED(gdata);
+    SIMINF_UNUSED(t);
+
+    return ldata[GAMMA] * u[I];
 }
 
 /**
@@ -90,7 +99,7 @@ double SIR_I_to_R(
  * transition rates, or 0 when it doesn't need to update the
  * transition rates.
  */
-int SIR_post_time_step(
+static int SIR_post_time_step(
     double *v_new,
     const int *u,
     const double *v,
@@ -99,6 +108,14 @@ int SIR_post_time_step(
     int node,
     double t)
 {
+    SIMINF_UNUSED(v_new);
+    SIMINF_UNUSED(u);
+    SIMINF_UNUSED(v);
+    SIMINF_UNUSED(ldata);
+    SIMINF_UNUSED(gdata);
+    SIMINF_UNUSED(node);
+    SIMINF_UNUSED(t);
+
     return 0;
 }
 
@@ -106,13 +123,12 @@ int SIR_post_time_step(
  * Run simulation with the SIR model
  *
  * @param model The SIR model.
- * @param threads Number of threads.
  * @param solver The numerical solver.
  * @return The simulated trajectory.
  */
-SEXP SIR_run(SEXP model, SEXP threads, SEXP solver)
+SEXP attribute_hidden SIR_run(SEXP model, SEXP solver)
 {
     TRFun tr_fun[] = {&SIR_S_to_I, &SIR_I_to_R};
 
-    return SimInf_run(model, threads, solver, tr_fun, &SIR_post_time_step);
+    return SimInf_run(model, solver, tr_fun, &SIR_post_time_step);
 }

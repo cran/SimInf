@@ -21,6 +21,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <R_ext/Visibility.h>
 #include "SimInf.h"
 
 /* Offset in integer compartment state vector */
@@ -39,7 +40,7 @@ enum {BETA, EPSILON, GAMMA};
  * @param t Current time.
  * @return propensity.
  */
-double SEIR_S_to_E(
+static double SEIR_S_to_E(
     const int *u,
     const double *v,
     const double *ldata,
@@ -50,8 +51,12 @@ double SEIR_S_to_E(
     const double I_n = u[I];
     const double n = S_n + u[E] + I_n + u[R];
 
+    SIMINF_UNUSED(v);
+    SIMINF_UNUSED(gdata);
+    SIMINF_UNUSED(t);
+
     if (n > 0.0)
-        return gdata[BETA] * S_n * I_n / n;
+        return ldata[BETA] * S_n * I_n / n;
     return 0.0;
 }
 
@@ -65,14 +70,18 @@ double SEIR_S_to_E(
  * @param t Current time.
  * @return propensity.
  */
-double SEIR_E_to_I(
+static double SEIR_E_to_I(
     const int *u,
     const double *v,
     const double *ldata,
     const double *gdata,
     double t)
 {
-    return gdata[EPSILON] * u[E];
+    SIMINF_UNUSED(v);
+    SIMINF_UNUSED(gdata);
+    SIMINF_UNUSED(t);
+
+    return ldata[EPSILON] * u[E];
 }
 
 /**
@@ -85,14 +94,18 @@ double SEIR_E_to_I(
  * @param t Current time.
  * @return propensity.
  */
-double SEIR_I_to_R(
+static double SEIR_I_to_R(
     const int *u,
     const double *v,
     const double *ldata,
     const double *gdata,
     double t)
 {
-    return gdata[GAMMA] * u[I];
+    SIMINF_UNUSED(v);
+    SIMINF_UNUSED(gdata);
+    SIMINF_UNUSED(t);
+
+    return ldata[GAMMA] * u[I];
 }
 
 /**
@@ -110,7 +123,7 @@ double SEIR_I_to_R(
  * transition rates, or 0 when it doesn't need to update the
  * transition rates.
  */
-int SEIR_post_time_step(
+static int SEIR_post_time_step(
     double *v_new,
     const int *u,
     const double *v,
@@ -119,6 +132,14 @@ int SEIR_post_time_step(
     int node,
     double t)
 {
+    SIMINF_UNUSED(v_new);
+    SIMINF_UNUSED(u);
+    SIMINF_UNUSED(v);
+    SIMINF_UNUSED(ldata);
+    SIMINF_UNUSED(gdata);
+    SIMINF_UNUSED(node);
+    SIMINF_UNUSED(t);
+
     return 0;
 }
 
@@ -126,13 +147,12 @@ int SEIR_post_time_step(
  * Run simulation with the SEIR model
  *
  * @param model The SIR model.
- * @param threads Number of threads.
  * @param solver The numerical solver.
  * @return The simulated trajectory.
  */
-SEXP SEIR_run(SEXP model, SEXP threads, SEXP solver)
+SEXP attribute_hidden SEIR_run(SEXP model, SEXP solver)
 {
     TRFun tr_fun[] = {&SEIR_S_to_E, &SEIR_E_to_I, &SEIR_I_to_R};
 
-    return SimInf_run(model, threads, solver, tr_fun, &SEIR_post_time_step);
+    return SimInf_run(model, solver, tr_fun, &SEIR_post_time_step);
 }

@@ -10,6 +10,8 @@
    the "data" held by node n in the heap is given by INDEX2[INDEX[n]].
 */
 
+#include <R_ext/Visibility.h>
+
 /*----------------------------------------------------------------------*/
 static void percolate_down(int n1,double *data,int *INDEX,int *INDEX2,int N)
 /*** ? ***/
@@ -40,7 +42,7 @@ static void percolate_down(int n1,double *data,int *INDEX,int *INDEX2,int N)
   INDEX2[j]=node;
 }
 /*----------------------------------------------------------------------*/
-static void percolate_up(int node,double *data,int *INDEX,int *INDEX2,int N)
+static void percolate_up(int node,double *data,int *INDEX,int *INDEX2)
 /*** ? ***/
 {
   int parent;
@@ -68,7 +70,7 @@ static void percolate_up(int node,double *data,int *INDEX,int *INDEX2,int N)
   INDEX2[j]=node;
 }
 /*----------------------------------------------------------------------*/
-void initialize_heap(double *data,int *INDEX,int *INDEX2,int N)
+void attribute_hidden initialize_heap(double *data,int *INDEX,int *INDEX2,int N)
 /*** ? ***/
 {
   int i;
@@ -76,13 +78,13 @@ void initialize_heap(double *data,int *INDEX,int *INDEX2,int N)
     percolate_down(i,data,INDEX,INDEX2,N);
 }
 /*----------------------------------------------------------------------*/
-void update(int node,double *data,int *INDEX,int *INDEX2,int N)
+void attribute_hidden update(int node,double *data,int *INDEX,int *INDEX2,int N)
 /*** ? ***/
 {
   int parent=(node-1)>>1;
 
   if(node>0 && data[node]<data[parent])
-    percolate_up(node,data,INDEX,INDEX2,N);
+    percolate_up(node,data,INDEX,INDEX2);
   else
     percolate_down(node,data,INDEX,INDEX2,N);
 }

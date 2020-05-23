@@ -4,7 +4,7 @@
 ## Copyright (C) 2015 Pavol Bauer
 ## Copyright (C) 2017 -- 2019 Robin Eriksson
 ## Copyright (C) 2015 -- 2019 Stefan Engblom
-## Copyright (C) 2015 -- 2019 Stefan Widgren
+## Copyright (C) 2015 -- 2020 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -88,6 +88,30 @@ check_gdata_arg <- function(...) {
             stop(paste0("'",
                         match.call(expand.dots = FALSE)$"..."[i],
                         "' must be numeric of length 1."),
+                 call. = FALSE)
+        }
+    }
+
+    invisible(NULL)
+}
+
+##' Check arguments for 'ldata'
+##'
+##' Raise an error if any of the arguments are not ok.
+##' @param len Exprected length of each data vector in '...'.
+##' @param ... The arguments to check
+##' @return invisible(NULL)
+##' @noRd
+check_ldata_arg <- function(len, ...) {
+    arg <- list(...)
+    for (i in seq_len(length(arg))) {
+        if (!is.numeric(arg[[i]]) ||
+            !is.atomic(arg[[i]]) ||
+            (!identical(length(arg[[i]]), 1L) &&
+             !identical(length(arg[[i]]), len))) {
+            stop(paste0("'",
+                        match.call(expand.dots = FALSE)$"..."[i],
+                        "' must be numeric of length 1 or 'nrow(u0)'."),
                  call. = FALSE)
         }
     }
@@ -250,6 +274,26 @@ check_distance_matrix <- function(distance) {
     }
     if (any(distance < 0))
         stop("All values in the 'distance' matrix must be >= 0.", call. = FALSE)
+
+    invisible(NULL)
+}
+
+##' Check a package name
+##'
+##' From the "Writing R Extensions" manual: The mandatory ‘Package’
+##' field gives the name of the package. This should contain only
+##' (ASCII) letters, numbers and dot, have at least two characters and
+##' start with a letter and not end in a dot.
+##' @param name Character string with the package name.
+##' @return invisible(NULL)
+##' @noRd
+check_package_name <- function(name) {
+    pattern <- paste0("^", .standard_regexps()$valid_package_name, "$")
+
+    if (any(is.null(name), !is.character(name), length(name) != 1,
+            nchar(name) == 0, !grepl(pattern, name))) {
+        stop("Malformed package name.", call. = FALSE)
+    }
 
     invisible(NULL)
 }

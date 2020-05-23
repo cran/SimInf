@@ -5,7 +5,7 @@
  * Copyright (C) 2015 Pavol Bauer
  * Copyright (C) 2017 -- 2019 Robin Eriksson
  * Copyright (C) 2015 -- 2019 Stefan Engblom
- * Copyright (C) 2015 -- 2019 Stefan Widgren
+ * Copyright (C) 2015 -- 2020 Stefan Widgren
  *
  * SimInf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,12 +27,12 @@
 #include "SimInf.h"
 
 /* Declare functions to register */
-SEXP SEIR_run(SEXP, SEXP, SEXP);
-SEXP SIR_run(SEXP, SEXP, SEXP);
-SEXP SISe_run(SEXP, SEXP, SEXP);
-SEXP SISe3_run(SEXP, SEXP, SEXP);
-SEXP SISe3_sp_run(SEXP, SEXP, SEXP);
-SEXP SISe_sp_run(SEXP, SEXP, SEXP);
+SEXP SEIR_run(SEXP, SEXP);
+SEXP SIR_run(SEXP, SEXP);
+SEXP SISe_run(SEXP, SEXP);
+SEXP SISe3_run(SEXP, SEXP);
+SEXP SISe3_sp_run(SEXP, SEXP);
+SEXP SISe_sp_run(SEXP, SEXP);
 SEXP SimInf_have_openmp();
 SEXP SimInf_init_threads(SEXP);
 SEXP SimInf_ldata_sp(SEXP, SEXP, SEXP);
@@ -42,12 +42,12 @@ SEXP SimInf_trajectory(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 
 static const R_CallMethodDef callMethods[] =
 {
-    CALLDEF(SEIR_run, 3),
-    CALLDEF(SIR_run, 3),
-    CALLDEF(SISe_run, 3),
-    CALLDEF(SISe3_run, 3),
-    CALLDEF(SISe3_sp_run, 3),
-    CALLDEF(SISe_sp_run, 3),
+    CALLDEF(SEIR_run, 2),
+    CALLDEF(SIR_run, 2),
+    CALLDEF(SISe_run, 2),
+    CALLDEF(SISe3_run, 2),
+    CALLDEF(SISe3_sp_run, 2),
+    CALLDEF(SISe_sp_run, 2),
     CALLDEF(SimInf_have_openmp, 0),
     CALLDEF(SimInf_init_threads, 1),
     CALLDEF(SimInf_ldata_sp, 3),
@@ -65,7 +65,12 @@ R_init_SimInf(DllInfo *info)
 {
     R_registerRoutines(info, NULL, callMethods, NULL, NULL);
     R_useDynamicSymbols(info, FALSE);
-    R_forceSymbols(info, FALSE);
-    R_RegisterCCallable("SimInf", "SimInf_run", (DL_FUNC) &SimInf_run);
+    R_forceSymbols(info, TRUE);
+    R_RegisterCCallable("SimInf", "SimInf_local_spread",
+                        (DL_FUNC) &SimInf_local_spread);
+    R_RegisterCCallable("SimInf", "SimInf_forward_euler_linear_decay",
+                        (DL_FUNC) &SimInf_forward_euler_linear_decay);
+    R_RegisterCCallable("SimInf", "SimInf_run",
+                        (DL_FUNC) &SimInf_run);
     SimInf_init_threads(R_NilValue);
 }

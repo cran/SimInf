@@ -21,9 +21,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <R_ext/Visibility.h>
 #include "SimInf.h"
-#include "SimInf_forward_euler_linear_decay.h"
-#include "SimInf_local_spread.h"
 
 /* Offset in integer compartment state vector */
 enum {S_1, I_1, S_2, I_2, S_3, I_3};
@@ -48,13 +47,16 @@ enum {UPSILON_1, UPSILON_2, UPSILON_3, GAMMA_1, GAMMA_2, GAMMA_3,
  * @param t Current time.
  * @return propensity.
  */
-double SISe3_sp_S_1_to_I_1(
+static double SISe3_sp_S_1_to_I_1(
     const int *u,
     const double *v,
     const double *ldata,
     const double *gdata,
     double t)
 {
+    SIMINF_UNUSED(ldata);
+    SIMINF_UNUSED(t);
+
     return gdata[UPSILON_1] * v[PHI] * u[S_1];
 }
 
@@ -68,13 +70,16 @@ double SISe3_sp_S_1_to_I_1(
  * @param t Current time.
  * @return propensity.
  */
-double SISe3_sp_S_2_to_I_2(
+static double SISe3_sp_S_2_to_I_2(
     const int *u,
     const double *v,
     const double *ldata,
     const double *gdata,
     double t)
 {
+    SIMINF_UNUSED(ldata);
+    SIMINF_UNUSED(t);
+
     return gdata[UPSILON_2] * v[PHI] * u[S_2];
 }
 
@@ -88,13 +93,16 @@ double SISe3_sp_S_2_to_I_2(
  * @param t Current time.
  * @return propensity.
  */
-double SISe3_sp_S_3_to_I_3(
+static double SISe3_sp_S_3_to_I_3(
     const int *u,
     const double *v,
     const double *ldata,
     const double *gdata,
     double t)
 {
+    SIMINF_UNUSED(ldata);
+    SIMINF_UNUSED(t);
+
     return gdata[UPSILON_3] * v[PHI] * u[S_3];
 }
 
@@ -108,13 +116,17 @@ double SISe3_sp_S_3_to_I_3(
  * @param t Current time.
  * @return propensity.
  */
-double SISe3_sp_I_1_to_S_1(
+static double SISe3_sp_I_1_to_S_1(
     const int *u,
     const double *v,
     const double *ldata,
     const double *gdata,
     double t)
 {
+    SIMINF_UNUSED(v);
+    SIMINF_UNUSED(ldata);
+    SIMINF_UNUSED(t);
+
     return gdata[GAMMA_1] * u[I_1];
 }
 
@@ -128,13 +140,17 @@ double SISe3_sp_I_1_to_S_1(
  * @param t Current time.
  * @return propensity.
  */
-double SISe3_sp_I_2_to_S_2(
+static double SISe3_sp_I_2_to_S_2(
     const int *u,
     const double *v,
     const double *ldata,
     const double *gdata,
     double t)
 {
+    SIMINF_UNUSED(v);
+    SIMINF_UNUSED(ldata);
+    SIMINF_UNUSED(t);
+
     return gdata[GAMMA_2] * u[I_2];
 }
 
@@ -148,13 +164,17 @@ double SISe3_sp_I_2_to_S_2(
  * @param t Current time.
  * @return propensity
  */
-double SISe3_sp_I_3_to_S_3(
+static double SISe3_sp_I_3_to_S_3(
     const int *u,
     const double *v,
     const double *ldata,
     const double *gdata,
     double t)
 {
+    SIMINF_UNUSED(v);
+    SIMINF_UNUSED(ldata);
+    SIMINF_UNUSED(t);
+
     return gdata[GAMMA_3] * u[I_3];
 }
 
@@ -175,7 +195,7 @@ double SISe3_sp_I_3_to_S_3(
  * transition rates, or 0 when it doesn't need to update the
  * transition rates.
  */
-int SISe3_sp_post_time_step(
+static int SISe3_sp_post_time_step(
     double *v_new,
     const int *u,
     const double *v,
@@ -225,15 +245,14 @@ int SISe3_sp_post_time_step(
  * Run simulation with the SISe3_sp model
  *
  * @param model The SISe3_sp model.
- * @param threads Number of threads.
  * @param solver The numerical solver.
  * @return The simulated trajectory.
  */
-SEXP SISe3_sp_run(SEXP model, SEXP threads, SEXP solver)
+SEXP attribute_hidden SISe3_sp_run(SEXP model, SEXP solver)
 {
     TRFun tr_fun[] = {&SISe3_sp_S_1_to_I_1, &SISe3_sp_I_1_to_S_1,
                       &SISe3_sp_S_2_to_I_2, &SISe3_sp_I_2_to_S_2,
                       &SISe3_sp_S_3_to_I_3, &SISe3_sp_I_3_to_S_3};
 
-    return SimInf_run(model, threads, solver, tr_fun, &SISe3_sp_post_time_step);
+    return SimInf_run(model, solver, tr_fun, &SISe3_sp_post_time_step);
 }

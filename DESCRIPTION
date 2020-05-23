@@ -1,7 +1,7 @@
 Package: SimInf
 Title: A Framework for Data-Driven Stochastic Disease Spread
         Simulations
-Version: 6.5.1
+Version: 7.0.0
 Authors@R: c(person("Stefan", "Widgren", role = c("aut", "cre"),
                     email = "stefan.widgren@gmail.com",
                     comment = c(ORCID = "0000-0001-5745-2284")),
@@ -11,6 +11,8 @@ Authors@R: c(person("Stefan", "Widgren", role = c("aut", "cre"),
                     comment = c(ORCID = "0000-0002-3614-1732")),
              person("Pavol", "Bauer", role = "aut",
                     comment = c(ORCID = "0000-0003-4328-7171")),
+             person("Thomas", "Rosendal", role = "ctb",
+                    comment = c(ORCID = "0000-0002-6576-9668")),
              person("Attractive Chaos", role = "cph",
                     comment = "Author of 'kvec.h'."))
 Description: Provides an efficient and very flexible framework to
@@ -44,21 +46,23 @@ LazyData: true
 Biarch: true
 NeedsCompilation: yes
 SystemRequirements: GNU Scientific Library (GSL)
-Depends: R(>= 3.1)
-Imports: graphics, grDevices, methods, stats, utils, Matrix
-Collate: 'check_arguments.R' 'SimInf_events.R' 'SimInf_model.R'
-        'SEIR.R' 'SIR.R' 'SISe.R' 'SISe3.R' 'SISe3_sp.R' 'SISe_sp.R'
-        'SimInf.R' 'degree.R' 'distance.R' 'mparse.R' 'openmp.R'
+Depends: R(>= 3.3)
+Imports: digest, graphics, grDevices, methods, stats, utils, Matrix
+Collate: 'C-generator.R' 'check_arguments.R' 'init.R' 'valid.R'
+        'SimInf_events.R' 'SimInf_model.R' 'SEIR.R' 'SIR.R' 'SISe.R'
+        'SISe3.R' 'SISe3_sp.R' 'SISe_sp.R' 'SimInf.R' 'degree.R'
+        'distance.R' 'formula.R' 'mparse.R' 'openmp.R'
         'package_skeleton.R' 'plot.R' 'prevalence.R' 'print.R'
-        'punchcard.R' 'run.R' 'run_outer.R' 'trajectory.R'
+        'priors.R' 'punchcard.R' 'run.R' 'trajectory.R'
 Encoding: UTF-8
-RoxygenNote: 7.0.2
-Packaged: 2020-04-01 10:06:29 UTC; stefan
+RoxygenNote: 7.1.0
+Packaged: 2020-05-23 15:32:49 UTC; stefan
 Author: Stefan Widgren [aut, cre] (<https://orcid.org/0000-0001-5745-2284>),
   Robin Eriksson [aut] (<https://orcid.org/0000-0002-4291-712X>),
   Stefan Engblom [aut] (<https://orcid.org/0000-0002-3614-1732>),
   Pavol Bauer [aut] (<https://orcid.org/0000-0003-4328-7171>),
+  Thomas Rosendal [ctb] (<https://orcid.org/0000-0002-6576-9668>),
   Attractive Chaos [cph] (Author of 'kvec.h'.)
 Maintainer: Stefan Widgren <stefan.widgren@gmail.com>
 Repository: CRAN
-Date/Publication: 2020-04-01 17:50:11 UTC
+Date/Publication: 2020-05-23 16:40:02 UTC
