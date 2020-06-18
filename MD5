@@ -1,7 +1,7 @@
-ad57f30d23c951348f7a2fcb3e46b16e *DESCRIPTION
+2eb6f718a8416a4491784b58507a644a *DESCRIPTION
 74b7e179b36fb281d1ecbddabb18fabe *NAMESPACE
-b6c838280ea2a1069131faaa68ca484e *NEWS.md
-b0a951ccc9783d99afb729a898ffb08c *R/C-generator.R
+d8b98a15992a843e2dba7b48742a43d4 *NEWS.md
+3217a35b0c9fd2e70d4c8b9925b32733 *R/C-generator.R
 5fc806da49896cb199d19f2891c7e576 *R/SEIR.R
 39b3298a66490eb8ac7fd32da37277c8 *R/SIR.R
 91480114b31471b7a07f48e32742acb3 *R/SISe.R
@@ -24,10 +24,10 @@ e151af7ce17270059dc7ae170e59fb30 *R/prevalence.R
 d097455ba89cd16493131e53702c53b0 *R/print.R
 f2bb00f72acbe9277586b74b7687f259 *R/priors.R
 643da9c3a594d222e9dc5d9d2c3953de *R/punchcard.R
-e73e6588f2f2d806e673bb9b4b09357b *R/run.R
+21f04193840626c12009d76102f014cc *R/run.R
 8f93a111eeca5d1496a4f7c5e8e42723 *R/trajectory.R
 359ab900af611b87de9f2a58c11982af *R/valid.R
-09115427b41ebc08330ee6ab84f52e09 *README.md
+beb1d6d88dbc77e8919c6cd2fc4a52f0 *README.md
 9933c27be3ba9686a41ea85e855461dc *build/vignette.rds
 2f827bf880da06156f16b13a6d1652bc *cleanup
 87a88dbe3610b7b7dc36192c6126eed4 *cleanup.win
@@ -40,7 +40,7 @@ f1750ab7fa66b11bf9e6ac531b103b7d *configure.win
 b02e5cd1ef2d8a43b24c8ad1b7716bfd *inst/CITATION
 66531de6dda2dd6bdbb940f9caea0571 *inst/doc/SimInf.R
 386f51da9e2b8af747d27e3925e5e955 *inst/doc/SimInf.Rnw
-795cbbc9700ef930b67ce4fdcec78020 *inst/doc/SimInf.pdf
+ff87e0b3259c671d7d10915e3c2daa63 *inst/doc/SimInf.pdf
 4f0fc97ee6b5f3ffab8ef332bc0c33d8 *inst/include/SimInf.h
 4443cbef99db9b3e614aed546f105bcc *man/C_code.Rd
 dfd62ca59457ada5b99848d5c3118c4c *man/Nn.Rd
@@ -120,7 +120,7 @@ e79672c34ae6b099c5e75e168a04e523 *src/models/SEIR.c
 581efd4f1432c40058aa819948114e01 *src/models/SISe3.c
 94ec1b8ccba0e2083080818b7753d269 *src/models/SISe3_sp.c
 dd2cd24d38487b2841e337e184157055 *src/models/SISe_sp.c
-160aec6bd18c14cf7d0cd1b9aeff292a *src/solvers/SimInf_solver.c
+88ec69a5ef740d86b614961b59a95d3d *src/solvers/SimInf_solver.c
 d500f7cd411aeeb505e8dfc5fc3d3dd6 *src/solvers/SimInf_solver.h
 df4f885e7bd953df193e6bd60942d98b *src/solvers/aem/SimInf_solver_aem.c
 9c8d0734a8a26354362dcba682197fa3 *src/solvers/aem/SimInf_solver_aem.h
@@ -137,7 +137,7 @@ ca4dbe49c5c8939f99372206cb8b51c9 *tests/SEIR.R
 5259d3ca43a42d9e00d243de1577da07 *tests/SimInf_model.R
 e2d42c4d36bac01c326dbb8f32f8ced9 *tests/ldata_sp.R
 59277f3004e3b128f8488c1d0ae34ad3 *tests/measures.R
-e109ffc3ebda0991669578c9010b5345 *tests/mparse.R
+bbc273bfc666d8eab51886eeb593de49 *tests/mparse.R
 8d26e2aa6e14d4ba3d33beaab4fafd0d *tests/package_skeleton.R
 3cbb57967933de40d85be7e4569b95e3 *tests/phi.R
 038e57cf80c7d8175cad79c7c7351e1e *tests/prevalence.R
