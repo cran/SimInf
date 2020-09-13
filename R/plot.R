@@ -24,6 +24,15 @@
 ##' Produce box-and-whisker plot(s) of the number of individuals in
 ##' each model compartment.
 ##' @param x The \code{model} to plot
+##' @param compartments specify the names of the compartments to
+##'     extract data from. The compartments can be specified as a
+##'     character vector e.g. \code{compartments = c('S', 'I', 'R')},
+##'     or as a formula e.g. \code{compartments = ~S+I+R} (see
+##'     \sQuote{Examples}). Default (\code{compartments=NULL})
+##'     includes all compartments.
+##' @param index indices specifying the nodes to include when plotting
+##'     data. Default \code{index = NULL} include all nodes in the
+##'     model.
 ##' @param ... Additional arguments affecting the plot produced.
 ##' @aliases boxplot,SimInf_model-method
 ##' @export
@@ -43,14 +52,19 @@
 ##' ## Run the model and save the result.
 ##' result <- run(model)
 ##'
-##' ## Create a boxplot
+##' ## Create a boxplot that includes all compartments in all nodes.
 ##' boxplot(result)
-setMethod("boxplot",
-          signature(x = "SimInf_model"),
-          function(x, ...) {
-              ## Remove the first two columns node and time
-              boxplot(trajectory(x)[c(-1, -2)], ...)
-          }
+##'
+##' ## Create a boxplot that includes the S and I compartments in
+##' ## nodes 1 and 2.
+##' boxplot(result, ~S+I, 1:2)
+setMethod(
+    "boxplot",
+    signature(x = "SimInf_model"),
+    function(x, compartments = NULL, index = NULL, ...) {
+        ## Remove the first two columns node and time
+        boxplot(trajectory(x, compartments, index)[c(-1, -2)], ...)
+    }
 )
 
 ##' Scatterplot of number of individuals in each compartment
@@ -59,6 +73,15 @@ setMethod("boxplot",
 ##' compartment is produced. The \code{ij}th scatterplot contains
 ##' \code{x[,i]} plotted against \code{x[,j]}.
 ##' @param x The \code{model} to plot
+##' @param compartments specify the names of the compartments to
+##'     extract data from. The compartments can be specified as a
+##'     character vector e.g. \code{compartments = c('S', 'I', 'R')},
+##'     or as a formula e.g. \code{compartments = ~S+I+R} (see
+##'     \sQuote{Examples}). Default (\code{compartments=NULL})
+##'     includes all compartments.
+##' @param index indices specifying the nodes to include when plotting
+##'     data. Default \code{index = NULL} include all nodes in the
+##'     model.
 ##' @param ... Additional arguments affecting the plot produced.
 ##' @export
 ##' @include SimInf_model.R
@@ -77,14 +100,20 @@ setMethod("boxplot",
 ##' ## Run the model and save the result.
 ##' result <- run(model)
 ##'
-##' ## Create a scatter plot
+##' ## Create a scatter plot that includes all compartments in all
+##' ## nodes.
 ##' pairs(result)
-setMethod("pairs",
-          signature(x = "SimInf_model"),
-          function(x, ...) {
-              ## Remove the first two columns node and time
-              pairs(trajectory(x)[c(-1, -2)], ...)
-          }
+##'
+##' ## Create a scatter plot that includes the S and I compartments in
+##' ## nodes 1 and 2.
+##' pairs(result, ~S+I, 1:2)
+setMethod(
+    "pairs",
+    signature(x = "SimInf_model"),
+    function(x, compartments = NULL, index = NULL, ...) {
+        ## Remove the first two columns node and time
+        pairs(trajectory(x, compartments, index)[c(-1, -2)], ...)
+    }
 )
 
 init_plot_compartments <- function(x, compartments) {
@@ -97,9 +126,9 @@ init_plot_compartments <- function(x, compartments) {
 }
 
 init_plot_node <- function(x, node) {
-    node <- check_node_argument(x, node)
+    node <- check_node_index_argument(x, node)
     if (is.null(node))
-        node <- seq_len(Nn(x))
+        node <- seq_len(n_nodes(x))
     node
 }
 
@@ -209,113 +238,113 @@ init_plot_line_width <- function(lwd) {
 ##'
 ##' ## Plot the number of infected individuals in the first node.
 ##' plot(result, compartments = "I", node = 1, range = FALSE)
-setMethod("plot",
-          signature(x = "SimInf_model"),
-          function(x, compartments = NULL, node = NULL, range = 0.5, ...) {
-              if (identical(dim(x@U), c(0L, 0L))) {
-                  stop("Please run the model first, the 'U' matrix is empty.",
-                       call. = FALSE)
-              }
+setMethod(
+    "plot",
+    signature(x = "SimInf_model"),
+    function(x, compartments = NULL, node = NULL, range = 0.5, ...) {
+        if (identical(dim(x@U), c(0L, 0L))) {
+            stop("Please run the model first, the 'U' matrix is empty.",
+                 call. = FALSE)
+        }
 
-              argv <- list(...)
+        argv <- list(...)
 
-              compartments <- init_plot_compartments(x, compartments)
-              node <- init_plot_node(x, node)
+        compartments <- init_plot_compartments(x, compartments)
+        node <- init_plot_node(x, node)
 
-              ## Create a matrix with one row for each line in the
-              ## plot.
-              if (identical(range, FALSE)) {
-                  ## Extract subset of data from U
-                  i <- rep(compartments, length(node))
-                  i <- i + rep((node - 1) * Nc(x), each = length(compartments))
-                  m <- x@U[i, seq_len(ncol(x@U)), drop = FALSE]
-              } else {
-                  ## Check range argument
-                  if (any(!is.numeric(range), !identical(length(range), 1L),
-                          range < 0, range > 1)) {
-                      stop("'range' must be FALSE or a value between 0 and 1.",
-                           call. = FALSE)
-                  }
-                  range <- (1 - range) / 2
+        ## Create a matrix with one row for each line in the plot.
+        if (identical(range, FALSE)) {
+            ## Extract subset of data from U
+            i <- rep(compartments, length(node))
+            i <- i + rep((node - 1) * Nc(x), each = length(compartments))
+            m <- x@U[i, seq_len(ncol(x@U)), drop = FALSE]
+        } else {
+            ## Check range argument
+            if (any(!is.numeric(range), !identical(length(range), 1L),
+                    range < 0, range > 1)) {
+                stop("'range' must be FALSE or a value between 0 and 1.",
+                     call. = FALSE)
+            }
+            range <- (1 - range) / 2
 
-                  m <- matrix(0, nrow = length(compartments),
-                              ncol = length(x@tspan))
+            m <- matrix(0, nrow = length(compartments),
+                        ncol = length(x@tspan))
 
-                  ## Matrices for quantile range
-                  mu <- m
-                  ml <- m
+            ## Matrices for quantile range
+            mu <- m
+            ml <- m
 
-                  for (i in seq_len(length(compartments))) {
-                      k <- seq(from = compartments[i], to = dim(x@U)[1],
-                               by = Nc(x))
-                      u <- apply(x@U[k[node], seq_len(ncol(x@U)), drop = FALSE],
-                                 2,
-                                 quantile,
-                                 probs = c(range, 0.5, 1 - range))
-                      ml[i, ] <- u[1, ]
-                      m[i, ] <- u[2, ]
-                      mu[i, ] <- u[3, ]
-                  }
+            for (i in seq_len(length(compartments))) {
+                k <- seq(from = compartments[i], to = dim(x@U)[1],
+                         by = Nc(x))
+                u <- apply(x@U[k[node], seq_len(ncol(x@U)), drop = FALSE],
+                           2,
+                           quantile,
+                           probs = c(range, 0.5, 1 - range))
+                ml[i, ] <- u[1, ]
+                m[i, ] <- u[2, ]
+                mu[i, ] <- u[3, ]
+            }
 
-                  range <- TRUE
-              }
+            range <- TRUE
+        }
 
-              lty <- init_plot_line_type(argv$lty, compartments, m)
-              col <- init_plot_color(argv$col, compartments, m)
-              argv$type <- init_plot_type(argv$type)
-              argv$lwd <- init_plot_line_width(argv$lwd)
+        lty <- init_plot_line_type(argv$lty, compartments, m)
+        col <- init_plot_color(argv$col, compartments, m)
+        argv$type <- init_plot_type(argv$type)
+        argv$lwd <- init_plot_line_width(argv$lwd)
 
-              ## Settings for the y-axis.
-              argv$ylab <- "N"
-              if (isTRUE(range)) {
-                  argv$ylim <- c(0, max(mu))
-              } else {
-                  argv$ylim <- c(0, max(m))
-              }
+        ## Settings for the y-axis.
+        argv$ylab <- "N"
+        if (isTRUE(range)) {
+            argv$ylim <- c(0, max(mu))
+        } else {
+            argv$ylim <- c(0, max(m))
+        }
 
-              ## Settings for the x-axis
-              if (is.null(names(x@tspan))) {
-                  xx <- x@tspan
-                  argv$xlab <- "Time"
-              } else {
-                  xx <- as.Date(names(x@tspan))
-                  argv$xlab <- "Date"
-              }
+        ## Settings for the x-axis
+        if (is.null(names(x@tspan))) {
+            xx <- x@tspan
+            argv$xlab <- "Time"
+        } else {
+            xx <- as.Date(names(x@tspan))
+            argv$xlab <- "Date"
+        }
 
-              savepar <- par(mar = c(2, 4, 1, 1), oma = c(4, 1, 0, 0),
-                             xpd = TRUE)
-              on.exit(par(savepar))
+        savepar <- par(mar = c(2, 4, 1, 1), oma = c(4, 1, 0, 0),
+                       xpd = TRUE)
+        on.exit(par(savepar))
 
-              ## Plot lines
-              for (i in seq_len(dim(m)[1])) {
-                  argv$x <- xx
-                  argv$y <- m[i, ]
-                  argv$col <- col[i]
-                  argv$lty <- lty[i]
-                  if (i == 1) {
-                      do.call(plot, argv)
-                      title(xlab = argv$xlab, outer = TRUE, line = 0)
-                  } else {
-                      do.call(lines, argv)
-                  }
-                  if (isTRUE(range)) {
-                      polygon(x = c(xx, rev(xx)), y = c(mu[i, ], rev(ml[i, ])),
-                              col = adjustcolor(col[i], alpha.f = 0.1),
-                              border = NA)
-                  }
-              }
+        ## Plot lines
+        for (i in seq_len(dim(m)[1])) {
+            argv$x <- xx
+            argv$y <- m[i, ]
+            argv$col <- col[i]
+            argv$lty <- lty[i]
+            if (i == 1) {
+                do.call(plot, argv)
+                title(xlab = argv$xlab, outer = TRUE, line = 0)
+            } else {
+                do.call(lines, argv)
+            }
+            if (isTRUE(range)) {
+                polygon(x = c(xx, rev(xx)), y = c(mu[i, ], rev(ml[i, ])),
+                        col = adjustcolor(col[i], alpha.f = 0.1),
+                        border = NA)
+            }
+        }
 
-              ## Add the legend below plot. The default legend is the
-              ## names of the compartments.
-              if (is.null(argv$legend))
-                  argv$legend <- rownames(x@S)[compartments]
-              par(fig = c(0, 1, 0, 1), oma = c(0, 0, 0, 0),
-                  mar = c(0, 0, 0, 0), new = TRUE)
-              plot(0, 0, type = "n", bty = "n", xaxt = "n", yaxt = "n")
-              legend("bottom", inset = c(0, 0),
-                     lty = lty[seq_len(length(compartments))],
-                     col = col[seq_len(length(compartments))],
-                     bty = "n", horiz = TRUE, legend = argv$legend,
-                     lwd = argv$lwd)
-          }
+        ## Add the legend below plot. The default legend is the names
+        ## of the compartments.
+        if (is.null(argv$legend))
+            argv$legend <- rownames(x@S)[compartments]
+        par(fig = c(0, 1, 0, 1), oma = c(0, 0, 0, 0),
+            mar = c(0, 0, 0, 0), new = TRUE)
+        plot(0, 0, type = "n", bty = "n", xaxt = "n", yaxt = "n")
+        legend("bottom", inset = c(0, 0),
+               lty = lty[seq_len(length(compartments))],
+               col = col[seq_len(length(compartments))],
+               bty = "n", horiz = TRUE, legend = argv$legend,
+               lwd = argv$lwd)
+    }
 )

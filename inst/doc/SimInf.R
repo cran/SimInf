@@ -1,8 +1,7 @@
 ### R code from vignette source 'SimInf.Rnw'
-### Encoding: UTF-8
 
 ###################################################
-### code chunk number 1: SimInf.Rnw:108-109
+### code chunk number 1: SimInf.Rnw:106-107
 ###################################################
 options(prompt = "R> ", continue = "+  ", width = 70, useFancyQuotes = FALSE)
 
@@ -73,7 +72,7 @@ dev.off()
 ###################################################
 ### code chunk number 11: SIR-head-trajectory
 ###################################################
-head(trajectory(model = result, node = 1))
+head(trajectory(model = result, index = 1))
 
 
 ###################################################
@@ -125,7 +124,7 @@ remove <- data.frame(event = "exit", time = c(70, 110),
 
 
 ###################################################
-### code chunk number 18: SimInf.Rnw:1363-1370 (eval = FALSE)
+### code chunk number 18: SimInf.Rnw:1361-1368 (eval = FALSE)
 ###################################################
 ## events = rbind(add, infect, move, remove)
 ## model <- SIR(u0 = u0, tspan = 1:180, events = events, beta = 0.16,
@@ -170,7 +169,7 @@ dev.off()
 set.seed(123)
 set_num_threads(1)
 mean(replicate(n = 1000, {
-  nI <- trajectory(run(model = model), node = 1:4)$I
+  nI <- trajectory(run(model = model), index = 1:4)$I
   sum(nI) > 0
 }))
 
@@ -209,7 +208,7 @@ model <- SISe_sp(u0 = u0, tspan = 1:1460, events = events, phi = 0,
 
 
 ###################################################
-### code chunk number 26: SimInf.Rnw:1560-1569 (eval = FALSE)
+### code chunk number 26: SimInf.Rnw:1558-1567 (eval = FALSE)
 ###################################################
 ## plot(NULL, xlim = c(0, 1500), ylim = c(0, 0.18), ylab = "Prevalance",
 ##   xlab = "Time")
@@ -217,18 +216,18 @@ model <- SISe_sp(u0 = u0, tspan = 1:1460, events = events, phi = 0,
 ## set_num_threads(1)
 ## replicate(5, {
 ##   result <- run(model = model)
-##   p <- prevalence(model = result, formula = I ~ S + I, type = "nop")
+##   p <- prevalence(model = result, formula = I ~ S + I, level = 2)
 ##   lines(p)
 ## })
 
 
 ###################################################
-### code chunk number 27: SimInf.Rnw:1578-1584 (eval = FALSE)
+### code chunk number 27: SimInf.Rnw:1576-1582 (eval = FALSE)
 ###################################################
 ## gdata(model, "coupling") <- 0.1
 ## replicate(5, {
 ##   result <- run(model = model)
-##   p <- prevalence(model = result, formula = I ~ S + I, type = "nop")
+##   p <- prevalence(model = result, formula = I ~ S + I, level = 2)
 ##   lines(p, col = "blue", lty = 2)
 ## })
 
@@ -377,7 +376,7 @@ epicurve <- function(model, n = 1000) {
     model@u0["S", j] <- model@u0["S", j] - 1L
     result <- run(model = model)
     traj <- trajectory(model = result, compartments = "Icum",
-      as.is = TRUE)
+      format = "matrix")
     Icum <- Icum + colSums(traj)
   }
   stepfun(model@tspan[-1], diff(c(0, Icum / n)))
@@ -470,9 +469,9 @@ model <- mparse(transitions = transitions, compartments = compartments,
 ## plot(R ~ F, trajectory(model = result), cex = 0.3, pch = 20,
 ##   xlab = "Number of predators", ylab = "Number of prey",
 ##   col = rgb(0, 0, 0, alpha = 0.1))
-## plot(R ~ time, trajectory(model = result, node = 4), type = "l",
+## plot(R ~ time, trajectory(model = result, index = 4), type = "l",
 ##   xlab = "Time", ylab = "N")
-## lines(F ~ time, trajectory(model = result, node = 4), type = "l", lty = 2)
+## lines(F ~ time, trajectory(model = result, index = 4), type = "l", lty = 2)
 ## legend("right", c("Prey", "Predator"), lty = 1:2)
 ## par(opar)
 

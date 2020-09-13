@@ -65,6 +65,12 @@ stopifnot(identical(
     "'E' and 'N' must have rownames matching the compartments."))
 
 events <- SimInf_events(E = E, N = N)
+events@E[1, 1] <- -1
+stopifnot(identical(
+    SimInf:::valid_SimInf_events_object(events),
+    "Select matrix 'E' has negative elements."))
+
+events <- SimInf_events(E = E, N = N)
 events@event <- 3L
 stopifnot(identical(SimInf:::valid_SimInf_events_object(events),
                     "All scheduled events must have equal length."))
@@ -478,6 +484,7 @@ events <- data.frame(
               1L, 2L, 0L, 1L, 2L, 0L))
 res <- SimInf_events(E = E, N = N, events = events)
 stopifnot(identical(as(res, "data.frame"), events))
+stopifnot(identical(as.data.frame(res), events))
 
 ## Check that it fails when dest is out of bounds.
 u0 <- data.frame(S = c(10, 10), I = c(0, 0), R = c(0, 0))
