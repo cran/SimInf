@@ -50,7 +50,7 @@ result
 ### code chunk number 8: SIR-plot (eval = FALSE)
 ###################################################
 ## plot(result)
-## plot(result, node = 1:10, range = FALSE)
+## plot(result, index = 1:10, range = FALSE)
 
 
 ###################################################
@@ -65,7 +65,7 @@ dev.off()
 ### code chunk number 10: SIR-II
 ###################################################
 pdf("SimInf-SIR-II.pdf", width = 10, height = 5)
-plot(result, node = 1:10, range = FALSE)
+plot(result, index = 1:10, range = FALSE)
 dev.off()
 
 
@@ -132,7 +132,7 @@ remove <- data.frame(event = "exit", time = c(70, 110),
 ## set.seed(3)
 ## set_num_threads(1)
 ## result <- run(model)
-## plot(result, node = 1:5, range = FALSE)
+## plot(result, index = 1:5, range = FALSE)
 
 
 ###################################################
@@ -145,7 +145,7 @@ set.seed(3)
 set_num_threads(1)
 result <- run(model)
 pdf("SimInf-SIR-events-I.pdf", width = 10, height = 5)
-plot(result, node = 1:5, range = FALSE)
+plot(result, index = 1:5, range = FALSE)
 dev.off()
 
 
@@ -159,7 +159,7 @@ set.seed(3)
 set_num_threads(1)
 result_no_infected <- run(model_no_infected)
 pdf("SimInf-SIR-events-II.pdf", width = 10, height = 5)
-plot(result_no_infected, node = 1:5, range = FALSE)
+plot(result_no_infected, index = 1:5, range = FALSE)
 dev.off()
 
 

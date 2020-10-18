@@ -92,8 +92,11 @@ calculate_prevalence <- function(model, compartments, level,
 
     prevalence <- cases / population
 
-    if (identical(format, "matrix"))
+    if (identical(format, "matrix")) {
+        if (is.null(dim(prevalence)))
+            dim(prevalence) <- c(1L, length(prevalence))
         return(prevalence)
+    }
 
     time <- names(model@tspan)
     if (is.null(time))
@@ -184,23 +187,23 @@ setGeneric(
 ##'
 ##' ## Determine the proportion of infected individuals (cases)
 ##' ## in the population at the time-points in 'tspan'.
-##' prevalence(result, I~S+I+R)
+##' prevalence(result, I ~ S + I + R)
 ##'
 ##' ## Identical result is obtained with the shorthand 'I~.'
-##' prevalence(result, I~.)
+##' prevalence(result, I ~ .)
 ##'
 ##' ## Determine the proportion of nodes with infected individuals at
 ##' ## the time-points in 'tspan'.
-##' prevalence(result, I~S+I+R, level = 2)
+##' prevalence(result, I ~ S + I + R, level = 2)
 ##'
 ##' ## Determine the proportion of infected individuals in each node
 ##' ## at the time-points in 'tspan'.
-##' prevalence(result, I~S+I+R, level = 3)
+##' prevalence(result, I ~ S + I + R, level = 3)
 ##'
 ##' ## Determine the proportion of infected individuals in each node
 ##' ## at the time-points in 'tspan' when the number of recovered is
 ##' ## zero.
-##' prevalence(result, I~S+I+R|R==0, level = 3)
+##' prevalence(result, I ~ S + I + R | R == 0, level = 3)
 setMethod(
     "prevalence",
     signature(model = "SimInf_model", formula = "formula"),

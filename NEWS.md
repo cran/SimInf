@@ -1,3 +1,21 @@
+# SimInf 8.1.0 (2020-10-18)
+
+This release of SimInf focuses primarily on improving the plotting of
+trajectory data.
+
+## CHANGES OR IMPROVEMENTS
+
+* The plotting functionality has been improved to allow visualisation
+  of the prevalence using the same formula notation as the
+  'prevalence' function, see the documentation. In addition, the box
+  around the plot has been removed and the legend has been moved to
+  the top.
+
+* The prevalence function has been updated to always return a matrix
+  when format='matrix'. Before it returned a vector instead of a
+  '1 x length(tspan)' matrix when the level argument was equal to 1
+  or 2, or when level = 3 and the prevalence included one node only.
+
 # SimInf 8.0.0 (2020-09-13)
 
 This release of SimInf includes improvements and changes to facilitate
