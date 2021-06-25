@@ -1,13 +1,13 @@
 
 
-![](https://raw.githubusercontent.com/stewid/SimInf/master/logo/logo.png)
+![](https://raw.githubusercontent.com/stewid/SimInf/main/logo/logo.png)
 
 > A flexible and efficient framework for data-driven stochastic disease spread simulations
 
-[![Build Status](https://dev.azure.com/stefanwidgren/SimInf/_apis/build/status/stewid.SimInf?branchName=master)](https://dev.azure.com/stefanwidgren/SimInf/_build)
+[![Build Status](https://dev.azure.com/stefanwidgren/SimInf/_apis/build/status/stewid.SimInf?branchName=main)](https://dev.azure.com/stefanwidgren/SimInf/_build)
 [![CRAN status](https://www.r-pkg.org/badges/version/SimInf)](https://CRAN.R-project.org/package=SimInf)
 [![CRAN RStudio mirror downloads](https://cranlogs.r-pkg.org/badges/last-month/SimInf)](https://CRAN.R-project.org/package=SimInf)
-[![Code coverage](https://img.shields.io/azure-devops/coverage/stefanwidgren/SimInf/1)](https://dev.azure.com/stefanwidgren/SimInf/_build/latest?definitionId=1&branchName=master)
+[![Code coverage](https://img.shields.io/azure-devops/coverage/stefanwidgren/SimInf/1)](https://dev.azure.com/stefanwidgren/SimInf/_build/latest?definitionId=1&branchName=main)
 
 # SimInf
 
@@ -210,13 +210,13 @@ for detailed installation instructions.
 ## Authors
 
 In alphabetical order: Pavol Bauer [![ORCID
-iD](https://orcid.org/sites/default/files/images/orcid_16x16.gif)](https://orcid.org/0000-0003-4328-7171),
+iD](https://info.orcid.org/wp-content/uploads/2019/11/orcid_16x16.png)](https://orcid.org/0000-0003-4328-7171),
 Robin Eriksson [![ORCID
-iD](https://orcid.org/sites/default/files/images/orcid_16x16.gif)](https://orcid.org/0000-0002-4291-712X),
+iD](https://info.orcid.org/wp-content/uploads/2019/11/orcid_16x16.png)](https://orcid.org/0000-0002-4291-712X),
 Stefan Engblom [![ORCID
-iD](https://orcid.org/sites/default/files/images/orcid_16x16.gif)](https://orcid.org/0000-0002-3614-1732),
+iD](https://info.orcid.org/wp-content/uploads/2019/11/orcid_16x16.png)](https://orcid.org/0000-0002-3614-1732),
 and Stefan Widgren [![ORCID
-iD](https://orcid.org/sites/default/files/images/orcid_16x16.gif)](https://orcid.org/0000-0001-5745-2284)
+iD](https://info.orcid.org/wp-content/uploads/2019/11/orcid_16x16.png)](https://orcid.org/0000-0001-5745-2284)
 **(Maintainer)**
 
 Any suggestions, bug reports, forks and pull requests are
@@ -240,12 +240,14 @@ use:
 
 ## Acknowledgments
 
-This work was financially supported by the Swedish Research Council
-within the UPMARC Linnaeus centre of Excellence (Pavol Bauer, Robin
-Eriksson and Stefan Engblom), the Swedish Research Council Formas
-(Stefan Engblom and Stefan Widgren), the Swedish Board of Agriculture
-(Stefan Widgren), and by the Swedish strategic research program
-eSSENCE (Stefan Widgren).
+This software has been made possible by support from the Swedish
+Research Council within the UPMARC Linnaeus center of Excellence
+(Pavol Bauer, Robin Eriksson, and Stefan Engblom), the Swedish
+Research Council Formas (Stefan Engblom and Stefan Widgren), the
+Swedish Board of Agriculture (Stefan Widgren), the Swedish strategic
+research program eSSENCE (Stefan Widgren), and by the Full-Force
+research project within the One Health European Joint Programme
+(Stefan Widgren).
 
 ## Versioning
 
@@ -254,4 +256,4 @@ The `SimInf` package uses [semantic versioning](https://semver.org/).
 ## License
 
 The `SimInf` package is licensed under the
-[GPLv3](https://github.com/stewid/SimInf/blob/master/LICENSE).
+[GPLv3](https://github.com/stewid/SimInf/blob/main/LICENSE).

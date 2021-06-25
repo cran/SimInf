@@ -467,3 +467,52 @@ setMethod(
         invisible(NULL)
     }
 )
+
+##' Display the ABC posterior distribution
+##'
+##' @param x The \code{SimInf_abc} object to plot.
+##' @param y The generation to plot. The default is to display the
+##'     last generation.
+##' @param ... Additional arguments affecting the plot.
+##' @aliases plot,SimInf_abc-method
+##' @importFrom graphics contour
+##' @importFrom graphics lines
+##' @importFrom graphics rug
+##' @importFrom MASS kde2d
+##' @importFrom stats density
+##' @export
+##' @include abc.R
+setMethod(
+    "plot",
+    signature(x = "SimInf_abc"),
+    function(x, y, ...) {
+        if (missing(y))
+            y <- length(x@x)
+        y <- as.integer(y)
+        if (length(y) != 1) {
+            stop("Can only select one generation to plot.",
+                 call. = FALSE)
+        }
+
+        if (length(x@pars) > 1) {
+            pairs(t(x@x[[y]]),
+                  diag.panel = function(x, ...) {
+                      usr <- par("usr")
+                      on.exit(par(usr))
+                      par(usr = c(usr[1:2], 0, 1.5))
+                      d <- density(x, bw = "SJ-ste")
+                      d$y <- d$y / max(d$y)
+                      lines(d, ...)
+                      rug(x)
+                  },
+                  lower.panel = function(x, y, ...) {
+                      d <- kde2d(x, y)
+                      contour(d, add = TRUE, drawlabels = FALSE, ...)
+                  }, ...)
+        } else {
+            plot(density(x@x[[y]], bw = "SJ-ste"), main = "",
+                 xlab = rownames(x@x[[y]]), ...)
+            rug(x@x[[y]])
+        }
+    }
+)

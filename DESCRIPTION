@@ -1,7 +1,7 @@
 Package: SimInf
 Title: A Framework for Data-Driven Stochastic Disease Spread
         Simulations
-Version: 8.2.0
+Version: 8.3.0
 Authors@R: c(person("Stefan", "Widgren", role = c("aut", "cre"),
                     email = "stefan.widgren@gmail.com",
                     comment = c(ORCID = "0000-0001-5745-2284")),
@@ -30,14 +30,21 @@ Description: Provides an efficient and very flexible framework to
     research. The package contains template models and can be extended
     with user-defined models. For more details see the paper by
     Widgren, Bauer, Eriksson and Engblom (2019)
-    <doi:10.18637/jss.v091.i12>.
-Acknowledgements: This work was financially supported by the Swedish
-        Research Council within the UPMARC Linnaeus center of
-        Excellence (Pavol Bauer, Robin Eriksson, and Stefan Engblom),
-        the Swedish Research Council Formas (Stefan Engblom and Stefan
-        Widgren), the Swedish Board of Agriculture (Stefan Widgren),
-        and by the Swedish strategic research program eSSENCE (Stefan
-        Widgren).
+    <doi:10.18637/jss.v091.i12>. The package also provides
+    functionality to fit models to time series data using the
+    Approximate Bayesian Computation Sequential Monte Carlo
+    ('ABC-SMC') algorithm of Toni and others (2009)
+    <doi:10.1098/rsif.2008.0172>.
+Acknowledgements: This software has been made possible by support from
+        the Swedish Research Council within the UPMARC Linnaeus center
+        of Excellence (Pavol Bauer, Robin Eriksson, and Stefan
+        Engblom), the Swedish Research Council Formas (Stefan Engblom
+        and Stefan Widgren), the Swedish Board of Agriculture (Stefan
+        Widgren), the Swedish strategic research program eSSENCE
+        (Stefan Widgren), and in the framework of the Full Force
+        project, supported by funding from the European Union’s Horizon
+        2020 Research and Innovation programme under grant agreement No
+        773830: One Health European Joint Programme (Stefan Widgren).
 License: GPL-3
 URL: https://github.com/stewid/SimInf
 BugReports: https://github.com/stewid/SimInf/issues
@@ -46,17 +53,21 @@ LazyData: true
 Biarch: true
 NeedsCompilation: yes
 SystemRequirements: GNU Scientific Library (GSL)
-Depends: R(>= 3.3)
-Imports: digest, graphics, grDevices, methods, stats, utils, Matrix
+Depends: R(>= 4.0)
+Imports: digest, graphics, grDevices, MASS, methods, stats, utils,
+        Matrix
+Suggests: knitr, rmarkdown
 Collate: 'C-generator.R' 'check_arguments.R' 'init.R' 'valid.R'
         'SimInf_events.R' 'SimInf_model.R' 'SEIR.R' 'SIR.R' 'SISe.R'
-        'SISe3.R' 'SISe3_sp.R' 'SISe_sp.R' 'SimInf.R' 'degree.R'
-        'distance.R' 'match_compartments.R' 'mparse.R' 'n.R' 'openmp.R'
+        'SISe3.R' 'SISe3_sp.R' 'SISe_sp.R' 'SimInf.R' 'run.R' 'abc.R'
+        'abc_support.R' 'degree.R' 'distance.R' 'distributions.R'
+        'match_compartments.R' 'mparse.R' 'n.R' 'openmp.R'
         'package_skeleton.R' 'plot.R' 'prevalence.R' 'print.R'
-        'priors.R' 'punchcard.R' 'run.R' 'trajectory.R'
+        'punchcard.R' 'trajectory.R'
 Encoding: UTF-8
 RoxygenNote: 7.1.1
-Packaged: 2020-12-06 15:09:49 UTC; stefan
+VignetteBuilder: utils, knitr
+Packaged: 2021-06-24 21:21:41 UTC; stefan
 Author: Stefan Widgren [aut, cre] (<https://orcid.org/0000-0001-5745-2284>),
   Robin Eriksson [aut] (<https://orcid.org/0000-0002-4291-712X>),
   Stefan Engblom [aut] (<https://orcid.org/0000-0002-3614-1732>),
@@ -65,4 +76,4 @@ Author: Stefan Widgren [aut, cre] (<https://orcid.org/0000-0001-5745-2284>),
   Attractive Chaos [cph] (Author of 'kvec.h'.)
 Maintainer: Stefan Widgren <stefan.widgren@gmail.com>
 Repository: CRAN
-Date/Publication: 2020-12-06 15:40:03 UTC
+Date/Publication: 2021-06-25 11:30:21 UTC

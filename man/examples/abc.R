@@ -1,3 +1,4 @@
+\dontrun{
 ## Let us consider an SIR model in a closed population with N = 100
 ## individuals of whom one is initially infectious and the rest are
 ## susceptible. First, generate one realisation (with a specified
@@ -45,15 +46,21 @@ acceptFun <- function(result, generation, tol, ptol, ...) {
 ## practice you would want to use many more to ensure better
 ## approximations.
 fit <- abc(model = model,
-           priors = c(beta~U(0, 1), gamma~U(0, 1)),
+           priors = c(beta ~ uniform(0, 1), gamma ~ uniform(0, 1)),
            ngen = 4,
            npart = 100,
            fn = acceptFun,
            tol = 5000,
            ptol = 0.9)
 
+## Print a brief summary.
+fit
+
+## Display the ABC posterior distribution.
 plot(fit)
 
+## Run one more generation.
 fit <- continue(fit, tol = 5000, ptol = 0.9)
 
 plot(fit)
+}
