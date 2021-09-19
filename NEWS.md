@@ -1,3 +1,17 @@
+# SimInf 8.4.0 (2021-09-19)
+
+## CHANGES OR IMPROVEMENTS
+
+* The 'events', 'gdata', 'gdata<-', 'ldata', 'punchcard<-',
+  'select_matrix', 'select_matrix<-' 'shift_matrix', 'shift_matrix<-'
+  functions were changed to S4 methods.
+
+## BUG FIXES
+
+* Protect against an integer overflow that could occur in the
+  'punchcard' method for a model with many nodes, compartments and
+  time-points.
+
 # SimInf 8.3.2 (2021-06-29)
 
 ## BUG FIXES
