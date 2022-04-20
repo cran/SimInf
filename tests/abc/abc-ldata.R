@@ -1,7 +1,7 @@
 ## This file is part of SimInf, a framework for stochastic
 ## disease spread simulations.
 ##
-## Copyright (C) 2015 -- 2021 Stefan Widgren
+## Copyright (C) 2015 -- 2022 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -23,9 +23,7 @@ source("util/check.R")
 ## Specify the number of threads to use.
 set_num_threads(1)
 
-##
 ## Create a model with parameters in ldata
-##
 model <- mparse(transitions = c("S -> beta*S*I/(S+I+R) -> I + Icum",
                                 "I -> gamma*I -> R"),
                 compartments = c("S", "I", "Icum", "R"),
@@ -39,17 +37,119 @@ model <- mparse(transitions = c("S -> beta*S*I/(S+I+R) -> I + Icum",
                                            c("1"))),
                 tspan = 2:75)
 
-accept_fn_ldata <- function(result, generation, tol, ptol, ...) {
-    ## Determine the tolerance for this generation.
-    tol <- tol * ptol ^ (generation - 1)
+## Check that a non-numeric distance vector raises an error.
+res <- assertError(abc(model = model,
+                       priors = c(beta ~ uniform(0.5, 1.5),
+                                  gamma ~ uniform(0.3, 0.7)),
+                       npart = 2,
+                       distance = function(result, ...) {
+                           c("1", "2")
+                       },
+                       tolerance = c(5, 4)))
+check_error(res, "The result from the ABC distance function must be numeric.")
 
-    ## Extract the time-series for R1 for each node as a
-    ## data.frame.
+## Check that a distance vector with the wrong dimension raises an
+## error.
+res <- assertError(abc(model = model,
+                       priors = c(beta ~ uniform(0.5, 1.5),
+                                  gamma ~ uniform(0.3, 0.7)),
+                       npart = 2,
+                       distance = function(result, ...) {
+                           1:3
+                       },
+                       tolerance = c(5, 4)))
+check_error(
+    res,
+    "Invalid dimension of the result from the ABC distance function.")
+
+## Check that a distance vector with NA raises an error.
+res <- assertError(abc(model = model,
+                       priors = c(beta ~ uniform(0.5, 1.5),
+                                  gamma ~ uniform(0.3, 0.7)),
+                       npart = 2,
+                       distance = function(result, ...) {
+                           c(NA, 2:20)
+                       },
+                       tolerance = c(5, 4)))
+check_error(
+    res,
+    "The result from the ABC distance function must be non-negative.")
+
+## Check that a distance vector with a negative value raises an error.
+res <- assertError(abc(model = model,
+                       priors = c(beta ~ uniform(0.5, 1.5),
+                                  gamma ~ uniform(0.3, 0.7)),
+                       npart = 2,
+                       distance = function(result, ...) {
+                           c(-1L, 2:20)
+                       },
+                       tolerance = c(5, 4)))
+check_error(
+    res,
+    "The result from the ABC distance function must be non-negative.")
+
+## Check that a non-numeric tolerance raises an error.
+res <- assertError(abc(model = model,
+                       priors = c(beta ~ uniform(0.5, 1.5),
+                                  gamma ~ uniform(0.3, 0.7)),
+                       npart = 2,
+                       distance = function(result, ...) {
+                           1:20
+                       },
+                       tolerance = c("1", "2")))
+check_error(res, "'tolerance' must have non-negative values.")
+
+## Check that a tolerance with NA raises an error.
+res <- assertError(abc(model = model,
+                       priors = c(beta ~ uniform(0.5, 1.5),
+                                  gamma ~ uniform(0.3, 0.7)),
+                       npart = 2,
+                       distance = function(result, ...) {
+                           1:20
+                       },
+                       tolerance = c(NA_real_, 2)))
+check_error(res, "'tolerance' must have non-negative values.")
+
+## Check that a 'tolerance' with a negative value raises an error.
+res <- assertError(abc(model = model,
+                       priors = c(beta ~ uniform(0.5, 1.5),
+                                  gamma ~ uniform(0.3, 0.7)),
+                       npart = 2,
+                       distance = function(result, ...) {
+                           1:20
+                       },
+                       tolerance = c(1, -2)))
+check_error(res, "'tolerance' must have non-negative values.")
+
+## Check that a tolerance with wrong dimension raises an error.
+res <- assertError(abc(model = model,
+                       priors = c(beta ~ uniform(0.5, 1.5),
+                                  gamma ~ uniform(0.3, 0.7)),
+                       npart = 2,
+                       distance = function(result, ...) {
+                           1:20
+                       },
+                       tolerance = numeric(0)))
+check_error(res, "'tolerance' must have columns.")
+
+## Check that a non-decreasing tolerance raises an error.
+res <- assertError(abc(model = model,
+                       priors = c(beta ~ uniform(0.5, 1.5),
+                                  gamma ~ uniform(0.3, 0.7)),
+                       npart = 2,
+                       distance = function(result, ...) {
+                           1:20
+                       },
+                       tolerance = c(4, 5)))
+check_error(res, "'tolerance' must be a decreasing vector.")
+
+distance_fn_ldata <- function(result, ...) {
+    ## Extract the time-series for R1 for each node as a data.frame.
     sim <- trajectory(result, "Icum")
 
     ## Split the 'sim' data.frame by node and calculate the sum of the
     ## squared distance at each time-point for every node.
-    dist <- tapply(sim$Icum, sim$node, function(Icum) {
+    tapply(sim$Icum, sim$node, function(Icum) {
         ## Observed cases
         cases <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                    0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 6, 6, 25, 42, 56,
@@ -63,67 +163,38 @@ accept_fn_ldata <- function(result, generation, tol, ptol, ...) {
 
         sum((sim_cases - cases)^2)
     })
-
-    ## Return TRUE or FALSE for each node depending on if the
-    ## distance is less than the tolerance.
-    abc_accept(dist < tol, tol)
 }
 
 ## Check invalid npart
 res <- assertError(abc(model = model,
                        priors = c(beta ~ uniform(0.5, 1.5),
                                   gamma ~ uniform(0.3, 0.7)),
-                       ngen = 2,
                        npart = 1,
-                       fn = accept_fn_ldata,
-                       tol = 250000,
-                       ptol = 0.9))
+                       distance = distance_fn_ldata,
+                       tolerance = c(250000, 225000)))
 check_error(res, "'npart' must be an integer > 1.")
 
 res <- assertError(abc(model = model,
                        priors = c(beta ~ uniform(0.5, 1.5),
                                   gamma ~ uniform(0.3, 0.7)),
-                       ngen = 2,
                        npart = c(10, 10),
-                       fn = accept_fn_ldata,
-                       tol = 250000,
-                       ptol = 0.9))
+                       distance = distance_fn_ldata,
+                       tolerance = c(250000, 225000)))
 check_error(res, "'npart' must be an integer > 1.")
-
-## Check invalid ngen
-res <- assertError(abc(model = model,
-                       priors = c(beta ~ uniform(0.5, 1.5),
-                                  gamma ~ uniform(0.3, 0.7)),
-                       ngen = 0,
-                       npart = 10,
-                       fn = accept_fn_ldata,
-                       tol = 250000,
-                       ptol = 0.9))
-check_error(res, "'ngen' must be an integer >= 1.")
-
-res <- assertError(abc(model = model,
-                       priors = c(beta ~ uniform(0.5, 1.5),
-                                  gamma ~ uniform(0.3, 0.7)),
-                       ngen = c(2, 2),
-                       npart = 10,
-                       fn = accept_fn_ldata,
-                       tol = 250000,
-                       ptol = 0.9))
-check_error(res, "'ngen' must be an integer >= 1.")
 
 set.seed(123)
 fit <- abc(model = model,
            priors = c(beta ~ uniform(0.5, 1.5),
                       gamma ~ uniform(0.3, 0.7)),
-           ngen = 2,
            npart = 10,
-           fn = accept_fn_ldata,
-           tol = 250000,
-           ptol = 0.9,
+           distance = distance_fn_ldata,
+           tolerance = c(250000, 225000),
            verbose = TRUE)
 fit
 summary(fit)
 as.data.frame(fit)
+
+fit <- continue(fit, tolerance = 200000, verbose = TRUE)
 
 pdf_file <- tempfile(fileext = ".pdf")
 pdf(pdf_file)
@@ -133,7 +204,7 @@ stopifnot(file.exists(pdf_file))
 unlink(pdf_file)
 
 ## Check that an invalid 'n' is detected.
-sigma <- SimInf:::proposal_covariance(fit@x[[2]])
+sigma <- SimInf:::abc_proposal_covariance(SimInf:::abc_particles(fit, 2L))
 res <- assertError(
     .Call(SimInf:::SimInf_abc_proposals,
           fit@priors$parameter,
@@ -141,8 +212,8 @@ res <- assertError(
           fit@priors$p1,
           fit@priors$p2,
           0L,
-          fit@x[[2]],
-          fit@w[[2]],
+          SimInf:::abc_particles(fit, 2L),
+          fit@weight[, 2],
           sigma))
 check_error(res, "'n' must be an integer > 0.")
 
@@ -154,8 +225,8 @@ res <- assertError(
           fit@priors$p1,
           fit@priors$p2,
           1L,
-          fit@x[[2]],
-          fit@w[[2]],
+          SimInf:::abc_particles(fit, 2L),
+          fit@weight[, 2],
           sigma))
 check_error(res, "'parameter' must be a character vector.")
 
@@ -167,8 +238,8 @@ res <- assertError(
           fit@priors$p1,
           fit@priors$p2,
           1L,
-          fit@x[[2]],
-          fit@w[[2]],
+          SimInf:::abc_particles(fit, 2L),
+          fit@weight[, 2],
           sigma))
 check_error(res, "Unknown distribution.")
 
@@ -180,12 +251,12 @@ res <- assertError(
           fit@priors$p1,
           fit@priors$p2,
           1L,
-          fit@x[[2]],
+          SimInf:::abc_particles(fit, 2L),
           numeric(0),
           sigma))
 check_error(res, "'w' must have length >= 1 when 'x' is non-null.")
 
-fit@w[[2]][2] <- -1
+fit@weight[2, 2] <- -1
 res <- assertError(
     .Call(SimInf:::SimInf_abc_proposals,
           fit@priors$parameter,
@@ -193,12 +264,12 @@ res <- assertError(
           fit@priors$p1,
           fit@priors$p2,
           1L,
-          fit@x[[2]],
-          fit@w[[2]],
+          SimInf:::abc_particles(fit, 2L),
+          fit@weight[, 2],
           sigma))
 check_error(res, "Invalid weight detected (non-finite or < 0.0).")
 
-fit@w[[2]][2] <- NaN
+fit@weight[2, 2] <- NaN
 res <- assertError(
     .Call(SimInf:::SimInf_abc_proposals,
           fit@priors$parameter,
@@ -206,12 +277,12 @@ res <- assertError(
           fit@priors$p1,
           fit@priors$p2,
           1L,
-          fit@x[[2]],
-          fit@w[[2]],
+          SimInf:::abc_particles(fit, 2L),
+          fit@weight[, 2],
           sigma))
 check_error(res, "Invalid weight detected (non-finite or < 0.0).")
 
-fit@w[[2]][2] <- NA_real_
+fit@weight[2, 2] <- NA_real_
 res <- assertError(
     .Call(SimInf:::SimInf_abc_proposals,
           fit@priors$parameter,
@@ -219,7 +290,7 @@ res <- assertError(
           fit@priors$p1,
           fit@priors$p2,
           1L,
-          fit@x[[2]],
-          fit@w[[2]],
+          SimInf:::abc_particles(fit, 2L),
+          fit@weight[, 2],
           sigma))
 check_error(res, "Invalid weight detected (non-finite or < 0.0).")

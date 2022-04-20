@@ -4,7 +4,7 @@
 ## Copyright (C) 2015 Pavol Bauer
 ## Copyright (C) 2017 -- 2019 Robin Eriksson
 ## Copyright (C) 2015 -- 2019 Stefan Engblom
-## Copyright (C) 2015 -- 2020 Stefan Widgren
+## Copyright (C) 2015 -- 2021 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -90,21 +90,26 @@ trajectory_data <- function(model, name) {
     slot(model, name)
 }
 
+##' Generic function to extract data from a simulated trajectory
+##'
+##' @param model the object to extract the trajectory from.
+##' @template compartments-param
+##' @template index-param
+##' @param ... Additional arguments, see
+##'     \code{\link{trajectory,SimInf_model-method}}
+setGeneric(
+    "trajectory",
+    signature = "model",
+    function(model, compartments = NULL, index = NULL, ...) {
+        standardGeneric("trajectory")
+    }
+)
+
 ##' Extract data from a simulated trajectory
 ##'
 ##' Extract the number of individuals in each compartment in every
 ##' node after generating a single stochastic trajectory with
 ##' \code{\link{run}}.
-setGeneric(
-    "trajectory",
-    signature = "model",
-    function(model, compartments = NULL, index = NULL,
-             format = c("data.frame", "matrix")) {
-        standardGeneric("trajectory")
-    }
-)
-
-##' @rdname trajectory
 ##' @section Internal format of the discrete state variables:
 ##'     Description of the layout of the internal matrix (\code{U})
 ##'     that is returned if \code{format = "matrix"}. \code{U[, j]}
@@ -123,20 +128,10 @@ setGeneric(
 ##'     real-valued state of the system at \code{tspan[j]}. The
 ##'     dimension of the matrix is \eqn{N_n}\code{dim(ldata)[1]}
 ##'     \eqn{\times} \code{length(tspan)}.
-##' @param model the \code{model} to extract the result from.
-##' @param compartments specify the names of the compartments to
-##'     extract data from. The compartments can be specified as a
-##'     character vector e.g. \code{compartments = c('S', 'I', 'R')},
-##'     or as a formula e.g. \code{compartments = ~S+I+R} (see
-##'     \sQuote{Examples}). Default (\code{compartments=NULL}) is to
-##'     extract the number of individuals in each compartment i.e. the
-##'     data from all discrete state compartments in the model. In
-##'     models that also have continuous state variables e.g. the
-##'     \code{SISe} model, use \code{~.} instead of \code{NULL} to
-##'     also include these.
-##' @param index indices specifying the subset of nodes to include
-##'     when extracting data. Default (\code{index = NULL}) is to
-##'     extract data from all nodes.
+##' @param model the \code{SimInf_model} object to extract the result
+##'     from.
+##' @template compartments-param
+##' @template index-param
 ##' @param format the default (\code{format = "data.frame"}) is to
 ##'     generate a \code{data.frame} with one row per node and
 ##'     time-step with the number of individuals in each
@@ -189,7 +184,8 @@ setGeneric(
 setMethod(
     "trajectory",
     signature(model = "SimInf_model"),
-    function(model, compartments, index, format) {
+    function(model, compartments, index,
+             format = c("data.frame", "matrix")) {
         if (is_trajectory_empty(model)) {
             stop("Please run the model first, the trajectory is empty.",
                  call. = FALSE)

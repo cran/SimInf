@@ -4,7 +4,7 @@
 ## Copyright (C) 2015 Pavol Bauer
 ## Copyright (C) 2017 -- 2019 Robin Eriksson
 ## Copyright (C) 2015 -- 2019 Stefan Engblom
-## Copyright (C) 2015 -- 2020 Stefan Widgren
+## Copyright (C) 2015 -- 2022 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -356,13 +356,41 @@ plot_data <- function(pd, argv, lty, col, frame.plot, legend) {
     }
 }
 
+##' @importFrom graphics contour
+##' @importFrom graphics lines
+##' @importFrom graphics rug
+##' @importFrom MASS kde2d
+##' @importFrom stats density
+##' @noRd
+plot_density <- function(x, ...) {
+    if (ncol(x) > 1) {
+        pairs(x,
+              diag.panel = function(x, ...) {
+                  usr <- par("usr")
+                  on.exit(par(usr))
+                  par(usr = c(usr[1:2], 0, 1.5))
+                  d <- density(x, bw = "SJ-ste")
+                  d$y <- d$y / max(d$y)
+                  lines(d, ...)
+                  rug(x)
+              },
+              lower.panel = function(x, y, ...) {
+                  d <- kde2d(x, y)
+                  contour(d, add = TRUE, drawlabels = FALSE, ...)
+              }, ...)
+    } else {
+        plot(density(x, bw = "SJ-ste"), main = "", xlab = colnames(x), ...)
+        rug(x)
+    }
+}
+
 ##' Display the outcome from a simulated trajectory
 ##'
 ##' Plot either the median and the quantile range of the counts in all
 ##' nodes, or plot the counts in specified nodes.
 ##' @param x The \code{model} to plot.
 ##' @template plot-y-param
-##' @template plot-level-param
+##' @template prevalence-level-param
 ##' @template plot-index-param
 ##' @template plot-range-param
 ##' @template plot-type-param
@@ -475,11 +503,6 @@ setMethod(
 ##'     last generation.
 ##' @param ... Additional arguments affecting the plot.
 ##' @aliases plot,SimInf_abc-method
-##' @importFrom graphics contour
-##' @importFrom graphics lines
-##' @importFrom graphics rug
-##' @importFrom MASS kde2d
-##' @importFrom stats density
 ##' @export
 ##' @include abc.R
 setMethod(
@@ -487,32 +510,15 @@ setMethod(
     signature(x = "SimInf_abc"),
     function(x, y, ...) {
         if (missing(y))
-            y <- length(x@x)
+            y <- n_generations(x)
         y <- as.integer(y)
         if (length(y) != 1) {
             stop("Can only select one generation to plot.",
                  call. = FALSE)
         }
 
-        if (length(x@pars) > 1) {
-            pairs(t(x@x[[y]]),
-                  diag.panel = function(x, ...) {
-                      usr <- par("usr")
-                      on.exit(par(usr))
-                      par(usr = c(usr[1:2], 0, 1.5))
-                      d <- density(x, bw = "SJ-ste")
-                      d$y <- d$y / max(d$y)
-                      lines(d, ...)
-                      rug(x)
-                  },
-                  lower.panel = function(x, y, ...) {
-                      d <- kde2d(x, y)
-                      contour(d, add = TRUE, drawlabels = FALSE, ...)
-                  }, ...)
-        } else {
-            plot(density(x@x[[y]], bw = "SJ-ste"), main = "",
-                 xlab = rownames(x@x[[y]]), ...)
-            rug(x@x[[y]])
-        }
+        plot_density(abc_particles(x, y), ...)
+
+        invisible(NULL)
     }
 )

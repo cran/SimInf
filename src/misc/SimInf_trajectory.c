@@ -5,7 +5,7 @@
  * Copyright (C) 2015 Pavol Bauer
  * Copyright (C) 2017 -- 2019 Robin Eriksson
  * Copyright (C) 2015 -- 2019 Stefan Engblom
- * Copyright (C) 2015 -- 2020 Stefan Widgren
+ * Copyright (C) 2015 -- 2021 Stefan Widgren
  *
  * SimInf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -130,8 +130,11 @@ SimInf_sparse2df_int(
     double *m_x = REAL(GET_SLOT(m, Rf_install("x")));
 
     for (R_xlen_t i = 0; i < m_i_len; i++) {
-        SEXP vec = PROTECT(Rf_allocVector(INTSXP, nrow));
-        int *p_vec = INTEGER(vec);
+        SEXP vec;
+        int *p_vec;
+
+        SET_VECTOR_ELT(dst, col++, vec = Rf_allocVector(INTSXP, nrow));
+        p_vec = INTEGER(vec);
 
         if (ri) {
             size_t k = 0;
@@ -189,9 +192,6 @@ SimInf_sparse2df_int(
                     p_vec[t * n_id + id] = NA_INTEGER;
             }
         }
-
-        SET_VECTOR_ELT(dst, col++, vec);
-        UNPROTECT(1);
     }
 }
 
@@ -213,8 +213,11 @@ SimInf_sparse2df_real(
     double *m_x = REAL(GET_SLOT(m, Rf_install("x")));
 
     for (R_xlen_t i = 0; i < m_i_len; i++) {
-        SEXP vec = PROTECT(Rf_allocVector(REALSXP, nrow));
-        double *p_vec = REAL(vec);
+        SEXP vec;
+        double *p_vec;
+
+        SET_VECTOR_ELT(dst, col++, vec = Rf_allocVector(REALSXP, nrow));
+        p_vec = REAL(vec);
 
         if (ri) {
             size_t k = 0;
@@ -272,9 +275,6 @@ SimInf_sparse2df_real(
                     p_vec[t * n_id + id] = NA_REAL;
             }
         }
-
-        SET_VECTOR_ELT(dst, col++, vec);
-        UNPROTECT(1);
     }
 }
 
@@ -293,9 +293,12 @@ SimInf_dense2df_int(
     int *p_id)
 {
     for (R_xlen_t i = 0; i < m_i_len; i++) {
-        SEXP vec = PROTECT(Rf_allocVector(INTSXP, nrow));
-        int *p_vec = INTEGER(vec);
+        SEXP vec;
+        int *p_vec;
         int *p_m = m + m_i[i] - 1;
+
+        SET_VECTOR_ELT(dst, col++, vec = Rf_allocVector(INTSXP, nrow));
+        p_vec = INTEGER(vec);
 
         if (p_id != NULL) {
             /* Note that the identifiers are one-based. */
@@ -319,9 +322,6 @@ SimInf_dense2df_int(
                 }
             }
         }
-
-        SET_VECTOR_ELT(dst, col++, vec);
-        UNPROTECT(1);
     }
 }
 
@@ -340,9 +340,12 @@ SimInf_dense2df_real(
     int *p_id)
 {
     for (R_xlen_t i = 0; i < m_i_len; i++) {
-        SEXP vec = PROTECT(Rf_allocVector(REALSXP, nrow));
-        double *p_vec = REAL(vec);
+        SEXP vec;
+        double *p_vec;
         double *p_m = m + m_i[i] - 1;
+
+        SET_VECTOR_ELT(dst, col++, vec = Rf_allocVector(REALSXP, nrow));
+        p_vec = REAL(vec);
 
         if (p_id != NULL) {
             /* Note that the node identifiers are one-based. */
@@ -366,9 +369,6 @@ SimInf_dense2df_real(
                 }
             }
         }
-
-        SET_VECTOR_ELT(dst, col++, vec);
-        UNPROTECT(1);
     }
 }
 
@@ -408,6 +408,8 @@ SimInf_trajectory(
     SEXP id_lbl)
 {
     SEXP colnames, result, vec;
+    int error = 0;
+    int nprotect = 0;
     int *p_vec;
     int *p_id = Rf_isNull(id) ? NULL : INTEGER(id);
     R_xlen_t dm_i_len = XLENGTH(dm_i);
@@ -430,6 +432,7 @@ SimInf_trajectory(
 
     /* Create a vector for the column names. */
     PROTECT(colnames = Rf_allocVector(STRSXP, ncol));
+    nprotect++;
     SET_STRING_ELT(colnames, 0, STRING_ELT(id_lbl, 0));
     SET_STRING_ELT(colnames, 1, Rf_mkChar("time"));
     for (R_xlen_t i = 0; i < dm_i_len; i++) {
@@ -449,15 +452,27 @@ SimInf_trajectory(
     if (dm_i_len > 0 && cm_i_len > 0) {
         if (dm_sparse && cm_sparse) {
             ri = calloc(1, sizeof(rowinfo_vec));
+            if (!ri) {
+                error = SIMINF_ERR_ALLOC_MEMORY_BUFFER; /* #nocov */
+                goto cleanup;                           /* #nocov */
+            }
             SimInf_insert_id_time2(ri, dm, cm, dm_stride, cm_stride, tlen);
             nrow = kv_size(*ri);
         }
     } else if (dm_i_len > 0 && dm_sparse) {
         ri = calloc(1, sizeof(rowinfo_vec));
+        if (!ri) {
+            error = SIMINF_ERR_ALLOC_MEMORY_BUFFER; /* #nocov */
+            goto cleanup;                           /* #nocov */
+        }
         SimInf_insert_id_time(ri, dm, dm_stride, tlen);
         nrow = kv_size(*ri);
     } else if (cm_i_len > 0 && cm_sparse) {
         ri = calloc(1, sizeof(rowinfo_vec));
+        if (!ri) {
+            error = SIMINF_ERR_ALLOC_MEMORY_BUFFER; /* #nocov */
+            goto cleanup;                           /* #nocov */
+        }
         SimInf_insert_id_time(ri, cm, cm_stride, tlen);
         nrow = kv_size(*ri);
     }
@@ -465,12 +480,14 @@ SimInf_trajectory(
     /* Create a list for the 'data.frame' and add colnames and a
      * 'data.frame' class attribute. */
     PROTECT(result = Rf_allocVector(VECSXP, ncol));
+    nprotect++;
     Rf_setAttrib(result, R_NamesSymbol, colnames);
     Rf_setAttrib(result, R_ClassSymbol, Rf_mkString("data.frame"));
 
     /* Add row names to the 'data.frame'. Note that the row names are
      * one-based. */
     PROTECT(vec = Rf_allocVector(INTSXP, nrow));
+    nprotect++;
     p_vec = INTEGER(vec);
     #ifdef _OPENMP
     #  pragma omp parallel for num_threads(SimInf_num_threads())
@@ -479,10 +496,9 @@ SimInf_trajectory(
         p_vec[i] = i + 1;
     }
     Rf_setAttrib(result, R_RowNamesSymbol, vec);
-    UNPROTECT(1);
 
     /* Add an identifier column to the 'data.frame'. */
-    PROTECT(vec = Rf_allocVector(INTSXP, nrow));
+    SET_VECTOR_ELT(result, 0, vec = Rf_allocVector(INTSXP, nrow));
     p_vec = INTEGER(vec);
     if (ri) {
         for (size_t i = 0; i < kv_size(*ri); i++)
@@ -503,16 +519,13 @@ SimInf_trajectory(
                 p_vec[t * id_len + i] = i + 1;
         }
     }
-    SET_VECTOR_ELT(result, 0, vec);
-    UNPROTECT(1);
 
     /* Add a 'time' column to the 'data.frame'. */
     if (Rf_isNull(Rf_getAttrib(tspan, R_NamesSymbol))) {
         double *p_tspan = REAL(tspan);
 
-        PROTECT(vec = Rf_allocVector(INTSXP, nrow));
+        SET_VECTOR_ELT(result, 1, vec = Rf_allocVector(INTSXP, nrow));
         p_vec = INTEGER(vec);
-
         if (ri) {
             for (size_t i = 0; i < kv_size(*ri); i++)
                 p_vec[i] = p_tspan[kv_A(*ri, i).time];
@@ -525,14 +538,11 @@ SimInf_trajectory(
                     p_vec[t * id_len + i] = p_tspan[t];
             }
         }
-
-        SET_VECTOR_ELT(result, 1, vec);
-        UNPROTECT(1);
     } else {
         SEXP lbl_tspan = PROTECT(Rf_getAttrib(tspan, R_NamesSymbol));
+        nprotect++;
 
-        PROTECT(vec = Rf_allocVector(STRSXP, nrow));
-
+        SET_VECTOR_ELT(result, 1, vec = Rf_allocVector(STRSXP, nrow));
         if (ri) {
             for (size_t i = 0; i < kv_size(*ri); i++)
                 SET_STRING_ELT(vec, i, STRING_ELT(lbl_tspan, kv_A(*ri, i).time));
@@ -542,9 +552,6 @@ SimInf_trajectory(
                     SET_STRING_ELT(vec, t * id_len + i, STRING_ELT(lbl_tspan, t));
             }
         }
-
-        SET_VECTOR_ELT(result, 1, vec);
-        UNPROTECT(2);
     }
 
     /* Copy data from the discrete state matrix. */
@@ -565,12 +572,17 @@ SimInf_trajectory(
                              nrow, tlen, id_len, c_id_n, 2 + dm_i_len, p_id);
     }
 
+cleanup:
     if (ri) {
         kv_destroy(*ri);
         free(ri);
     }
 
-    UNPROTECT(2);
+    if (nprotect)
+        UNPROTECT(nprotect);
+
+    if (error)
+        Rf_error("Unable to allocate memory buffer."); /* #nocov */
 
     return result;
 }
