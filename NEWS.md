@@ -1,3 +1,20 @@
+# SimInf 9.1.0 (2022-06-08)
+
+## CHANGES OR IMPROVEMENTS
+
+* Added a new built-in Susceptible-Infected-Susceptible model: `SIS`.
+
+* Added the functions `update_u0` and `update_v0` to update the
+  initial state in a model.
+
+* Added the `pfilter` function to run a bootstrap particle algorithm
+  on a model. See the documentation for an example.
+
+## BUG FIXES
+
+* Fixed the unnamed non-character argument 'usr' in par() when ploting
+  the density of the ABC posterior distribution.
+
 # SimInf 9.0.0 (2022-04-20)
 
 This release of SimInf focuses primarily on improving the

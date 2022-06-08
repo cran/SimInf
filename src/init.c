@@ -5,7 +5,7 @@
  * Copyright (C) 2015 Pavol Bauer
  * Copyright (C) 2017 -- 2019 Robin Eriksson
  * Copyright (C) 2015 -- 2019 Stefan Engblom
- * Copyright (C) 2015 -- 2020 Stefan Widgren
+ * Copyright (C) 2015 -- 2022 Stefan Widgren
  *
  * SimInf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@
 /* Declare functions to register */
 SEXP SEIR_run(SEXP, SEXP);
 SEXP SIR_run(SEXP, SEXP);
+SEXP SIS_run(SEXP, SEXP);
 SEXP SISe_run(SEXP, SEXP);
 SEXP SISe3_run(SEXP, SEXP);
 SEXP SISe3_sp_run(SEXP, SEXP);
@@ -38,6 +39,8 @@ SEXP SimInf_abc_weights(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP SimInf_have_openmp();
 SEXP SimInf_init_threads(SEXP);
 SEXP SimInf_ldata_sp(SEXP, SEXP, SEXP);
+SEXP SimInf_split_events(SEXP, SEXP);
+SEXP SimInf_systematic_resampling(SEXP);
 SEXP SimInf_trajectory(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 
 #define CALLDEF(name, n) {#name, (DL_FUNC) &name, n}
@@ -47,6 +50,7 @@ static const R_CallMethodDef callMethods[] =
     CALLDEF(SEIR_run, 2),
     CALLDEF(SIR_run, 2),
     CALLDEF(SISe_run, 2),
+    CALLDEF(SIS_run, 2),
     CALLDEF(SISe3_run, 2),
     CALLDEF(SISe3_sp_run, 2),
     CALLDEF(SISe_sp_run, 2),
@@ -55,6 +59,8 @@ static const R_CallMethodDef callMethods[] =
     CALLDEF(SimInf_have_openmp, 0),
     CALLDEF(SimInf_init_threads, 1),
     CALLDEF(SimInf_ldata_sp, 3),
+    CALLDEF(SimInf_split_events, 2),
+    CALLDEF(SimInf_systematic_resampling, 1),
     CALLDEF(SimInf_trajectory, 10),
     {NULL, NULL, 0}
 };

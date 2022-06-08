@@ -1,7 +1,7 @@
 Package: SimInf
 Title: A Framework for Data-Driven Stochastic Disease Spread
         Simulations
-Version: 9.0.0
+Version: 9.1.0
 Authors@R: c(person("Stefan", "Widgren", role = c("aut", "cre"),
                     email = "stefan.widgren@gmail.com",
                     comment = c(ORCID = "0000-0001-5745-2284")),
@@ -58,16 +58,17 @@ Imports: digest, graphics, grDevices, MASS, methods, stats, utils,
         Matrix
 Suggests: knitr, rmarkdown
 Collate: 'C-generator.R' 'check_arguments.R' 'init.R' 'valid.R'
-        'classes.R' 'SimInf_model.R' 'SEIR.R' 'SIR.R' 'SISe.R'
+        'classes.R' 'SimInf_model.R' 'SEIR.R' 'SIR.R' 'SIS.R' 'SISe.R'
         'SISe3.R' 'SISe3_sp.R' 'SISe_sp.R' 'SimInf.R' 'SimInf_events.R'
         'run.R' 'density_ratio.R' 'abc.R' 'abc_support.R' 'degree.R'
         'distance.R' 'distributions.R' 'match_compartments.R'
-        'mparse.R' 'n.R' 'openmp.R' 'package_skeleton.R' 'plot.R'
-        'prevalence.R' 'print.R' 'punchcard.R' 'trajectory.R'
+        'mparse.R' 'n.R' 'openmp.R' 'package_skeleton.R' 'pfilter.R'
+        'plot.R' 'prevalence.R' 'print.R' 'punchcard.R' 'trajectory.R'
+        'update.R'
 Encoding: UTF-8
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.0
 VignetteBuilder: utils, knitr
-Packaged: 2022-04-20 08:04:24 UTC; stefan
+Packaged: 2022-06-08 06:22:30 UTC; stefan
 Author: Stefan Widgren [aut, cre] (<https://orcid.org/0000-0001-5745-2284>),
   Robin Eriksson [aut] (<https://orcid.org/0000-0002-4291-712X>),
   Stefan Engblom [aut] (<https://orcid.org/0000-0002-3614-1732>),
@@ -76,4 +77,4 @@ Author: Stefan Widgren [aut, cre] (<https://orcid.org/0000-0001-5745-2284>),
   Attractive Chaos [cph] (Author of 'kvec.h'.)
 Maintainer: Stefan Widgren <stefan.widgren@gmail.com>
 Repository: CRAN
-Date/Publication: 2022-04-20 08:42:33 UTC
+Date/Publication: 2022-06-08 07:00:02 UTC

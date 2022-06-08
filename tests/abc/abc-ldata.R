@@ -217,6 +217,18 @@ res <- assertError(
           sigma))
 check_error(res, "'n' must be an integer > 0.")
 
+res <- assertError(
+    .Call(SimInf:::SimInf_abc_proposals,
+          fit@priors$parameter,
+          fit@priors$distribution,
+          fit@priors$p1,
+          fit@priors$p2,
+          2,
+          SimInf:::abc_particles(fit, 2L),
+          fit@weight[, 2],
+          sigma))
+check_error(res, "'n' must be an integer > 0.")
+
 ## Check that an invalid 'parameter' is detected.
 res <- assertError(
     .Call(SimInf:::SimInf_abc_proposals,
@@ -241,6 +253,18 @@ res <- assertError(
           SimInf:::abc_particles(fit, 2L),
           fit@weight[, 2],
           sigma))
+check_error(res, "Unknown distribution.")
+
+res <- assertError(
+    .Call(SimInf:::SimInf_abc_proposals,
+          fit@priors$parameter,
+          "a",
+          fit@priors$p1,
+          fit@priors$p2,
+          1L,
+          NULL,
+          NULL,
+          NULL))
 check_error(res, "Unknown distribution.")
 
 ## Check that an invalid weight is detected.
