@@ -126,7 +126,7 @@ remove <- data.frame(event = "exit", time = c(70, 110),
 ###################################################
 ### code chunk number 18: SimInf.Rnw:1361-1368 (eval = FALSE)
 ###################################################
-## events = rbind(add, infect, move, remove)
+## events <- rbind(add, infect, move, remove)
 ## model <- SIR(u0 = u0, tspan = 1:180, events = events, beta = 0.16,
 ##   gamma = 0.077)
 ## set.seed(3)
@@ -138,7 +138,7 @@ remove <- data.frame(event = "exit", time = c(70, 110),
 ###################################################
 ### code chunk number 19: SIR-events-I
 ###################################################
-events = rbind(add, infect, move, remove)
+events <- rbind(add, infect, move, remove)
 model <- SIR(u0 = u0, tspan = 1:180, events = events, beta = 0.16,
 gamma = 0.077)
 set.seed(3)
@@ -428,7 +428,7 @@ parameters <- c(bR = 2, bF = 2, dR = 1, K = 1000, alpha = 0.007,
 ### code chunk number 47: mparse-predator-prey-II
 ###################################################
 n <- 1000
-u0 = data.frame(R = rep(1000, n), F = rep(100, n))
+u0 <- data.frame(R = rep(1000, n), F = rep(100, n))
 model <- mparse(transitions = transitions, compartments = compartments,
   gdata = parameters, u0 = u0, tspan = 1:100)
 

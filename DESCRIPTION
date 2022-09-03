@@ -1,7 +1,7 @@
 Package: SimInf
 Title: A Framework for Data-Driven Stochastic Disease Spread
         Simulations
-Version: 9.1.0
+Version: 9.2.0
 Authors@R: c(person("Stefan", "Widgren", role = c("aut", "cre"),
                     email = "stefan.widgren@gmail.com",
                     comment = c(ORCID = "0000-0001-5745-2284")),
@@ -13,6 +13,8 @@ Authors@R: c(person("Stefan", "Widgren", role = c("aut", "cre"),
                     comment = c(ORCID = "0000-0003-4328-7171")),
              person("Thomas", "Rosendal", role = "ctb",
                     comment = c(ORCID = "0000-0002-6576-9668")),
+             person("Ivana", "Rodriguez Ewerlöf", role = "ctb",
+                    comment = c(ORCID = "0000-0002-9678-9813")),
              person("Attractive Chaos", role = "cph",
                     comment = "Author of 'kvec.h'."))
 Description: Provides an efficient and very flexible framework to
@@ -68,13 +70,14 @@ Collate: 'C-generator.R' 'check_arguments.R' 'init.R' 'valid.R'
 Encoding: UTF-8
 RoxygenNote: 7.2.0
 VignetteBuilder: utils, knitr
-Packaged: 2022-06-08 06:22:30 UTC; stefan
+Packaged: 2022-09-03 16:35:15 UTC; stefan
 Author: Stefan Widgren [aut, cre] (<https://orcid.org/0000-0001-5745-2284>),
   Robin Eriksson [aut] (<https://orcid.org/0000-0002-4291-712X>),
   Stefan Engblom [aut] (<https://orcid.org/0000-0002-3614-1732>),
   Pavol Bauer [aut] (<https://orcid.org/0000-0003-4328-7171>),
   Thomas Rosendal [ctb] (<https://orcid.org/0000-0002-6576-9668>),
+  Ivana Rodriguez Ewerlöf [ctb] (<https://orcid.org/0000-0002-9678-9813>),
   Attractive Chaos [cph] (Author of 'kvec.h'.)
 Maintainer: Stefan Widgren <stefan.widgren@gmail.com>
 Repository: CRAN
-Date/Publication: 2022-06-08 07:00:02 UTC
+Date/Publication: 2022-09-03 17:40:01 UTC
