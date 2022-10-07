@@ -1,7 +1,7 @@
-aa0a69b102b5629068099825b206c56e *DESCRIPTION
+624acb96d99231ad250c7022c028b5da *DESCRIPTION
 db65d746e9dab8af8a00ddf035f2f60a *NAMESPACE
-d1fb2e6b84ac79475bd8b7bc9263209a *NEWS.md
-771791428261c5d3660bd5a12ac6ec9a *R/C-generator.R
+13b85421e7ea845480a8342077bde107 *NEWS.md
+8c021aab3d23b5e3d580b9d1bb23abdf *R/C-generator.R
 7f8cf624a6d202f0214c6603839fb1ca *R/SEIR.R
 6870a136944b3fce43532bb8e5ad9746 *R/SIR.R
 8296b649ee455a881d3911d796c01a89 *R/SIS.R
@@ -37,8 +37,8 @@ e942f9a4ba19b47ba460732083f884cd *R/run.R
 8841040165ac2d203163ef1dc1312e03 *R/update.R
 b67ad9a6abc48ee2e672d76176311310 *R/valid.R
 6b89e74807078693d73a96234c5e7259 *README.md
-9a8b54eb3ab9affe54228ca82bb84012 *build/partial.rdb
-9e7d4ac1508c26507f8e1e63bf9deee3 *build/vignette.rds
+439bf689fa27cf9affd0335332142165 *build/partial.rdb
+90313a5cf00ad844bc72a84d0b2c4e37 *build/vignette.rds
 10d7c54922727e585af83c3509002458 *cleanup
 c7e3e8ae4c16d4805f8e6807452d887a *configure
 d44719c7767d517006a8926c4473b746 *configure.ac
@@ -48,10 +48,10 @@ e4cc4ca1a5ff459aaa9b3c9d42d6f1dd *data/u0_SISe3.rda
 b02e5cd1ef2d8a43b24c8ad1b7716bfd *inst/CITATION
 ed62cb8b5f75f88963fc01e60fd5b821 *inst/doc/SimInf.R
 70a6af8c076f16ff4de00ee5e5f0d08f *inst/doc/SimInf.Rnw
-65f15ee31be2f7f8749c2feeb6a7f288 *inst/doc/SimInf.pdf
+d0d6f7ef6cb6d7757da0f5bc45a608c0 *inst/doc/SimInf.pdf
 e3c0604d3ea44855b095f4e708dd88cf *inst/doc/scheduled-events.R
 89dd172404f773c497d584f79fb537ad *inst/doc/scheduled-events.Rmd
-2bdc125e6bf75a9618d48c68ffc7f14e *inst/doc/scheduled-events.html
+1fab2b61927d10abf78cbdf6bbb6112b *inst/doc/scheduled-events.html
 109b04fd770317b13a858f2da210d2f3 *inst/include/SimInf.h
 4443cbef99db9b3e614aed546f105bcc *man/C_code.Rd
 a47d292df203301af2694a26495d17e3 *man/SEIR-class.Rd
@@ -139,7 +139,7 @@ d1ff7f76cbeb527a14bcd3e56e615535 *man/u0_SIR.Rd
 21259f817035c222b4ac477069eb76e9 *src/Makevars.win
 15e9813224d748f5eb09b5fcde7f632c *src/SimInf-win.def
 b1d5c2b18a0afe94d8691cdf8e17de09 *src/SimInf.c
-19051b0201baa2e19723052ededd74ee *src/init.c
+bb625a14c87e0bf7485cf793a6489ed0 *src/init.c
 f3e6b30d409af5326567615750bdb674 *src/misc/SimInf_abc.c
 72af1b1e41bf21e7b22f388a0e651be9 *src/misc/SimInf_arg.c
 836d826459e79d7f527d886d54c304c1 *src/misc/SimInf_arg.h
@@ -147,8 +147,8 @@ f3e6b30d409af5326567615750bdb674 *src/misc/SimInf_abc.c
 66184f8b02b0539cfc1cd5dff49743be *src/misc/SimInf_forward_euler_linear_decay.c
 ca6e1ecd2f8ecb16fd9b12f562ab8f78 *src/misc/SimInf_ldata.c
 bc5364043d49e1a8bd83eaa513dfea00 *src/misc/SimInf_local_spread.c
-5f6530cf9a9907589851beafb705c9ed *src/misc/SimInf_openmp.c
-d48c5974b6d7ca4322cadda02e69b18a *src/misc/SimInf_openmp.h
+0a460a333a287e994fea6130ab55d510 *src/misc/SimInf_openmp.c
+86bccdca19853eda2a75fd43688bbdbb *src/misc/SimInf_openmp.h
 0e7010ab201dca8873d8cf690f0ef2df *src/misc/SimInf_particle_filter.c
 c210e89f300f5f6af0d9c598e2c3af51 *src/misc/SimInf_trajectory.c
 5aca36a50c420debea0694c70181867f *src/misc/binheap.c
@@ -163,9 +163,9 @@ e79672c34ae6b099c5e75e168a04e523 *src/models/SEIR.c
 dd2cd24d38487b2841e337e184157055 *src/models/SISe_sp.c
 ab781c005118208765cb0ce9796924cb *src/solvers/SimInf_solver.c
 c67971e5f58c667dcb7b4f01316638df *src/solvers/SimInf_solver.h
-f417de4489007d4cd4fccb9b550e792b *src/solvers/aem/SimInf_solver_aem.c
+1a189ac2a517eb89525dcc0827a95f91 *src/solvers/aem/SimInf_solver_aem.c
 9c8d0734a8a26354362dcba682197fa3 *src/solvers/aem/SimInf_solver_aem.h
-f5b3fd5171eccd7278a872af843bf0f4 *src/solvers/ssm/SimInf_solver_ssm.c
+d92640f840803671ec127d598bc7fa7c *src/solvers/ssm/SimInf_solver_ssm.c
 cc80697c3f0a2c065455cd049c1c2e60 *src/solvers/ssm/SimInf_solver_ssm.h
 ff90fe0b2d3c7dc201b856923346d0c9 *tests/SEIR.R
 cfdc98b3e38ef9aa91b7560d066ea19f *tests/SIR.R
@@ -188,7 +188,7 @@ e935d969053a1ce81a46741d372a3ccd *tests/clean_raw_events.R
 e2d42c4d36bac01c326dbb8f32f8ced9 *tests/ldata_sp.R
 581e8871d51ba9cf085ccfcd25dc1568 *tests/match_compartments.R
 291f78f4797875bf31362368a2817d2c *tests/measures.R
-8f2028770f9bf6e6e784a194899a1e0d *tests/mparse.R
+c391395f9be0ac4a42639ddc3a1e3e1d *tests/mparse.R
 8d26e2aa6e14d4ba3d33beaab4fafd0d *tests/package_skeleton.R
 da6512372df3c13b4be26b4e12223d50 *tests/pfilter.R
 767be8ef4e67a210d09ceb25ee143160 *tests/phi.R
