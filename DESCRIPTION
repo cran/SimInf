@@ -1,7 +1,7 @@
 Package: SimInf
 Title: A Framework for Data-Driven Stochastic Disease Spread
         Simulations
-Version: 9.4.0
+Version: 9.5.0
 Authors@R: c(person("Stefan", "Widgren", role = c("aut", "cre"),
                     email = "stefan.widgren@gmail.com",
                     comment = c(ORCID = "0000-0001-5745-2284")),
@@ -70,7 +70,7 @@ Collate: 'C-generator.R' 'check_arguments.R' 'init.R' 'valid.R'
 Encoding: UTF-8
 RoxygenNote: 7.2.1
 VignetteBuilder: utils, knitr
-Packaged: 2023-01-06 08:57:37 UTC; stefan
+Packaged: 2023-01-23 07:10:33 UTC; stefan
 Author: Stefan Widgren [aut, cre] (<https://orcid.org/0000-0001-5745-2284>),
   Robin Eriksson [aut] (<https://orcid.org/0000-0002-4291-712X>),
   Stefan Engblom [aut] (<https://orcid.org/0000-0002-3614-1732>),
@@ -80,4 +80,4 @@ Author: Stefan Widgren [aut, cre] (<https://orcid.org/0000-0001-5745-2284>),
   Attractive Chaos [cph] (Author of 'kvec.h'.)
 Maintainer: Stefan Widgren <stefan.widgren@gmail.com>
 Repository: CRAN
-Date/Publication: 2023-01-06 11:10:08 UTC
+Date/Publication: 2023-01-23 08:50:02 UTC
