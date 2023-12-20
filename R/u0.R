@@ -1,7 +1,7 @@
 ## This file is part of SimInf, a framework for stochastic
 ## disease spread simulations.
 ##
-## Copyright (C) 2015 -- 2022 Stefan Widgren
+## Copyright (C) 2015 -- 2023 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -18,9 +18,9 @@
 
 ##' Get the initial compartment state
 ##'
-##' @param model The model to get the initial compartment state
+##' @param object The object to get the initial compartment state
 ##'     \code{u0} from.
-##' @param ... Additional arguments. Currently not used.
+##' @param ... Additional arguments.
 ##' @return a \code{data.frame} with the initial compartment state.
 ##' @export
 ##' @examples
@@ -34,8 +34,8 @@
 ##' u0(model)
 setGeneric(
     "u0",
-    signature = "model",
-    function(model, ...) {
+    signature = "object",
+    function(object, ...) {
         standardGeneric("u0")
     }
 )
@@ -44,9 +44,71 @@ setGeneric(
 ##' @export
 setMethod(
     "u0",
-    signature(model = "SimInf_model"),
-    function(model, ...) {
-        as.data.frame(t(model@u0))
+    signature(object = "SimInf_model"),
+    function(object, ...) {
+        as.data.frame(t(object@u0))
+    }
+)
+
+##' @rdname u0
+##' @param time the time-point that will be used to create u0. If left
+##'     empty (the default), the earliest time among the events will
+##'     be used.
+##' @param target the SimInf model ('SEIR', 'SIR', 'SIS', 'SISe3',
+##'     'SISe3_sp', 'SISe', or 'SISe_sp') to target the events and u0
+##'     for. The default, \code{NULL}, creates an \code{u0}, but where
+##'     the compartments might have to be renamed and post-processed
+##'     to fit the specific use case.
+##' @param age FIXME.
+##' @export
+setMethod(
+    "u0",
+    signature(object = "SimInf_indiv_events"),
+    function(object, time = NULL, target = NULL, age = NULL) {
+        ## Check for valid target model.
+        if (!is.null(target)) {
+            target <- match.arg(target, c("SEIR", "SIR", "SIS",
+                                          "SISe3", "SISe3_sp", "SISe",
+                                          "SISe_sp"))
+        }
+
+        if (is.null(age)) {
+            age <- c(0, Inf)
+        } else {
+            stop("Not implemented.")
+        }
+
+        ## Determine the location and age for all individuals.
+        individuals <- get_individuals(object, time)
+
+        ## Ensure all nodes are included in u0.
+        nodes <- setdiff(c(object@node, object@dest), individuals$node)
+        nodes <- nodes[!is.na(nodes)]
+        node <- c(individuals$node, nodes)
+
+        if (nrow(individuals)) {
+            ## Determine the age categories.
+            age_category <- paste0("S_", findInterval(individuals$age, age))
+            age_category <- c(age_category, rep(NA_character_, length(nodes)))
+
+            ## Create u0.
+            u0 <- as.data.frame.matrix(table(node, age_category))
+        } else {
+            ## Create an empty u0.
+            u0 <- as.data.frame.matrix(
+                matrix(data = 0L,
+                       nrow = length(nodes),
+                       ncol = length(age) - 1,
+                       dimnames = list(
+                           nodes,
+                           paste0("S_", seq_len(length(age) - 1)))))
+        }
+
+        u0 <- cbind(node = rownames(u0), u0)
+        mode(u0$node) <- mode(node)
+        rownames(u0) <- NULL
+
+        u0
     }
 )
 
@@ -97,7 +159,7 @@ setMethod(
                  call. = FALSE)
         }
         model@u0 <- init_x0(value)
-        validObject(model)
+        methods::validObject(model)
         model
     }
 )

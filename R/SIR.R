@@ -4,7 +4,7 @@
 ## Copyright (C) 2015 Pavol Bauer
 ## Copyright (C) 2017 -- 2019 Robin Eriksson
 ## Copyright (C) 2015 -- 2019 Stefan Engblom
-## Copyright (C) 2015 -- 2022 Stefan Widgren
+## Copyright (C) 2015 -- 2023 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -45,6 +45,21 @@
 ##' result <- run(model)
 ##' plot(result)
 setClass("SIR", contains = c("SimInf_model"))
+
+##' The compartments in an SIR model
+##' @noRd
+compartments_SIR <- function() {
+    c("S", "I", "R")
+}
+
+##' The select matrix 'E' for an SIR model
+##' @noRd
+select_matrix_SIR <- function() {
+    matrix(c(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1),
+           nrow = 3,
+           ncol = 4,
+           dimnames = list(compartments_SIR(), seq_len(4)))
+}
 
 ##' Create an \acronym{SIR} model
 ##'
@@ -92,12 +107,10 @@ SIR <- function(u0,
                 events = NULL,
                 beta   = NULL,
                 gamma  = NULL) {
-    compartments <- c("S", "I", "R")
-
     ## Check arguments.
 
     ## Check u0 and compartments
-    u0 <- check_u0(u0, compartments)
+    u0 <- check_u0(u0, compartments_SIR())
 
     ## Check for non-numeric parameters
     check_ldata_arg(nrow(u0), beta, gamma)
@@ -106,17 +119,13 @@ SIR <- function(u0,
 
     ## Arguments seem ok...go on
 
-    E <- matrix(c(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1),
-                nrow = 3, ncol = 4,
-                dimnames = list(compartments, c("1", "2", "3", "4")))
-
     G <- matrix(c(1, 1, 1, 1), nrow = 2, ncol = 2,
                 dimnames = list(c("S -> beta*S*I/(S+I+R) -> I",
                                   "I -> gamma*I -> R"),
                                 c("1", "2")))
 
     S <- matrix(c(-1, 1, 0, 0, -1, 1), nrow = 3, ncol = 2,
-                dimnames = list(compartments, c("1", "2")))
+                dimnames = list(compartments_SIR(), c("1", "2")))
 
     ldata <- matrix(as.numeric(c(beta, gamma)),
                     nrow  = 2, byrow = TRUE,
@@ -124,13 +133,13 @@ SIR <- function(u0,
 
     model <- SimInf_model(G      = G,
                           S      = S,
-                          E      = E,
+                          E      = select_matrix_SIR(),
                           tspan  = tspan,
                           events = events,
                           ldata  = ldata,
                           u0     = u0)
 
-    as(model, "SIR")
+    methods::as(model, "SIR")
 }
 
 ##' Example data to initialize events for the \sQuote{SIR} model
@@ -151,8 +160,13 @@ SIR <- function(u0,
 ##' a model.
 ##' @return A \code{data.frame}
 ##' @export
-##' @importFrom utils data
 ##' @examples
+##' ## For reproducibility, call the set.seed() function and specify
+##' ## the number of threads to use. To use all available threads,
+##' ## remove the set_num_threads() call.
+##' set.seed(123)
+##' set_num_threads(1)
+##'
 ##' ## Create an 'SIR' model with 1600 nodes and initialize
 ##' ## it to run over 4*365 days. Add one infected individual
 ##' ## to the first node.
@@ -177,7 +191,7 @@ SIR <- function(u0,
 ##' ## events by event type.
 ##' summary(result)
 events_SIR <- function() {
-    data("events_SISe3", package = "SimInf", envir = environment())
+    utils::data("events_SISe3", package = "SimInf", envir = environment())
     events_SISe3$select[events_SISe3$event == "exit"] <- 4L
     events_SISe3$select[events_SISe3$event == "enter"] <- 1L
     events_SISe3 <- events_SISe3[events_SISe3$event != "intTrans", ]
@@ -196,8 +210,14 @@ events_SIR <- function() {
 ##' zero.
 ##' @return A \code{data.frame}
 ##' @export
-##' @importFrom utils data
 ##' @examples
+##' \dontrun{
+##' ## For reproducibility, call the set.seed() function and specify
+##' ## the number of threads to use. To use all available threads,
+##' ## remove the set_num_threads() call.
+##' set.seed(123)
+##' set_num_threads(1)
+##'
 ##' ## Create an 'SIR' model with 1600 nodes and initialize
 ##' ## it to run over 4*365 days. Add one infected individual
 ##' ## to the first node.
@@ -216,8 +236,9 @@ events_SIR <- function() {
 ##'
 ##' ## Summarize trajectory
 ##' summary(result)
+##' }
 u0_SIR <- function() {
-    data("u0_SISe3", package = "SimInf", envir = environment())
+    utils::data("u0_SISe3", package = "SimInf", envir = environment())
     u0_SISe3$S <- u0_SISe3$S_1 + u0_SISe3$S_2 + u0_SISe3$S_3
     u0_SISe3$I <- u0_SISe3$I_1 + u0_SISe3$I_2 + u0_SISe3$I_3
     u0_SISe3$R <- 0L

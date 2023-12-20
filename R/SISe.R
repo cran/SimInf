@@ -4,7 +4,7 @@
 ## Copyright (C) 2015 Pavol Bauer
 ## Copyright (C) 2017 -- 2019 Robin Eriksson
 ## Copyright (C) 2015 -- 2019 Stefan Engblom
-## Copyright (C) 2015 -- 2020 Stefan Widgren
+## Copyright (C) 2015 -- 2023 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -25,6 +25,18 @@
 ##' @include SimInf_model.R
 ##' @export
 setClass("SISe", contains = c("SimInf_model"))
+
+##' The compartments in an SISe model
+##' @noRd
+compartments_SISe <- function() {
+    compartments_SIS()
+}
+
+##' The select matrix 'E' for an SISe model
+##' @noRd
+select_matrix_SISe <- function() {
+    select_matrix_SIS()
+}
 
 ##' Create a SISe model
 ##'
@@ -87,7 +99,6 @@ setClass("SISe", contains = c("SimInf_model"))
 ##' @return \code{SISe}
 ##' @include check_arguments.R
 ##' @export
-##' @importFrom methods as
 SISe <- function(u0,
                  tspan,
                  events  = NULL,
@@ -104,12 +115,10 @@ SISe <- function(u0,
                  end_t3  = NULL,
                  end_t4  = NULL,
                  epsilon = NULL) {
-    compartments <- c("S", "I")
-
     ## Check arguments.
 
     ## Check u0 and compartments
-    u0 <- check_u0(u0, compartments)
+    u0 <- check_u0(u0, compartments_SISe())
 
     ## Check initial infectious pressure
     if (is.null(phi))
@@ -131,16 +140,13 @@ SISe <- function(u0,
 
     ## Arguments seem ok...go on
 
-    E <- matrix(c(1, 0, 1, 1), nrow = 2, ncol = 2,
-                dimnames = list(compartments, c("1", "2")))
-
     G <- matrix(c(1, 1, 1, 1), nrow = 2, ncol = 2,
                 dimnames = list(c("S -> upsilon*phi*S -> I",
                                   "I -> gamma*I -> S"),
                                 c("1", "2")))
 
     S <- matrix(c(-1,  1, 1, -1), nrow = 2, ncol = 2,
-                dimnames = list(compartments, c("1", "2")))
+                dimnames = list(compartments_SISe(), c("1", "2")))
 
     v0 <- matrix(as.numeric(phi), nrow  = 1, byrow = TRUE,
                  dimnames = list("phi"))
@@ -156,7 +162,7 @@ SISe <- function(u0,
 
     model <- SimInf_model(G      = G,
                           S      = S,
-                          E      = E,
+                          E      = select_matrix_SISe(),
                           tspan  = tspan,
                           events = events,
                           ldata  = ldata,
@@ -164,7 +170,7 @@ SISe <- function(u0,
                           u0     = u0,
                           v0     = v0)
 
-    as(model, "SISe")
+    methods::as(model, "SISe")
 }
 
 ##' Example data to initialize events for the \sQuote{SISe} model
@@ -185,8 +191,13 @@ SISe <- function(u0,
 ##' a model.
 ##' @return A \code{data.frame}
 ##' @export
-##' @importFrom utils data
 ##' @examples
+##' ## For reproducibility, call the set.seed() function and specify
+##' ## the number of threads to use. To use all available threads,
+##' ## remove the set_num_threads() call.
+##' set.seed(123)
+##' set_num_threads(1)
+##'
 ##' ## Create an 'SISe' model with 1600 nodes and initialize
 ##' ## it to run over 4*365 days. Add one infected individual
 ##' ## to the first node.
@@ -210,7 +221,7 @@ SISe <- function(u0,
 ##' ## events by event type.
 ##' summary(result)
 events_SISe <- function() {
-    data("events_SISe3", package = "SimInf", envir = environment())
+    utils::data("events_SISe3", package = "SimInf", envir = environment())
     events_SISe3$select[events_SISe3$event == "exit"] <- 2L
     events_SISe3$select[events_SISe3$event == "enter"] <- 1L
     events_SISe3 <- events_SISe3[events_SISe3$event != "intTrans", ]
@@ -228,8 +239,14 @@ events_SISe <- function() {
 ##' the \sQuote{I} compartment is zero.
 ##' @return A \code{data.frame}
 ##' @export
-##' @importFrom utils data
 ##' @examples
+##' \dontrun{
+##' ## For reproducibility, call the set.seed() function and specify
+##' ## the number of threads to use. To use all available threads,
+##' ## remove the set_num_threads() call.
+##' set.seed(123)
+##' set_num_threads(1)
+##'
 ##' ## Create an 'SISe' model with 1600 nodes and initialize it to
 ##' ## run over 4*365 days and record data at weekly time-points.
 ##'
@@ -262,6 +279,7 @@ events_SISe <- function() {
 ##' ## Plot the proportion of nodes with at least one infected
 ##' ## individual.
 ##' plot(result, I~S+I, level = 2, type = "l")
+##' }
 u0_SISe <- function() {
     u0 <- u0_SIR()
     u0[, c("S", "I")]

@@ -1,7 +1,7 @@
 ## ----pressure, echo=FALSE, fig.align="left", fig.cap="**Figure 1.** Illustration of movements between nodes. Each time step depicts movements during one time unit, for example, a day. The network has *N=4* nodes where node *1* is infected and nodes *2*--*4* are non-infected. Arrows indicate movements of individuals from a source node to a destination node and labels denote the size of the shipment. Here, infection may spread from node *1* to node *3* at *t=2* and then from node *3* to node *2* at *t=3*.", out.width = '100%'----
 knitr::include_graphics("img/temporal-network.svg")
 
-## ---- eval = TRUE, echo = TRUE, message = FALSE---------------------
+## ----eval = TRUE, echo = TRUE, message = FALSE----------------------
 events <- data.frame(
   event      = rep("extTrans", 6),  ## Event "extTrans" is
                                     ##  a movement between nodes
@@ -35,7 +35,7 @@ model@events@E
 set.seed(1)
 result <- run(model)
 
-## ---- fig.width=7, fig.height=4, fig.align="left", fig.cap="**Figure 2.** Number of susceptible, infected and recovered individuals in each node."----
+## ----fig.width=7, fig.height=4, fig.align="left", fig.cap="**Figure 2.** Number of susceptible, infected and recovered individuals in each node."----
 plot(result, range = FALSE)
 
 ## -------------------------------------------------------------------
