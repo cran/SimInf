@@ -2,7 +2,7 @@
  * This file is part of SimInf, a framework for stochastic
  * disease spread simulations.
  *
- * Copyright (C) 2015 -- 2023 Stefan Widgren
+ * Copyright (C) 2015 -- 2024 Stefan Widgren
  *
  * SimInf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@ SimInf_Euclidean_distance(
     const double* y,
     double cutoff,
     double min_dist,
+    int na_fail,
     R_xlen_t len,
     double *distance,
     int *row_indices,
@@ -44,8 +45,20 @@ SimInf_Euclidean_distance(
                 /* Calculate the Euclidean distance. */
                 double d = hypot(x[i] - x[j], y[i] - y[j]);
 
-                if (!R_FINITE(d))
-                    Rf_error("Invalid distance for i=%" R_PRIdXLEN_T " and j=%" R_PRIdXLEN_T ".", i, j);
+                if (!R_FINITE(d)) {
+                    if ((R_IsNA(x[i]) ||
+                         R_IsNA(x[j]) ||
+                         R_IsNA(y[i]) ||
+                         R_IsNA(y[j])) && !na_fail) {
+                        continue;
+                    }
+
+                    Rf_error("Invalid distance for i=%"
+                             R_PRIdXLEN_T
+                             " and j=%"
+                             R_PRIdXLEN_T
+                             ".", i, j);
+                }
 
                 if (d <= cutoff) {
                     if (d <= 0) {
@@ -80,7 +93,8 @@ SimInf_distance_matrix(
     SEXP x_,
     SEXP y_,
     SEXP cutoff_,
-    SEXP min_dist_)
+    SEXP min_dist_,
+    SEXP na_fail)
 {
     double *x = REAL(x_);
     double *y = REAL(y_);
@@ -91,6 +105,7 @@ SimInf_distance_matrix(
     SEXP distance;
     SEXP row_indices;
     SEXP col_indices;
+    SEXP class;
     SEXP result;
 
     /* Check that the input vectors have an identical length > 0. */
@@ -103,6 +118,13 @@ SimInf_distance_matrix(
     if (!R_FINITE(cutoff) || cutoff < 0)
         Rf_error("'cutoff' must be > 0.");
 
+    /* Check for a valid na_fail. */
+    if (!Rf_isLogical(na_fail) ||
+        Rf_length(na_fail) != 1 ||
+        LOGICAL(na_fail)[0] == NA_LOGICAL) {
+        Rf_error("'na_fail' must be TRUE or FALSE.");
+    }
+
     /* First, iterate over all the elements to determine the required
      * length for the result vector. */
     n = SimInf_Euclidean_distance(
@@ -110,6 +132,7 @@ SimInf_distance_matrix(
         y,
         cutoff,
         min_dist,
+        LOGICAL(na_fail)[0],
         len,
         NULL,
         NULL,
@@ -127,20 +150,22 @@ SimInf_distance_matrix(
         y,
         cutoff,
         min_dist,
+        LOGICAL(na_fail)[0],
         len,
         REAL(distance),
         INTEGER(row_indices),
         INTEGER(col_indices));
 
     /* Create the sparse matrix. */
-    PROTECT(result = R_do_new_object(R_do_MAKE_CLASS("dgCMatrix")));
+    PROTECT(class = R_do_MAKE_CLASS("dgCMatrix"));
+    PROTECT(result = R_do_new_object(class));
     R_do_slot_assign(result, Rf_install("x"), distance);
     R_do_slot_assign(result, Rf_install("i"), row_indices);
     R_do_slot_assign(result, Rf_install("p"), col_indices);
     INTEGER(R_do_slot(result, Rf_install("Dim")))[0] = len;
     INTEGER(R_do_slot(result, Rf_install("Dim")))[1] = len;
 
-    UNPROTECT(4);
+    UNPROTECT(5);
 
     return result;
 }

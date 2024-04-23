@@ -4,7 +4,7 @@
 ## Copyright (C) 2015 Pavol Bauer
 ## Copyright (C) 2017 -- 2019 Robin Eriksson
 ## Copyright (C) 2015 -- 2019 Stefan Engblom
-## Copyright (C) 2015 -- 2021 Stefan Widgren
+## Copyright (C) 2015 -- 2024 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -215,5 +215,29 @@ setMethod(
         id <- "node"
 
         calculate_prevalence(model, compartments, level, index, n, format, id)
+    }
+)
+
+##' Extract prevalence from running a particle filter
+##'
+##' @param model the \code{SimInf_pfilter} object to extract the
+##'     prevalence from.
+##' @template prevalence-formula-param
+##' @template prevalence-level-param
+##' @template index-param
+##' @param format The default (\code{format = "data.frame"}) is to
+##'     generate a \code{data.frame} with one row per time-step with
+##'     the prevalence. Using \code{format = "matrix"} returns the
+##'     result as a matrix.
+##' @return A \code{data.frame} if \code{format = "data.frame"}, else
+##'     a matrix.
+##' @include pfilter.R
+##' @export
+setMethod(
+    "prevalence",
+    signature(model = "SimInf_pfilter"),
+    function(model, formula, level, index,
+             format = c("data.frame", "matrix")) {
+        prevalence(model@model, formula, level, index, format)
     }
 )

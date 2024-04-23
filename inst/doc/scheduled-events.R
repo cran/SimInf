@@ -33,6 +33,7 @@ model@events@E
 
 ## -------------------------------------------------------------------
 set.seed(1)
+set_num_threads(1)
 result <- run(model)
 
 ## ----fig.width=7, fig.height=4, fig.align="left", fig.cap="**Figure 2.** Number of susceptible, infected and recovered individuals in each node."----
@@ -40,4 +41,42 @@ plot(result, range = FALSE)
 
 ## -------------------------------------------------------------------
 trajectory(result)
+
+## -------------------------------------------------------------------
+u0 <- data.frame(S = c(100, 0),
+                 I = c(100, 0),
+                 R = c(100, 0))
+
+## -------------------------------------------------------------------
+events <- data.frame(
+  event = rep("extTrans", 300), ## Event "extTrans" is a movement between nodes
+  time = 1:300,                 ## The time that the event happens
+  node = 1,                     ## In which node does the event occur
+  dest = 2,                     ## Which node is the destination node
+  n = 1,                        ## How many individuals are moved
+  proportion = 0,               ## This is not used when n > 0
+  select = 4,                   ## Use the 4th column in the model select matrix
+  shift = 0)                    ## Not used in this example
+
+## -------------------------------------------------------------------
+model <- SIR(u0 = u0,
+             tspan = 1:300,
+             events = events,
+             beta = 0,
+             gamma = 0)
+
+## ----fig.width=7, fig.height=4, fig.align="left", fig.cap="**Figure 3.** The individuals have an equal probability of being selected regardless of compartment."----
+plot(run(model), index = 2)
+
+## ----fig.width=7, fig.height=4, fig.align="left", fig.cap="**Figure 4.** The individuals in the $I$ compartment are more likely of being selected for a movement event."----
+model@events@E[2, 4] <- 2
+plot(run(model), index = 2)
+
+## ----fig.width=7, fig.height=4, fig.align="left", fig.cap="**Figure 5.** The individuals in the $I$ compartment are even more likely of being selected for a movement event compared to the previous example."----
+model@events@E[2, 4] <- 10
+plot(run(model), index = 2)
+
+## ----fig.width=7, fig.height=4, fig.align="left", fig.cap="**Figure 6.** The individuals in the $I$ and $R$ compartments are more likely of being selected for a movement event compared to individuals in the $S$ compartment."----
+model@events@E[3, 4] <- 4
+plot(run(model), index = 2)
 

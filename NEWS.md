@@ -1,3 +1,26 @@
+# SimInf 9.7.0 (2024-04-23)
+
+## CHANGES OR IMPROVEMENTS
+
+* Two new features have been added to the model parser. First, it is
+  now possible to define variables in the transitions, which can then
+  be used in calculations of propensities or in calculations of other
+  variables. Secondly, enumeration constants can now be generated for
+  the indices to each parameter in the `u`, `v`, `ldata`, and `gdata`
+  vectors in the generated C code. See the `mparse()` documentation.
+
+* Added a utility function `node_events()` to facilitate cleaning raw
+  individual event data and prepare it for usage in SimInf.
+
+* Added a new vignette about how to post-process data from a simulated
+  trajectory.
+
+* Added a new section about varying probability of picking individuals
+  to the scheduled events vignette.
+
+* Added a missing PROTECT in the C function SimInf_distance_matrix.
+  This was uncovered by rchk on CRAN.
+
 # SimInf 9.6.0 (2023-12-20)
 
 ## CHANGES OR IMPROVEMENTS

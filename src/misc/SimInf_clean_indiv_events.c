@@ -3,7 +3,7 @@
  * disease spread simulations.
  *
  * Copyright (C) 2022 Ivana Rodriguez Ewerlöf
- * Copyright (C) 2015 -- 2023 Stefan Widgren
+ * Copyright (C) 2015 -- 2024 Stefan Widgren
  *
  * SimInf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,13 +75,6 @@ SimInf_find_longest_path(
         if (must_enter && event[begin] != ENTER_EVENT)
             continue;
 
-        /* Clear the path. */
-        memset(path, 0, n * sizeof(int));
-
-        /* Initialize the path with the first event. This is the root
-         * for the search. */
-        path[0] = begin + 1;
-
         /* Check if this event might be the longest path, for example,
          * if there are no more events. */
         if (longest_path == 0) {
@@ -90,9 +83,14 @@ SimInf_find_longest_path(
                 (must_exit == 1 && event[begin] == EXIT_EVENT))
             {
                 longest_path = 1;
-                keep[path[0] - 1] = 1;
+                keep[begin] = 1;
             }
         }
+
+        /* Initialize the path with the first event. This is the
+         * root for the search. */
+        memset(path, 0, n * sizeof(int));
+        path[0] = begin + 1;
 
         /* Perform a depth first search of the events to find the
          * longest path. */
@@ -100,19 +98,25 @@ SimInf_find_longest_path(
                depth < (n - begin) &&
                longest_path < (n - begin))
         {
-            int i = path[depth - 1] - 1;
-            int from = event[i] == ENTER_EVENT ? node[i] : dest[i];
+            int i, from;
+            int offset = 1;
 
-            /* Continue the search from a previous search at this
-             * depth? */
+            /* Determine where to continue the search. */
+            i = path[depth - 1] - 1;
             if (path[depth] > 0) {
-                i = path[depth] - 1;
+                /* Since the search is moving up in the search tree,
+                 * ensure to continue searching from a non-visited
+                 * node (in this path), i.e., set offset to skip the
+                 * node at depth. */
+                offset = path[depth] - path[depth - 1] + 1;
                 path[depth] = 0;
             }
 
             /* Find an event that is consistent with 'from' in the
-             * previous event. */
-            for (int j = i + 1; j < n && path[depth] == 0; j++) {
+             * previous event. 'j' is the index to the next event to
+             * search from. */
+            from = event[i] == ENTER_EVENT ? node[i] : dest[i];
+            for (int j = i + offset; j < n && path[depth] == 0; j++) {
                 if (time[j] > time[i] &&
                     from == node[j] &&
                     from != dest[j] &&
@@ -187,7 +191,7 @@ SimInf_clean_indiv_events(
 
     /* Check that the input vectors have an identical length >= 0. */
     if (len < 0)
-        Rf_error("'id' must be an integer vector with length >= 0.");
+        Rf_error("'id' must be an integer vector with length >= 0."); /* #nocov */
     if (XLENGTH(event) != len)
         Rf_error("'event' must be an integer vector with length %" R_PRIdXLEN_T ".", len);
     if (XLENGTH(time) != len)

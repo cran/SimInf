@@ -15,7 +15,8 @@ mparse(
   events = NULL,
   E = NULL,
   N = NULL,
-  pts_fun = NULL
+  pts_fun = NULL,
+  use_enum = FALSE
 )
 }
 \arguments{
@@ -24,22 +25,38 @@ form \code{"X -> ... -> Y"}. The left (right) side is the
 initial (final) state and the propensity is written in between
 the \code{->}-signs. The special symbol \code{@} is reserved
 for the empty set. For example, \code{transitions =
-c("S -> k1*S*I -> I", "I -> k2*I -> R")} expresses a SIR
-model.}
+c("S -> beta*S*I/(S+I+R) -> I", "I -> gamma*I -> R")}
+expresses the SIR model. It is also possible to define
+variables which can then be used in calculations of
+propensities or in calculations of other variables. A variable
+is defined by the operator \code{<-}. Using a variable for the
+size of the population, the SIR model can instead be written
+\code{transitions = c("S -> beta*S*I/N -> I",
+"I -> gamma*I -> R", "N <- S+I+R")}. By default, the type of a
+variable is defined as a double in the generated C code, but
+it is possible to also define it as an integer by writing
+\code{(int)} before the variable name. For example, for the
+SIR model, the population size can be defined as
+\code{"(int)N <- S+I+R"}. It is also possible to explicitly
+use (double) in front of the variable name, but it is not
+needed because it is the default. Note that the order of
+propensities and variables does not matter.}
 
 \item{compartments}{contains the names of the involved
 compartments, for example, \code{compartments = c("S", "I",
 "R")}.}
 
-\item{ldata}{optional data for the nodes. Can be specified either
-as a numeric matrix where column \code{ldata[, j]} contains
-the local data vector for the node \code{j} or as a
-\code{data.frame} with one row per node. If it's specified as
-a matrix, it must have row names to identify the parameters in
-the transitions. If it's specified as a data.frame, each
-column is one parameter. The local data vector is passed as an
-argument to the transition rate functions and the post time
-step function.}
+\item{ldata}{optional data for the nodes. Can be specified as a
+\code{data.frame} with one row per node, as a numeric matrix
+where column \code{ldata[, j]} contains the local data vector
+for the node \code{j}, or as a as a named vector when the
+model only contains one node. If \code{ldata} is specified as
+a \code{data.frame}, each column is one parameter. If
+\code{v0} is specified as a matrix, it must have row names to
+identify the parameters in the transitions. If \code{v0} is
+specified as a named vector, the names identify the
+parameters. The local data vector is passed as an argument to
+the transition rate functions and the post time step function.}
 
 \item{gdata}{optional data that are common to all nodes in the
 model. Can be specified either as a named numeric vector or as
@@ -48,21 +65,25 @@ parameters in the transitions. The global data vector is
 passed as an argument to the transition rate functions and the
 post time step function.}
 
-\item{u0}{A \code{data.frame} (or an object that can be coerced to
-a \code{data.frame} with \code{as.data.frame}) with the
-initial state i.e. the number of individuals in each
-compartment in each node when the simulation starts..}
+\item{u0}{A \code{data.frame} with the initial state in each node,
+i.e., the number of individuals in each compartment in each
+node when the simulation starts (see \sQuote{Details}). The
+parameter \code{u0} can also be an object that can be coerced
+to a \code{data.frame}, e.g., a named numeric vector will be
+coerced to a one row \code{data.frame}.}
 
 \item{v0}{optional data with the initial continuous state in each
-node. Can be specified either as a \code{data.frame} with one
-row per node or as a numeric matrix where column \code{v0[,
-j]} contains the initial state vector for the node
-\code{j}. If \code{v0} is specified as a \code{data.frame},
-each column is one parameter. If \code{v0} is specified as a
-matrix, the row names identify the parameters. The 'v' vector
-is passed as an argument to the transition rate functions and
-the post time step function. The continuous state can be
-updated in the post time step function.}
+node. \code{v0} can be specified as a \code{data.frame} with
+one row per node, as a numeric matrix where column \code{v0[,
+j]} contains the initial state vector for the node \code{j},
+or as a named vector when the model only contains one node. If
+\code{v0} is specified as a \code{data.frame}, each column is
+one parameter. If \code{v0} is specified as a matrix, the row
+names identify the parameters. If \code{v0} is specified as a
+named vector, the names identify the parameters. The
+\sQuote{v} vector is passed as an argument to the transition
+rate functions and the post time step function. The continuous
+state can be updated in the post time step function.}
 
 \item{tspan}{A vector (length >= 1) of increasing time points
 where the state of each node is to be returned. Can be either
@@ -88,6 +109,17 @@ i.e. no scheduled events in the model.}
 time step function. The C code should contain only the body of
 the function i.e. the code between the opening and closing
 curly brackets.}
+
+\item{use_enum}{generate enumeration constants for the indices to
+each parameter in the 'u', 'v', 'ldata', and 'gdata' vectors
+in the generated C code. The name of each enumeration constant
+will be transformed to the upper-case name of the
+corresponding parameter, for example, a parameter 'beta' will
+become 'BETA'. Using enumeration constants can make it easier
+to modify the C code afterwards, or when writing C code for
+the \code{pts_fun} parameter. Default is \code{FALSE}, i.e.,
+the parameters are specified by using integer indices for the
+parameters.}
 }
 \value{
 a \code{\linkS4class{SimInf_model}} object
@@ -100,10 +132,11 @@ definition that is ready to \code{\link{run}}.
 \examples{
 \dontrun{
 ## Use the model parser to create a 'SimInf_model' object that
-## expresses an SIR model, where 'beta' is the transmission rate
+## expresses the SIR model, where 'beta' is the transmission rate
 ## and 'gamma' is the recovery rate.
-model  <- mparse(transitions = c("S -> beta*S*I/(S+I+R) -> I",
-                                 "I -> gamma*I -> R"),
+model  <- mparse(transitions = c("S -> beta*S*I/N -> I",
+                                 "I -> gamma*I -> R",
+                                 "N <- S+I+R"),
                  compartments = c("S", "I", "R"),
                  gdata = c(beta = 0.16, gamma = 0.077),
                  u0 = data.frame(S = 100, I = 1, R = 0),

@@ -2,7 +2,7 @@
 ## disease spread simulations.
 ##
 ## Copyright (C) 2022 -- 2023 Ivana Rodriguez Ewerlöf
-## Copyright (C) 2015 -- 2023 Stefan Widgren
+## Copyright (C) 2015 -- 2024 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -281,6 +281,7 @@ check_indiv_events_nodes <- function(event, node, dest) {
 ##'     `details`.
 ##' @return \linkS4class{SimInf_indiv_events}
 ##' @export
+##' @seealso \code{\link{node_events}}.
 ##' @md
 individual_events <- function(events) {
     columns <- c("id", "event", "time", "node", "dest")
@@ -441,49 +442,368 @@ setMethod(
     }
 )
 
-##' @rdname events
-##' @param time Only used when object is of class
-##'     \code{SimInf_indiv_events} object. All events that occur after
-##'     \sQuote{time} are included. Default is \code{NULL} which means
-##'     to extract the events after the minimum time-point in the
-##'     \code{SimInf_indiv_events} object.
-##' @param target Only used when object is of class
-##'     \code{SimInf_indiv_events} object. The SimInf model ('SEIR',
-##'     'SIR', 'SIS', 'SISe3', 'SISe3_sp', 'SISe', or 'SISe_sp') to
-##'     target the events and u0 for. The default, \code{NULL},
-##'     creates events but they might have to be post-processed to fit
-##'     the specific use case.
-##' @param age Only used when object is of class
-##'     \code{SimInf_indiv_events} object. Integer vector with break
-##'     points in days for the ageing events.
-##' @export
-setMethod(
-    "events",
-    signature(object = "SimInf_indiv_events"),
-    function(object, time = NULL, target = NULL, age = NULL) {
-        ## Check for valid target model.
-        if (!is.null(target)) {
-            target <- match.arg(target, c("SEIR", "SIR", "SIS",
-                                          "SISe3", "SISe3_sp", "SISe",
-                                          "SISe_sp"))
-        } else {
-            stop("Not implemented.", call. = FALSE)
+inject_ageing_events <- function(events, age) {
+    ## Create ageing events for individuals. First, determine the
+    ## time-points for the enter events.
+    ageing <- events[events[, "event"] == 1L, c("id", "time"), drop = FALSE]
+    colnames(ageing) <- c("id", "enter")
+
+    ## Then determine the time-points for the exit events.
+    i <- which(events[, "event"] == 0L)
+    j <- match(ageing[, "id"], events[i, "id"])
+    ageing <- cbind(ageing, exit = events[i, "time"][j])
+
+    ## Ensure all ageing events occur within the time-span of all
+    ## events.
+    ageing[is.na(ageing[, "exit"]), "exit"] <- max(events[, "time"]) + 1L
+
+    ## Add a column of the age in days of the individual at
+    ## each event.
+    i <- match(events[, "id"], ageing[, "id"])
+    events <- cbind(events, days = events[, "time"] - ageing[i, "enter"])
+
+    ## Clear select for non-enter events.
+    events[events[, "event"] != 1L, "select"] <- NA_integer_
+
+    for (i in seq_len(length(age))[-1]) {
+        ## Determine which individuals are eligble for ageing.
+        j <- which(ageing[, "exit"] - ageing[, "enter"] > age[i])
+        ageing <- ageing[j, , drop = FALSE]
+
+        if (nrow(ageing) > 0) {
+            events <- rbind(
+                events,
+                matrix(c(ageing[, "id"],
+                         rep(2L, nrow(ageing)),
+                         ageing[, "enter"] + age[i],
+                         rep(0L, nrow(ageing)),
+                         rep(0L, nrow(ageing)),
+                         rep(length(age) + i - 1L, nrow(ageing)),
+                         rep(i - 1L, nrow(ageing)),
+                         rep(age[i], nrow(ageing))),
+                       nrow = nrow(ageing),
+                       ncol = 8L,
+                       dimnames = list(
+                           NULL,
+                           c("id", "event", "time", "node", "dest",
+                             "select", "shift", "days"))))
+
+            events <- events[order(events[, "id"],
+                                   events[, "time"],
+                                   events[, "event"],
+                                   events[, "node"],
+                                   events[, "dest"]), ]
+
+            ## Determine the node for the ageing event.
+            j <- which(events[, "event"] == 2L &
+                       events[, "node"] == 0L)
+            if (length(j)) {
+                ## If the previous event is a movement, then the node
+                ## is the destination of that movement.
+                events[j, "node"] <- ifelse(events[j - 1, "dest"] > 0L,
+                                            events[j - 1, "dest"],
+                                            events[j - 1, "node"])
+            }
         }
 
-        ## Keep events that occur after 'time'.
-        i <- which(object@time > indiv_events_time(object, time))
+        ## Determine if there are any exit events for this age
+        ## category.
+        j <- which(events[, "event"] == 0L &
+                   events[, "days"] <= age[i] &
+                   is.na(events[, "select"]))
+        events[j, "select"] <- length(age) + i - 1L
 
-        node <- object@node[i]
-        dest <- object@dest[i]
-        dest[is.na(dest)] <- 0L
+        ## Determine if there are any movement events for this age
+        ## category.
+        j <- which(events[, "event"] == 3L &
+                   events[, "days"] < age[i] &
+                   is.na(events[, "select"]))
+        events[j, "select"] <- length(age) + i - 1L
+    }
 
-        data.frame(event      = object@event[i],
-                   time       = object@time[i],
-                   node       = node,
-                   dest       = dest,
-                   n          = 1,
-                   proportion = 0,
-                   select     = 1,
-                   shift      = 0)
+    ## Determine if there are any events where select = NA because of
+    ## individuals being older than the largest age break point.
+    j <- which(is.na(events[, "select"]))
+    events[j, "select"] <- 2L * length(age)
+
+    events
+}
+
+events_target <- function(events, target) {
+    if (!is.null(target)) {
+        if (target %in% c("SIS", "SISe", "SISe_sp", "SEIR")) {
+            events[events[, "event"] == 0L, "select"] <- 2L
+            events[events[, "event"] == 3L, "select"] <- 2L
+        } else if (target %in% c("SIR")) {
+            events[events[, "event"] == 0L, "select"] <- 4L
+            events[events[, "event"] == 3L, "select"] <- 4L
+        }
+    }
+
+    events <- as.data.frame(events)
+    events$proportion <- as.numeric(events$proportion)
+    events
+}
+
+##' Transform individual events to node events for a model
+##'
+##' In many countries, individual-based livestock data are collected
+##' to enable contact tracing during disease outbreaks. However, the
+##' livestock databases are not always structured in such a way that
+##' relevant information for disease spread simulations is easily
+##' retrieved. The aim of this function is to facilitate cleaning
+##' livestock event data and prepare it for usage in SimInf.
+##'
+##' The individual-based events will be aggregated on node-level.  The
+##' \code{select} value is determined by the event type and age
+##' category.  If there is only one age category, i.e.,
+##' \code{age=NULL}, then \code{select=1} for the enter events, and
+##' \code{select=2} for all other events. If there are two age
+##' categories, then \code{select=1} for the enter events in the first
+##' age category, and \code{select=2} for the enter events in the
+##' second age category. Similarly, \code{select=3} for all other
+##' events in the first age category, and \code{select=4} for all
+##' other events in the first second category. With three age
+##' categories, it works similarly with \code{select=1,2,3} for the
+##' enter events in each age category, respectively. And
+##' \code{select=4,5,6} for all other events.
+##'
+##' @param x an individual events object of class
+##'     \code{SimInf_indiv_events}.
+##' @param time All events that occur after \sQuote{time} are
+##'     included. Default is \code{NULL} which means to extract the
+##'     events after the minimum time-point in the
+##'     \code{SimInf_indiv_events} object.
+##' @param target The SimInf model ('SEIR', 'SIR', 'SIS', 'SISe3',
+##'     'SISe3_sp', 'SISe', or 'SISe_sp') to target the events and u0
+##'     for. The default, \code{NULL}, creates events but they might
+##'     have to be post-processed to fit the specific use case.
+##' @param age Integer vector with break points in days for the ageing
+##'     events.
+##' @return a \code{data.frame} with the columns \code{event},
+##'     \code{time}, \code{node}, \code{dest}, \code{n},
+##'     \code{proportion}, \code{select}, and \code{shift}.
+##' @seealso \code{\link{individual_events}}.
+##' @export
+setGeneric(
+    "node_events",
+    signature = "x",
+    function(x, time = NULL, target = NULL, age = NULL) {
+        standardGeneric("node_events")
     }
 )
+
+##' @rdname node_events
+##' @export
+setMethod(
+    "node_events",
+    signature(x = "SimInf_indiv_events"),
+    function(x, time = NULL, target = NULL, age = NULL) {
+        age <- check_age(age)
+        target <- check_target(target, age)
+
+        ## Map nodes to the one-based index in SimInf.
+        all_nodes <- unique(c(x@node, x@dest))
+        all_nodes <- sort(all_nodes[!is.na(all_nodes)])
+
+        events <- matrix(c(as.integer(as.factor(x@id)),
+                           as.integer(x@event),
+                           as.integer(x@time),
+                           match(x@node, all_nodes),
+                           match(x@dest, all_nodes),
+                           rep(1L, length(x@id)),
+                           rep(0L, length(x@id))),
+                         nrow = length(x@id),
+                         ncol = 7,
+                         dimnames = list(
+                             NULL,
+                             c("id", "event", "time", "node", "dest",
+                               "select", "shift")))
+
+        ## Ensure all 'dest' are non-NA.
+        events[is.na(events[, "dest"]), "dest"] <- 0L
+
+        ## Check that all individuals have an enter event.
+        if (length(setdiff(events[, "id"],
+                           events[events[, "event"] == 1L, "id"]))) {
+            stop("All individuals must have an 'enter' event.", call. = FALSE)
+        }
+
+        if (length(age) > 1)
+            events <- inject_ageing_events(events, age)
+
+        ## Keep events that occur after 'time'.
+        i <- which(events[, "time"] > indiv_events_time(x, time))
+        j <- order(events[i, "time"], events[i, "event"], events[i, "node"],
+                   events[i, "dest"], events[i, "select"], events[i, "shift"])
+        events <- cbind(events[i[j], c("event", "time", "node", "dest",
+                                       "select", "shift"), drop = FALSE],
+                        n = 1L)
+
+        if (nrow(events) > 1) {
+            ## Determine duplicated events.
+            i <- seq(from = 2L, to = nrow(events), by = 1L)
+            duplicated <- i[events[i, "time"] == events[i - 1, "time"] &
+                            events[i, "event"] == events[i - 1, "event"] &
+                            events[i, "node"] == events[i - 1, "node"] &
+                            events[i, "dest"] == events[i - 1, "dest"] &
+                            events[i, "select"] == events[i - 1, "select"] &
+                            events[i, "shift"] == events[i - 1, "shift"]]
+
+            if (length(duplicated) > 0) {
+                ## Determine the index to the first non-duplicated row
+                ## before each sequence of duplicates.
+                d <- diff(duplicated)
+                i <- duplicated[c(0L, d) != 1L] - 1L
+
+                ## Count the number of duplicates in each sequence.
+                n <- cumsum(c(1L, d) > 1L)
+                n <- as.integer(tapply(n, n, length))
+
+                ## Update events and remove duplicates.
+                events[i, "n"] <- events[i, "n"] + n
+                events <- events[-duplicated, ]
+            }
+        }
+
+        events <- cbind(events, proportion = 0L)
+        rownames(events) <- NULL
+
+        events <- events_target(events[, c("event", "time", "node",
+                                           "dest", "n", "proportion",
+                                           "select", "shift"),
+                                       drop = FALSE],
+                                target)
+
+        if (!is.null(attr(x@event, "origin"))) {
+            event_names <- c("exit", "enter", "intTrans", "extTrans")
+            events$event <- event_names[events$event + 1]
+        }
+
+        if (!is.null(attr(x@time, "origin"))) {
+            events$time <- as.Date(events$time,
+                                   origin = attr(x@time, "origin"))
+            events$time <- as.character(events$time)
+        } else {
+            events$time <- as.numeric(events$time)
+        }
+
+        events
+    }
+)
+
+##' Non-exported utility function to display events for an individual
+##' @param events a \code{data.frame} with the columns `id`, `event`,
+##'     `time`, `node`, and `dest` to define the events, see
+##'     \code{\link{individual_events}} for details.
+##' @return a character vector with tex-code.
+##' @md
+##' @noRd
+events_to_tex <- function(events) {
+    columns <- c("id", "event", "time", "node", "dest")
+    if (!is.data.frame(events))
+        events <- as.data.frame(events)
+    if (!all(columns %in% names(events)))
+        stop("Missing columns in 'events'.", call. = FALSE)
+    events <- events[, columns, drop = FALSE]
+
+    id <- check_indiv_events_id(events$id)
+    stopifnot(length(unique(id)) == 1)
+    event <- check_indiv_events_event(events$event)
+    time <- check_indiv_events_time(events$time)
+    time <- as.integer(factor(time - min(time)))
+    events$dest[event != 3L] <- NA
+    nodes <- check_indiv_events_nodes(event, events$node, events$dest)
+    levels <- sort(unique(c(nodes$node, nodes$dest)))
+    nodes$node <- as.integer(factor(nodes$node, levels = levels))
+    nodes$dest <- as.integer(factor(nodes$dest, levels = levels))
+
+    ## Ensure the events are sorted.
+    i <- order(id, time, event)
+
+    keep <- .Call(SimInf_clean_indiv_events,
+                  id[i],
+                  event[i],
+                  time[i],
+                  nodes$node[i],
+                  nodes$dest[i])
+
+    lines <- c(
+        "\\documentclass[tikz]{standalone}",
+        "\\usepackage{tikz}",
+        "\\begin{document}",
+        "\\begin{tikzpicture}",
+        "  \\sffamily",
+        "",
+        sprintf("  \\draw[>=stealth,->] (0,0.5) -- (%i,0.5);", max(time) + 1),
+        sprintf("  \\node at (%g,0) {\\tiny Time};", (max(time) + 1) / 2),
+        "")
+
+    ## Add all nodes.
+    for (j in sort(unique(c(nodes$node, nodes$dest[!is.na(nodes$dest)])))) {
+        lines <- c(
+            lines,
+            sprintf("  \\draw[>=stealth, gray!40] (0.5,%i) -- (%g,%i);",
+                    j, max(time) + 0.5, j),
+            sprintf("  \\node at (0,%i) {\\tiny Node %i};", j, j),
+            "")
+    }
+
+    ## Add all time markers.
+    for (j in sort(unique(time))) {
+        lines <- c(
+            lines,
+            sprintf("  \\node at (%i,0.3) {\\tiny $t_{%i}$};", j, j),
+            sprintf("  \\draw (%i,0.55) -- (%i,0.45);", j, j))
+    }
+
+    ## Add all events.
+    events <- data.frame(keep = keep,
+                         id = id[i],
+                         event = event[i],
+                         time = time[i],
+                         node = nodes$node[i],
+                         dest = nodes$dest[i])
+    lines <- c(lines, "")
+    for (i in seq_len(nrow(events))) {
+        if (events$event[i] == 0) {
+            l <- sprintf("  \\node at (%i,%g) {%s\\textdagger};",
+                         events$time[i], events$node[i] + 0.2,
+                         ifelse(isTRUE(events$keep[i]), "",
+                                "\\textcolor{gray!60}"))
+        } else if (events$event[i] == 1) {
+            l <- sprintf("  \\node at (%i,%g) {%s\\textborn};",
+                         events$time[i], events$node[i] + 0.1,
+                         ifelse(isTRUE(events$keep[i]), "",
+                                "\\textcolor{gray!60}"))
+        } else if (events$event[i]) {
+            l <- sprintf("  \\path[>=stealth%s,->]",
+                         ifelse(isTRUE(events$keep[i]), "", ",gray!60"))
+
+            ## From.
+            l <- sprintf("%s (%i,%i)", l, events$time[i], events$node[i])
+
+            ## Edge
+            if (isTRUE(events$node[i] < events$dest[i])) {
+                l <- sprintf("%s edge [out=135, in=225]", l)
+            } else if (isTRUE(events$node[i] == events$dest[i])) {
+                l <- sprintf("%s edge [out=135, in=45, loop]", l)
+            } else {
+                l <- sprintf("%s edge [out=315, in=45]", l)
+            }
+
+            ## To
+            l <- sprintf("%s (%i,%i);", l, events$time[i], events$dest[i])
+        }
+
+        lines <- c(lines, l)
+    }
+
+    lines <- c(
+        lines,
+        "",
+        "\\end{tikzpicture}",
+        "\\end{document}")
+
+    lines
+}
