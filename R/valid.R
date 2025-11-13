@@ -4,7 +4,7 @@
 ## Copyright (C) 2015 Pavol Bauer
 ## Copyright (C) 2017 -- 2019 Robin Eriksson
 ## Copyright (C) 2015 -- 2019 Stefan Engblom
-## Copyright (C) 2015 -- 2022 Stefan Widgren
+## Copyright (C) 2015 -- 2025 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -18,6 +18,24 @@
 ##
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+valid_replicates <- function(object) {
+    if (any(length(object@replicates) != 1L,
+            anyNA(object@replicates),
+            any(object@replicates < 1L))) {
+        return("'replicates' must be a positive integer.")
+    }
+
+    if (object@replicates > 1L) {
+        if (any(isFALSE(identical(dim(object@U_sparse), c(0L, 0L))),
+                isFALSE(identical(dim(object@V_sparse), c(0L, 0L))))) {
+        stop("'replicates' must equal one when a sparse result matrix.",
+             call. = FALSE)
+        }
+    }
+
+    character(0)
+}
 
 valid_tspan <- function(object) {
     if (!is.double(object@tspan)) {
@@ -36,6 +54,8 @@ valid_u0 <- function(object) {
         return("Initial state 'u0' must be an integer matrix.")
     if (any(object@u0 < 0L))
         return("Initial state 'u0' has negative elements.")
+    if (!identical(nrow(object@S), nrow(object@u0)))
+        return("The number of rows in 'u0' and 'S' must match.")
 
     character(0)
 }
@@ -45,7 +65,10 @@ valid_U <- function(object) {
         return("Output state 'U' must be an integer matrix.")
     if (any(object@U < 0L) || any(object@U_sparse < 0, na.rm = TRUE))
         return("Output state 'U' has negative elements.")
-
+    if (all(isFALSE(identical(dim(object@U), c(0L, 0L))),
+            isFALSE(identical(dim(object@U_sparse), c(0L, 0L))))) {
+        return("Output state 'U' must be either dense or sparse.")
+    }
     character(0)
 }
 
@@ -66,6 +89,10 @@ valid_v0 <- function(object) {
 valid_V <- function(object) {
     if (!identical(storage.mode(object@V), "double"))
         return("Output model state 'V' must be a double matrix.")
+    if (all(isFALSE(identical(dim(object@V), c(0L, 0L))),
+            isFALSE(identical(dim(object@V_sparse), c(0L, 0L))))) {
+        return("Output model state 'V' must be either dense or sparse.")
+    }
 
     character(0)
 }
@@ -126,8 +153,10 @@ valid_ldata <- function(object) {
     if (!is.double(object@ldata))
         return("'ldata' matrix must be a double matrix.")
     Nn_ldata <- dim(object@ldata)[2]
-    if (Nn_ldata > 0 && !identical(Nn_ldata, dim(object@u0)[2]))
+    if (Nn_ldata > 0 &&
+        !identical(object@replicates * Nn_ldata, dim(object@u0)[2])) {
         return("The number of nodes in 'u0' and 'ldata' must match.")
+    }
 
     character(0)
 }

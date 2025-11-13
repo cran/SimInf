@@ -1,3 +1,55 @@
+# SimInf 10.0.0 (2025-11-13)
+
+## BREAKING CHANGES
+
+Backwards incompatible changes that are the reason why the major
+version has been incremented.
+
+* Redesigned the S4 class SimInf_pfilter and the interface to using
+  the bootstrap filtering algorithm, see the documentation for the
+  `pfilter` function. Moreover, a variant of the split-step solver
+  (ssm) was added to efficiently simulate multiple particles in one
+  trajectory (mssm).
+
+* The slot `replicates` was added to the `SimInf_model`. The slot
+  `replicates` holds the number of replicates of each node in a
+  model. This new functionality is used by the bootstrap filtering
+  algorithm.
+
+## CHANGES OR IMPROVEMENTS
+
+* Added functionality to fit models to time series data using the
+  Particle Markov Chain Monte Carlo ('PMCMC') algorithm of Andrieu and
+  others (2010)
+  [doi:10.1111/j.1467-9868.2009.00736.x](https://doi.org/10.1111/j.1467-9868.2009.00736.x).
+
+* The model parser (`mparse`) now allows the global data vector
+  `gdata` to have parameters without a name.
+
+* On Windows, use gsl from the system, via pkg-config when available.
+
+* Renamed the `abc` function argument `ninit` to `n_init`.
+
+* Renamed the `abc` function argument `npart` to `n_particles`.
+
+* When using `use_enum=TRUE` in `mparse`, the enumeration constants
+  `N_COMPARTMENTS_U` and `N_COMPARTMENTS_V` will be automatically
+  added to facilitate indexing 'u' and 'v' in the C code.
+  Additionally, enumeration values are added to all enumeration
+  constants.
+
+* The `plot` function of a `SimInf_model` object now accepts a `log`
+  argument, see the documentation. Thanks to Alfredo Acosta in PR #56.
+
+* Static code analysis of the C codebase has been performed using the
+  `clang-tidy` and `cppcheck` tools in order to improve code.
+
+* The `GNU Indent` program has been used to style the C code for
+  consistency and readability.
+
+* Add a function to calculate the Lambert W0 function using the GNU
+  Scientific Library (GSL).
+
 # SimInf 9.8.1 (2024-06-21)
 
 ## CHANGES OR IMPROVEMENTS
@@ -176,8 +228,8 @@ version has been incremented.
 
 * Added functionality to fit models to time series data using the
   Approximate Bayesian Computation Sequential Monte Carlo ('ABC-SMC')
-  algorithm of Toni and others (2009) [doi:
-  10.1098/rsif.2008.0172](https://doi.org/10.1098/rsif.2008.0172).
+  algorithm of Toni and others (2009)
+  [doi:10.1098/rsif.2008.0172](https://doi.org/10.1098/rsif.2008.0172).
 
 * Added a vignette about scheduled events. This vignette is
   work-in-progress and not yet complete.

@@ -1,7 +1,7 @@
 ## This file is part of SimInf, a framework for stochastic
 ## disease spread simulations.
 ##
-## Copyright (C) 2015 -- 2024 Stefan Widgren
+## Copyright (C) 2015 -- 2025 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -94,26 +94,26 @@ stopifnot(identical(
     SimInf:::pfilter_tspan(model, data),
     structure(c(5, NA, 6, 7), .Dim = c(2L, 2L))))
 
-## Check invalid npart
+## Check invalid n_particles
 model <- SIR(u0 = data.frame(S = 99, I = 1, R = 0),
              tspan = 1:5,
              beta = 0.16,
              gamma = 0.077)
 res <- assertError(pfilter(model = model,
-                           npart = 1,
+                           n_particles = 1,
                            data = data.frame(time = 1:3)))
-check_error(res, "'npart' must be an integer > 1.")
+check_error(res, "'n_particles' must be an integer > 1.")
 
 res <- assertError(pfilter(model = model,
-                           npart = c(10, 10),
+                           n_particles = c(10, 10),
                            data = data.frame(time = 1:3)))
-check_error(res, "'npart' must be an integer > 1.")
+check_error(res, "'n_particles' must be an integer > 1.")
 
 ## Check the C utility function to split events.
-res <- assertError(.Call(SimInf:::SimInf_split_events, 1, 1L))
+res <- assertError(.Call(SimInf:::SimInf_split_events, integer(0), 1L))
 check_error(res, "'t' must be an integer vector with length >= 1.")
 
-res <- assertError(.Call(SimInf:::SimInf_split_events, 1L, 1))
+res <- assertError(.Call(SimInf:::SimInf_split_events, 1L, integer(0)))
 check_error(res, "'t_end' must be an integer vector with length >= 1.")
 
 stopifnot(identical(.Call(SimInf:::SimInf_split_events, 1L, 1L),
@@ -209,7 +209,7 @@ check_error(res, "Non-positive sum of weights detected.")
 ## Expect all particles if the weights are equal.
 w <- rep(0.1, 10)
 stopifnot(identical(
-    seq_len(length(w)),
+    seq_along(w),
     .Call(SimInf:::SimInf_systematic_resampling, w)))
 
 ## Expect function for the observation process
@@ -230,8 +230,7 @@ stopifnot(identical(
                       "10" = data.frame(time = 10, Iobs = 3),
                       "13" = data.frame(time = 13, Iobs = 3),
                       "16" = data.frame(time = 16, Iobs = 3),
-                      "19" = data.frame(time = 19, Iobs = 3)),
-                 5),
+                      "19" = data.frame(time = 19, Iobs = 3))),
     obs_fn))
 
 ## Raise an error if the observation process is not a function when a
@@ -249,8 +248,7 @@ res <- assertError(
                       "10" = data.frame(time = 10, Iobs = 3),
                       "13" = data.frame(time = 13, Iobs = 3),
                       "16" = data.frame(time = 16, Iobs = 3),
-                      "19" = data.frame(time = 19, Iobs = 3)),
-                 5))
+                      "19" = data.frame(time = 19, Iobs = 3))))
 
 check_error(res,
             paste("The observation process must be a function",
@@ -270,8 +268,7 @@ res <- assertError(
                       "10" = data.frame(time = 10, Iobs = 3),
                       "13" = data.frame(time = 13, Iobs = 3),
                       "16" = data.frame(time = 16, Iobs = 3),
-                      "19" = data.frame(time = 19, Iobs = 3)),
-                 5))
+                      "19" = data.frame(time = 19, Iobs = 3))))
 
 check_error(res,
             paste("The observation process must be a function",
@@ -292,8 +289,7 @@ res <- assertError(
                       "10" = data.frame(time = 10, Iobs = 3),
                       "13" = data.frame(time = 13, Iobs = 3),
                       "16" = data.frame(time = 16, Iobs = 3),
-                      "19" = data.frame(time = 19, Iobs = 3)),
-                 5))
+                      "19" = data.frame(time = 19, Iobs = 3))))
 
 check_error(res, "'obs_process' must be either a formula or a function.")
 
@@ -311,8 +307,7 @@ res <- assertError(
                       "10" = data.frame(time = 10, Iobs = 3),
                       "13" = data.frame(time = 13, Iobs = 3),
                       "16" = data.frame(time = 16, Iobs = 3),
-                      "19" = data.frame(time = 19, Iobs = 3)),
-                 5))
+                      "19" = data.frame(time = 19, Iobs = 3))))
 
 check_error(res,
             "Unable to match the parameter on the lhs to a column in 'data'.")
@@ -331,8 +326,7 @@ res <- assertError(
                       "10" = data.frame(time = 10, Iobs = 3),
                       "13" = data.frame(time = 13, Iobs = 3),
                       "16" = data.frame(time = 16, Iobs = 3),
-                      "19" = data.frame(time = 19, Iobs = 3)),
-                 5))
+                      "19" = data.frame(time = 19, Iobs = 3))))
 
 check_error(res, "Non-existing compartment(s) in model: 'E'.")
 
@@ -349,15 +343,14 @@ result <- SimInf:::pfilter_obs_process(
                             "10" = data.frame(time = 10, Iobs = 3),
                             "13" = data.frame(time = 13, Iobs = 3),
                             "16" = data.frame(time = 16, Iobs = 3),
-                            "19" = data.frame(time = 19, Iobs = 3)),
-                       5)
+                            "19" = data.frame(time = 19, Iobs = 3)))
 
 stopifnot(identical(
     result,
     list(slots = list(list(
              slot = "U",
              name = "I",
-             i = c(2, 5, 8, 11, 14))),
+             i = 2L)),
          expr = "stats::dpois(x = Iobs, lambda = I+1e-06, log = TRUE)",
          par = "Iobs",
          par_i = 2L)))
@@ -374,15 +367,14 @@ result <- SimInf:::pfilter_obs_process(
                             "10" = data.frame(time = 10, Iobs = 3),
                             "13" = data.frame(time = 13, Iobs = 3),
                             "16" = data.frame(time = 16, Iobs = 3),
-                            "19" = data.frame(time = 19, Iobs = 3)),
-                       5)
+                            "19" = data.frame(time = 19, Iobs = 3)))
 
 stopifnot(identical(
     result,
     list(slots = list(list(
              slot = "U",
              name = "I",
-             i = c(2, 5, 8, 11, 14))),
+             i = 2L)),
          expr = "stats::dbinom(x = Iobs, size = 100, prob = I/100, log = TRUE)",
          par = "Iobs",
          par_i = 2L)))
@@ -399,13 +391,12 @@ result <- SimInf:::pfilter_obs_process(
                             "10" = data.frame(time = 10, Iobs = 3),
                             "13" = data.frame(time = 13, Iobs = 3),
                             "16" = data.frame(time = 16, Iobs = 3),
-                            "19" = data.frame(time = 19, Iobs = 3)),
-                       5)
+                            "19" = data.frame(time = 19, Iobs = 3)))
 
 stopifnot(identical(
     result,
-    list(slots = list(list(slot = "U", name = "I", i = c(2, 5, 8, 11, 14)),
-                      list(slot = "U", name = "I", i = c(2, 5, 8, 11, 14))),
+    list(slots = list(list(slot = "U", name = "I", i = 2L),
+                      list(slot = "U", name = "I", i = 2L)),
          expr = "stats::dunif(x = Iobs, min = I-3, max = I+3, log = TRUE)",
          par = "Iobs",
          par_i = 2L)))
@@ -430,10 +421,10 @@ pf <- pfilter(
     data = data.frame(
         time = c(1, 4, 7, 10, 13, 16, 19),
         Iobs = c(0, 16, 12, 11, 19, 19, 23)),
-    npart = 25)
+    n_particles = 25)
 
 show_expected <- c("Number of particles: 25",
-                   "Log-likelihood: -17.915850")
+                   "Log-likelihood: -18.113888")
 show_observed <- capture.output(show(pf))
 stopifnot(identical(show_observed, show_expected))
 
@@ -441,7 +432,7 @@ summary_expected <- c(
     "Particle filter",
     "---------------",
     "Number of particles: 25",
-    "Log-likelihood: -17.915850",
+    "Log-likelihood: -18.113888",
     "Model: SIR",
     "Number of nodes: 1",
     "Number of scheduled events: 1",
@@ -460,9 +451,9 @@ summary_expected <- c(
     "Compartments",
     "------------",
     "   Min. 1st Qu. Median Mean 3rd Qu. Max.",
-    " S 58.0    67.5   74.0 74.9    83.5 90.0",
-    " I  0.0    12.5   16.0 13.3    17.0 18.0",
-    " R  0.0     4.0   10.0 10.4    15.5 24.0")
+    " S 53.0    61.5   71.0 71.1    80.5 90.0",
+    " I  0.0    15.0   15.0 13.7    16.5 18.0",
+    " R  0.0     4.5   12.0 13.7    22.0 31.0")
 
 summary_observed <- capture.output(summary(pf))
 stopifnot(identical(summary_observed, summary_expected))
@@ -475,16 +466,16 @@ stopifnot(identical(
     data.frame(
         node = c(1L, 1L, 1L, 1L, 1L, 1L, 1L),
         time = c(1L, 4L, 7L, 10L, 13L, 16L, 19L),
-        S = c(90L, 87L, 80L, 74L, 69L, 66L, 58L),
-        I = c(0L, 11L, 14L, 16L, 18L, 16L, 18L),
-        R = c(0L, 2L, 6L, 10L, 13L, 18L, 24L))))
+        S = c(90L, 83L, 78L, 71L, 65L, 58L, 53L),
+        I = c(0L, 15L, 15L, 17L, 15L, 18L, 16L),
+        R = c(0L, 2L, 7L, 12L, 20L, 24L, 31L))))
 
 stopifnot(identical(
     prevalence(pf, I ~ .)$time,
     c(1, 4, 7, 10, 13, 16, 19)))
 
 stopifnot(all(abs(prevalence(pf, I ~ .)$prevalence
-                  - c(0, 0.11, 0.14, 0.16, 0.18, 0.16, 0.18)) < tol))
+                  - c(0, 0.15, 0.15, 0.17, 0.15, 0.18, 0.16)) < tol))
 
 ## Modify the model object to check that 'gdata' is included in the
 ## output.
@@ -494,7 +485,7 @@ summary_expected <- c(
     "Particle filter",
     "---------------",
     "Number of particles: 25",
-    "Log-likelihood: -17.915850",
+    "Log-likelihood: -18.113888",
     "Model: SIR",
     "Number of nodes: 1",
     "Number of scheduled events: 1",
@@ -518,9 +509,9 @@ summary_expected <- c(
     "Compartments",
     "------------",
     "   Min. 1st Qu. Median Mean 3rd Qu. Max.",
-    " S 58.0    67.5   74.0 74.9    83.5 90.0",
-    " I  0.0    12.5   16.0 13.3    17.0 18.0",
-    " R  0.0     4.0   10.0 10.4    15.5 24.0")
+    " S 53.0    61.5   71.0 71.1    80.5 90.0",
+    " I  0.0    15.0   15.0 13.7    16.5 18.0",
+    " R  0.0     4.5   12.0 13.7    22.0 31.0")
 
 summary_observed <- capture.output(summary(pf))
 stopifnot(identical(summary_observed, summary_expected))

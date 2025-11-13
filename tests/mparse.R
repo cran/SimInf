@@ -4,7 +4,7 @@
 ## Copyright (C) 2015 Pavol Bauer
 ## Copyright (C) 2017 -- 2019 Robin Eriksson
 ## Copyright (C) 2015 -- 2019 Stefan Engblom
-## Copyright (C) 2015 -- 2024 Stefan Widgren
+## Copyright (C) 2015 -- 2025 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -175,6 +175,27 @@ res <- assertError(
            u0 = data.frame(D = 10, W = 10), tspan = 1:5,
            pts_fun = 5))
 check_error(res, "'pts_fun' must be a character vector.")
+
+res <- assertError(
+    mparse(transitions = c("S -> beta*S*I/N -> I",
+                           "I -> gamma*I -> R",
+                           "N <- S+I+R"),
+           compartments = c("S", "I", "R", "N_COMPARTMENTS_U"),
+           gdata = c(beta = 0.16, gamma = 0.077),
+           u0 = data.frame(S = 100, I = 1, R = 0,
+                           N_COMPARTMENTS_U = 3),
+           tspan = 1:100))
+check_error(res, "Invalid compartment or variable name.")
+
+res <- assertError(
+    mparse(transitions = c("S -> beta*S*I/N -> I",
+                           "I -> gamma*I -> R",
+                           "N <- S+I+R"),
+           compartments = c("S", "I", "R"),
+           gdata = c(beta = 0.16, gamma = 0.077, N_COMPARTMENTS_V = 2),
+           u0 = data.frame(S = 100, I = 1, R = 0),
+           tspan = 1:100))
+check_error(res, "Invalid compartment or variable name.")
 
 ## Check mparse
 m <- mparse(transitions = c("@->c1->D", "D->c2*D->D+D",
@@ -980,6 +1001,18 @@ check_error(
     res,
     "Variable name already exists in 'u0', 'gdata', 'ldata' or 'v0'.")
 
+res <- assertError(
+    SimInf:::parse_variables(variables = c("N <- S + I + R",
+                                           "N <- S + I + R"),
+                             compartments = c("S", "I", "R"),
+                             ldata_names = character(0),
+                             gdata_names = character(0),
+                             v0_names = character(0),
+                             use_enum = FALSE))
+check_error(
+    res,
+    "Variables must have non-duplicated names.")
+
 stopifnot(identical(
     SimInf:::parse_variable(x = "N <- S + I + R",
                             compartments = c("S", "I", "R"),
@@ -990,6 +1023,18 @@ stopifnot(identical(
     list(variable = "N",
          tokens = c("u[0]", "+", "u[1]", "+", "u[2]"),
          type = "double",
+         compartments = c("S", "I", "R"))))
+
+stopifnot(identical(
+    SimInf:::parse_variable(x = "(int)N <- S + I + R",
+                            compartments = c("S", "I", "R"),
+                            ldata_names = character(0),
+                            gdata_names = character(0),
+                            v0_names = character(0),
+                            use_enum = FALSE),
+    list(variable = "N",
+         tokens = c("u[0]", "+", "u[1]", "+", "u[2]"),
+         type = "int",
          compartments = c("S", "I", "R"))))
 
 stopifnot(identical(
@@ -1069,19 +1114,50 @@ stopifnot(identical(
       "")))
 
 stopifnot(identical(
-    SimInf:::C_enum(compartment = c("S", "I", "R"),
+    SimInf:::C_enum(compartment = structure(c("S", "I", "R"),
+                                            value = c(0L, 1L, 2L),
+                                            n_values = 3L),
                     ldata_names = c("beta", "gamma", "delta",
                                     "epsilon", "zeta", "eta", "theta",
                                     "iota", "kappa", "lambda"),
-                    gdata_names = character(0),
-                    v0_names = character(0),
+                    gdata_names = structure("beta", value = 4L, n_values = 5L),
+                    v0_names = structure(c("mu", "nu"),
+                                         value = c(0L, 1L),
+                                         n_values = 2L),
                     use_enum = TRUE),
     c("/* Enumeration constants for indicies in the 'u' vector. */",
-      "enum {S, I, R};",
+      "enum {",
+      "    S = 0,",
+      "    I = 1,",
+      "    R = 2,",
+      "    N_COMPARTMENTS_U = 3",
+      "};",
+      "",
+      "/* Enumeration constants for indicies in the 'v' vector. */",
+      "enum {",
+      "    MU = 0,",
+      "    NU = 1,",
+      "    N_COMPARTMENTS_V = 2",
+      "};",
       "",
       "/* Enumeration constants for indicies in the 'ldata' vector. */",
-      "enum {BETA, GAMMA, DELTA, EPSILON, ZETA, ETA, THETA, IOTA, KAPPA,",
-      "      LAMBDA};",
+      "enum {",
+      "    BETA,",
+      "    GAMMA,",
+      "    DELTA,",
+      "    EPSILON,",
+      "    ZETA,",
+      "    ETA,",
+      "    THETA,",
+      "    IOTA,",
+      "    KAPPA,",
+      "    LAMBDA",
+      "};",
+      "",
+      "/* Enumeration constants for indicies in the 'gdata' vector. */",
+      "enum {",
+      "    BETA = 4",
+      "};",
       "")))
 
 ## Check dependecies to compartments via variables.
@@ -1110,3 +1186,56 @@ G_expected <- new("dgCMatrix",
                   factors = list())
 
 stopifnot(identical(model@G, G_expected))
+
+## Check that mparse works with gdata-parameters without a name.
+model  <- mparse(transitions = "S -> beta * S -> I",
+                 compartments = c("S", "I"),
+                 gdata = c(beta = 1, 1:4),
+                 u0 = data.frame(S = 100, I = 100),
+                 tspan = 1:100)
+
+show_expected <- c(
+    "Model: SimInf_model",
+    "Number of nodes: 1",
+    "Number of transitions: 1",
+    "Number of scheduled events: 0",
+    "",
+    "Global data",
+    "-----------",
+    " Parameter Value",
+    " beta      1    ",
+    " Number of parameters without a name: 4",
+    "",
+    "Compartments",
+    "------------",
+    " - Empty, please run the model first")
+
+show_observed <- capture.output(show(model))
+stopifnot(identical(show_observed, show_expected))
+
+model  <- mparse(transitions = "S -> S -> I",
+                 compartments = c("S", "I"),
+                 gdata = c(1:4),
+                 u0 = data.frame(S = 100, I = 100),
+                 tspan = 1:100)
+
+show_expected <- c(
+    "Model: SimInf_model",
+    "Number of nodes: 1",
+    "Number of transitions: 1",
+    "Number of scheduled events: 0",
+    "",
+    "Global data",
+    "-----------",
+    " Number of parameters without a name: 4",
+    "",
+    "Compartments",
+    "------------",
+    " - Empty, please run the model first")
+
+show_observed <- capture.output(show(model))
+stopifnot(identical(show_observed, show_expected))
+
+stopifnot(identical(
+    SimInf:::C_enumeration_constants("ldata", character(0)),
+    character(0)))

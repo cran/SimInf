@@ -5,7 +5,7 @@
  * Copyright (C) 2015 Pavol Bauer
  * Copyright (C) 2017 -- 2019 Robin Eriksson
  * Copyright (C) 2015 -- 2019 Stefan Engblom
- * Copyright (C) 2015 -- 2021 Stefan Widgren
+ * Copyright (C) 2015 -- 2025 Stefan Widgren
  *
  * SimInf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +21,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef INCLUDE_SIMINF_H
-#define INCLUDE_SIMINF_H
+#pragma once
 
 #include <R.h>
 #include <Rinternals.h>
@@ -80,7 +79,8 @@ typedef enum {
     SIMINF_ERR_EVENTS_N             = -15,
     SIMINF_ERR_EVENT_SHIFT          = -16,
     SIMINF_ERR_SHIFT_OUT_OF_BOUNDS  = -17,
-    SIMINF_ERR_INVALID_PROPORTION   = -18
+    SIMINF_ERR_INVALID_PROPORTION   = -18,
+    SIMINF_ERR_AEM_REPLICATED_MODEL = -19
 } SimInf_error_code;
 
 /* Forward declaration of the transition rate function. */
@@ -165,5 +165,3 @@ double SimInf_local_spread(
     const double *neighbors, const double *phi,
     const int *u, const double N_i,
     const double phi_i, const int Nc, const double D);
-
-#endif

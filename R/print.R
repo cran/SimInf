@@ -4,7 +4,7 @@
 ## Copyright (C) 2015 Pavol Bauer
 ## Copyright (C) 2017 -- 2019 Robin Eriksson
 ## Copyright (C) 2015 -- 2019 Stefan Engblom
-## Copyright (C) 2015 -- 2020 Stefan Widgren
+## Copyright (C) 2015 -- 2025 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -59,16 +59,41 @@ summary_matrix <- function(x) {
     colnames(qq) <- c("Min.", "1st Qu.", "Median",
                       "Mean", "3rd Qu.", "Max.")
     rownames(qq) <- paste0(" ", rownames(x))
-    print.table(qq, digits = 3)
+
+    ## Summarise named parameters.
+    i <- which(nchar(rownames(x)) > 0)
+    if (length(i) > 0) {
+        print.table(qq[i, , drop = FALSE], digits = 3)
+    }
+
+    ## Summarise parameters without a name.
+    fmt <- " Number of parameters without a name: %i\n"
+    i <- sum(nchar(rownames(x)) == 0 | is.na(rownames(x)))
+    if (i > 0)
+        cat(sprintf(fmt, i))
+    if (is.null(rownames(x)))
+        cat(sprintf(fmt, nrow(x)))
 }
 
 summary_vector <- function(x) {
-    xx <- data.frame(Parameter = names(x), Value = x)
-    if (nrow(xx) > 0) {
+    ## Summarise named parameters.
+    i <- which(nchar(names(x)) > 0)
+    if (length(i) > 0) {
+        xx <- data.frame(Parameter = names(x)[i], Value = x[i])
         print.data.frame(xx, right = FALSE, row.names = FALSE)
-    } else {
-        cat(" - None\n")
     }
+
+    ## Summarise parameters without a name.
+    fmt <- " Number of parameters without a name: %i\n"
+    i <- sum(nchar(names(x)) == 0 | is.na(names(x)))
+    if (i > 0)
+        cat(sprintf(fmt, i))
+    if (is.null(names(x)))
+        cat(sprintf(fmt, length(x)))
+
+    ## No parameters in the vector.
+    if (!length(x))
+        cat(" - None\n")
 }
 
 ##' Summarise model parameters
@@ -174,6 +199,8 @@ setMethod(
         ## The model name
         cat(sprintf("Model: %s\n", as.character(class(object))))
         cat(sprintf("Number of nodes: %i\n", n_nodes(object)))
+        if (n_replicates(object) > 1L)
+            cat(sprintf("Number of replicates: %i\n", n_replicates(object)))
         cat(sprintf("Number of transitions: %i\n", n_transitions(object)))
         show(object@events)
 
@@ -206,6 +233,10 @@ setMethod(
 
         ## Nodes
         cat(sprintf("Number of nodes: %i\n", n_nodes(object)))
+
+        ## Replicates
+        if (n_replicates(object) > 1L)
+            cat(sprintf("Number of replicates: %i\n", n_replicates(object)))
 
         summary_transitions(object)
         summary_gdata(object)

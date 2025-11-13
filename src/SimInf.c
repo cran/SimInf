@@ -5,7 +5,7 @@
  * Copyright (C) 2015 Pavol Bauer
  * Copyright (C) 2017 -- 2019 Robin Eriksson
  * Copyright (C) 2015 -- 2019 Stefan Engblom
- * Copyright (C) 2015 -- 2023 Stefan Widgren
+ * Copyright (C) 2015 -- 2025 Stefan Widgren
  *
  * SimInf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,24 +21,20 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <Rdefines.h>
+#include "SimInf_internal.h"
 #include <R_ext/Visibility.h>
-#include "misc/SimInf_arg.h"
-#include "misc/SimInf_openmp.h"
-#include "solvers/SimInf_solver.h"
-#include "solvers/ssm/SimInf_solver_ssm.h"
-#include "solvers/aem/SimInf_solver_aem.h"
+#include <Rdefines.h>
 
 static void
 SimInf_raise_error(
-    int error)
+    int err)
 {
-    switch (error) {
+    switch (err) {
     case SIMINF_ERR_NEGATIVE_STATE:
         Rf_error("Negative state detected.");
         break;
-    case SIMINF_ERR_ALLOC_MEMORY_BUFFER:               /* #nocov */
-        Rf_error("Unable to allocate memory buffer."); /* #nocov */
+    case SIMINF_ERR_ALLOC_MEMORY_BUFFER:       /* #nocov */
+        Rf_error("Unable to allocate memory buffer.");  /* #nocov */
         break;
     case SIMINF_UNDEFINED_EVENT:
         Rf_error("Undefined event type.");
@@ -79,8 +75,11 @@ SimInf_raise_error(
     case SIMINF_ERR_INVALID_PROPORTION:
         Rf_error("Invalid proportion detected (< 0.0 or > 1.0).");
         break;
-    default:                                        /* #nocov */
-        Rf_error("Unknown error code: %i.", error); /* #nocov */
+    case SIMINF_ERR_AEM_REPLICATED_MODEL:
+        Rf_error("Cannot run the 'aem' solver on a replicated model.");
+        break;
+    default:                   /* #nocov */
+        Rf_error("Unknown error code: %i.", err);       /* #nocov */
         break;
     }
 }
@@ -94,19 +93,15 @@ SimInf_raise_error(
  * @param pts_fun Function pointer to callback after each time step
  *        e.g. update infectious pressure.
  */
-SEXP attribute_hidden
-SimInf_run(
-    SEXP model,
-    SEXP solver,
-    TRFun *tr_fun,
-    PTSFun pts_fun)
+attribute_hidden
+    SEXP SimInf_run(SEXP model, SEXP solver, TRFun *tr_fun, PTSFun pts_fun)
 {
-    int error = 0, nprotect = 0;
+    int err = 0, nprotect = 0;
     SEXP result = R_NilValue;
     SEXP ext_events, E, G, N, S, prS;
     SEXP tspan;
     SEXP U, V, U_sparse, V_sparse;
-    SimInf_solver_args args = {0};
+    SimInf_solver_args args = { 0 };
 
     /* If the model ldata is a 0x0 matrix, i.e. Nld == 0, then use
      * ldata_tmp in the transition rate functions. This is to make
@@ -114,29 +109,29 @@ SimInf_run(
      * is to facilitate for the solvers to detect and raise an error
      * if a model C code uses ldata[0] in the transition rate
      * functions. */
-    const double ldata_tmp[1] = {INFINITY};
+    const double ldata_tmp[1] = { INFINITY };
 
     if (SimInf_arg_check_model(model)) {
-        error = SIMINF_ERR_INVALID_MODEL;
+        err = SIMINF_ERR_INVALID_MODEL;
         goto cleanup;
     }
 
     /* Check solver argument */
     if (!Rf_isNull(solver)) {
         if (!Rf_isString(solver)) {
-            error = SIMINF_ERR_UNKNOWN_SOLVER;
+            err = SIMINF_ERR_UNKNOWN_SOLVER;
             goto cleanup;
         }
 
         if (Rf_length(solver) != 1 || STRING_ELT(solver, 0) == NA_STRING) {
-            error = SIMINF_ERR_UNKNOWN_SOLVER;
+            err = SIMINF_ERR_UNKNOWN_SOLVER;
             goto cleanup;
         }
     }
 
     /* seed */
     GetRNGstate();
-    args.seed = (unsigned long int)(unif_rand() * UINT_MAX);
+    args.seed = (unsigned long int) (unif_rand() * UINT_MAX);
     PutRNGstate();
 
     /* Duplicate model. */
@@ -190,22 +185,32 @@ SimInf_run(
         args.N = INTEGER(N);
 
     /* Constants */
-    args.Nn = INTEGER(R_do_slot(R_do_slot(result, Rf_install("u0")), R_DimSymbol))[1];
+    args.Nrep = INTEGER(R_do_slot(result, Rf_install("replicates")))[0];
+    args.Nn =
+        INTEGER(R_do_slot
+                (R_do_slot(result, Rf_install("u0")),
+                 R_DimSymbol))[1] / args.Nrep;
     args.Nc = INTEGER(R_do_slot(S, Rf_install("Dim")))[0];
     args.Nt = INTEGER(R_do_slot(S, Rf_install("Dim")))[1];
-    args.Nd = INTEGER(R_do_slot(R_do_slot(result, Rf_install("v0")), R_DimSymbol))[0];
-    args.Nld = INTEGER(R_do_slot(R_do_slot(result, Rf_install("ldata")), R_DimSymbol))[0];
+    args.Nd =
+        INTEGER(R_do_slot(R_do_slot(result, Rf_install("v0")), R_DimSymbol))[0];
+    args.Nld =
+        INTEGER(R_do_slot
+                (R_do_slot(result, Rf_install("ldata")), R_DimSymbol))[0];
     args.tlen = LENGTH(R_do_slot(result, Rf_install("tspan")));
 
     /* Output array (to hold a single trajectory) */
     PROTECT(U_sparse = R_do_slot(result, Rf_install("U_sparse")));
     nprotect++;
-    if (SimInf_sparse(U_sparse, args.Nn * args.Nc, args.tlen)) {
+    if (SimInf_sparse
+        (U_sparse, (ptrdiff_t) args.Nn * (ptrdiff_t) args.Nc, args.tlen)) {
         args.irU = INTEGER(R_do_slot(U_sparse, Rf_install("i")));
         args.jcU = INTEGER(R_do_slot(U_sparse, Rf_install("p")));
         args.prU = REAL(R_do_slot(U_sparse, Rf_install("x")));
     } else {
-        PROTECT(U = Rf_allocMatrix(INTSXP, args.Nn * args.Nc, args.tlen));
+        PROTECT(U =
+                Rf_allocMatrix(INTSXP, args.Nn * args.Nc,
+                               args.Nrep * args.tlen));
         nprotect++;
         R_do_slot_assign(result, Rf_install("U"), U);
         args.U = INTEGER(R_do_slot(result, Rf_install("U")));
@@ -214,12 +219,15 @@ SimInf_run(
     /* Output array (to hold a single trajectory) */
     PROTECT(V_sparse = R_do_slot(result, Rf_install("V_sparse")));
     nprotect++;
-    if (SimInf_sparse(V_sparse, args.Nn * args.Nd, args.tlen)) {
+    if (SimInf_sparse
+        (V_sparse, (ptrdiff_t) args.Nn * (ptrdiff_t) args.Nd, args.tlen)) {
         args.irV = INTEGER(R_do_slot(V_sparse, Rf_install("i")));
         args.jcV = INTEGER(R_do_slot(V_sparse, Rf_install("p")));
         args.prV = REAL(R_do_slot(V_sparse, Rf_install("x")));
     } else {
-        PROTECT(V = Rf_allocMatrix(REALSXP, args.Nn * args.Nd, args.tlen));
+        PROTECT(V =
+                Rf_allocMatrix(REALSXP, args.Nn * args.Nd,
+                               args.Nrep * args.tlen));
         nprotect++;
         R_do_slot_assign(result, Rf_install("V"), V);
         args.V = REAL(R_do_slot(result, Rf_install("V")));
@@ -244,19 +252,30 @@ SimInf_run(
 
     /* Specify the number of threads to use. Make sure to not use more
      * threads than the number of nodes in the model. */
-    args.Nthread = SimInf_set_num_threads(args.Nn);
+    if (args.Nrep > 1)
+        args.Nthread = SimInf_set_num_threads(args.Nrep);
+    else
+        args.Nthread = SimInf_set_num_threads(args.Nn);
 
     /* Run the simulation solver. */
-    if (Rf_isNull(solver) || (strcmp(CHAR(STRING_ELT(solver, 0)), "ssm") == 0))
-        error = SimInf_run_solver_ssm(&args);
-    else if (strcmp(CHAR(STRING_ELT(solver, 0)), "aem") == 0)
-        error = SimInf_run_solver_aem(&args);
-    else
-        error = SIMINF_ERR_UNKNOWN_SOLVER;
+    if (Rf_isNull(solver)
+        || (strcmp(CHAR(STRING_ELT(solver, 0)), "ssm") == 0)) {
+        if (args.Nrep > 1)
+            err = SimInf_run_solver_mssm(&args);
+        else
+            err = SimInf_run_solver_ssm(&args);
+    } else if (strcmp(CHAR(STRING_ELT(solver, 0)), "aem") == 0) {
+        if (args.Nrep > 1)
+            err = SIMINF_ERR_AEM_REPLICATED_MODEL;
+        else
+            err = SimInf_run_solver_aem(&args);
+    } else {
+        err = SIMINF_ERR_UNKNOWN_SOLVER;
+    }
 
 cleanup:
-    if (error)
-        SimInf_raise_error(error);
+    if (err)
+        SimInf_raise_error(err);
 
     if (nprotect)
         UNPROTECT(nprotect);

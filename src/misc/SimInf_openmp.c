@@ -5,7 +5,7 @@
  * Copyright (C) 2015 Pavol Bauer
  * Copyright (C) 2017 -- 2019 Robin Eriksson
  * Copyright (C) 2015 -- 2019 Stefan Engblom
- * Copyright (C) 2015 -- 2023 Stefan Widgren
+ * Copyright (C) 2015 -- 2025 Stefan Widgren
  *
  * SimInf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,15 +21,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <Rinternals.h>
-#include <R_ext/Visibility.h>
-#include <stdlib.h>
-
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-
 #include "SimInf.h"
+#include <R_ext/Visibility.h>
+#include <Rinternals.h>
+#ifdef _OPENMP
+#  include <omp.h>
+#endif
+#include <stdlib.h>
 
 /* This is the maximum number of threads that SimInf will use for
  * OpenMP parallel regions. It is initialised (>= 1) by
@@ -41,7 +39,9 @@ static int SimInf_max_threads = -1;
  * run. */
 static int SimInf_threads = -1;
 
-int attribute_hidden SimInf_num_threads(void)
+attribute_hidden int
+SimInf_num_threads(
+    void)
 {
     return SimInf_threads;
 }
@@ -49,7 +49,9 @@ int attribute_hidden SimInf_num_threads(void)
 /* Internal function to specify the number of threads to use in a
  * parallel region. Use all avialable threads if the 'threads'
  * argument is <= 0. */
-int attribute_hidden SimInf_set_num_threads(int threads)
+attribute_hidden int
+SimInf_set_num_threads(
+    int threads)
 {
     if (threads <= 0 || threads > SimInf_max_threads)
         threads = SimInf_max_threads;
@@ -60,7 +62,9 @@ int attribute_hidden SimInf_set_num_threads(int threads)
 /* Get the value of the environmental variable 'SIMINF_NUM_THREADS'
  * (if it exists and is greater than 0). */
 #ifdef _OPENMP
-static int SimInf_get_max_threads(void)
+static int
+SimInf_get_max_threads(
+    void)
 {
     const char *p = getenv("SIMINF_NUM_THREADS");
 
@@ -83,7 +87,9 @@ static int SimInf_get_max_threads(void)
  * find the number of threads. Additionally, it can be controlled by
  * the 'threads' argument when called from 'R'. If called from R, it
  * returns the old value of the maximum number of threads used. */
-SEXP attribute_hidden SimInf_init_threads(SEXP threads)
+attribute_hidden SEXP
+SimInf_init_threads(
+    SEXP threads)
 {
     int old_value = SimInf_max_threads;
 
@@ -110,8 +116,7 @@ SEXP attribute_hidden SimInf_init_threads(SEXP threads)
     if (Rf_isInteger(threads) &&
         LENGTH(threads) == 1 &&
         INTEGER(threads)[0] != NA_INTEGER &&
-        INTEGER(threads)[0] < SimInf_max_threads)
-    {
+        INTEGER(threads)[0] < SimInf_max_threads) {
         SimInf_max_threads = INTEGER(threads)[0];
     }
 
@@ -131,7 +136,9 @@ SEXP attribute_hidden SimInf_init_threads(SEXP threads)
 /**
  * Is OpenMP available
  */
-SEXP attribute_hidden SimInf_have_openmp(void)
+attribute_hidden SEXP
+SimInf_have_openmp(
+    void)
 {
 #ifdef _OPENMP
     return Rf_ScalarLogical(1);

@@ -4,7 +4,7 @@
 ## Copyright (C) 2015 Pavol Bauer
 ## Copyright (C) 2017 -- 2019 Robin Eriksson
 ## Copyright (C) 2015 -- 2019 Stefan Engblom
-## Copyright (C) 2015 -- 2024 Stefan Widgren
+## Copyright (C) 2015 -- 2025 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -77,25 +77,42 @@ C_enumeration_constants <- function(target, labels) {
                target, "' vector. */"),
         "enum {")
 
-    for (i in seq_len(length(labels))) {
+    for (i in seq_along(labels)) {
         lbl <- toupper(labels[i])
-        if ((nchar(lines[length(lines)]) + nchar(lbl)) > 64)
-            lines <- c(lines, "     ")
-        if (i > 1)
-            lines[length(lines)] <- paste0(lines[length(lines)], " ")
-        lines[length(lines)] <- paste0(lines[length(lines)], lbl)
+
+        ## Add enumeration value.
+        if (!is.null(attr(labels, "value")))
+            lbl <- sprintf("%s = %i", lbl, attr(labels, "value")[i])
+
         if (i < length(labels))
-            lines[length(lines)] <- paste0(lines[length(lines)], ",")
+            lbl <- paste0(lbl, ",")
+
+        lines <- c(lines, paste0("    ", lbl))
     }
 
-    lines[length(lines)] <- paste0(lines[length(lines)], "};")
-    c(lines, "")
+    c(lines, "};", "")
 }
 
 C_enum <- function(compartments, ldata_names, gdata_names, v0_names,
                    use_enum) {
     if (!isTRUE(use_enum))
         return(character(0))
+
+    if (length(compartments) > 0) {
+        a <- attributes(compartments)
+        compartments <- c(compartments, "N_COMPARTMENTS_U")
+        a$value <- c(a$value, a$n_values)
+        a$n_values <- a$n_values + 1L
+        attributes(compartments) <- a
+    }
+
+    if (length(v0_names) > 0) {
+        a <- attributes(v0_names)
+        v0_names <- c(v0_names, "N_COMPARTMENTS_V")
+        a$value <- c(a$value, a$n_values)
+        a$n_values <- a$n_values + 1L
+        attributes(v0_names) <- a
+    }
 
    c(C_enumeration_constants("u", compartments),
      C_enumeration_constants("v", v0_names),
@@ -158,7 +175,7 @@ C_trFun <- function(transitions) {
         "    double t)")
 
     lines <- character(0)
-    for (i in seq_len(length(propensities))) {
+    for (i in seq_along(propensities)) {
         propensity <- propensities[[i]]
 
         lines <- c(

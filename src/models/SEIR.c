@@ -5,7 +5,7 @@
  * Copyright (C) 2015 Pavol Bauer
  * Copyright (C) 2017 -- 2019 Robin Eriksson
  * Copyright (C) 2015 -- 2019 Stefan Engblom
- * Copyright (C) 2015 -- 2022 Stefan Widgren
+ * Copyright (C) 2015 -- 2025 Stefan Widgren
  *
  * SimInf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,14 +21,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <R_ext/Visibility.h>
 #include "SimInf.h"
+#include <R_ext/Visibility.h>
 
 /* Offset in integer compartment state vector */
-enum {S, E, I, R};
+enum { S, E, I, R };
 
 /* Offsets in global data (gdata) to parameters in the model */
-enum {BETA, EPSILON, GAMMA};
+enum { BETA, EPSILON, GAMMA };
 
 /**
  * susceptible to exposed: S -> E
@@ -154,12 +154,12 @@ SEIR_post_time_step(
  * @param solver The numerical solver.
  * @return The simulated trajectory.
  */
-SEXP attribute_hidden
+attribute_hidden SEXP
 SEIR_run(
     SEXP model,
     SEXP solver)
 {
-    TRFun tr_fun[] = {&SEIR_S_to_E, &SEIR_E_to_I, &SEIR_I_to_R};
+    TRFun tr_fun[] = { &SEIR_S_to_E, &SEIR_E_to_I, &SEIR_I_to_R };
 
     return SimInf_run(model, solver, tr_fun, &SEIR_post_time_step);
 }

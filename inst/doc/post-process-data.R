@@ -70,5 +70,5 @@ plot(result, I ~ S + I + R, level = 3)
 plot(result, I ~ S + I + R, level = 3, index = 1:3, range = FALSE)
 
 ## ----eval=FALSE-----------------------------------------------------
-#  help("plot,SimInf_model-method", package = "SimInf")
+# help("plot,SimInf_model-method", package = "SimInf")
 

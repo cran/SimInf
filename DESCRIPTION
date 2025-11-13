@@ -1,7 +1,7 @@
 Package: SimInf
 Title: A Framework for Data-Driven Stochastic Disease Spread
         Simulations
-Version: 9.8.1
+Version: 10.0.0
 Authors@R: c(person("Stefan", "Widgren", role = c("aut", "cre"),
                     email = "stefan.widgren@gmail.com",
                     comment = c(ORCID = "0000-0001-5745-2284")),
@@ -36,7 +36,9 @@ Description: Provides an efficient and very flexible framework to
     functionality to fit models to time series data using the
     Approximate Bayesian Computation Sequential Monte Carlo
     ('ABC-SMC') algorithm of Toni and others (2009)
-    <doi:10.1098/rsif.2008.0172>.
+    <doi:10.1098/rsif.2008.0172> or the Particle Markov Chain Monte
+    Carlo ('PMCMC') algorithm of 'Andrieu' and others (2010)
+    <doi:10.1111/j.1467-9868.2009.00736.x>.
 Acknowledgements: This software has been made possible by support from
         the Swedish Research Council within the UPMARC Linnaeus center
         of Excellence (Pavol Bauer, Robin Eriksson, and Stefan
@@ -48,7 +50,7 @@ Acknowledgements: This software has been made possible by support from
         2020 Research and Innovation programme under grant agreement No
         773830: One Health European Joint Programme (Stefan Widgren).
 License: GPL-3
-URL: https://github.com/stewid/SimInf
+URL: https://github.com/stewid/SimInf, http://stewid.github.io/SimInf/
 BugReports: https://github.com/stewid/SimInf/issues
 Type: Package
 LazyData: true
@@ -62,23 +64,25 @@ Suggests: knitr, rmarkdown
 Collate: 'C-generator.R' 'check_arguments.R' 'init.R' 'valid.R'
         'classes.R' 'SimInf_model.R' 'SEIR.R' 'SIR.R' 'SIS.R' 'SISe.R'
         'SISe3.R' 'SISe3_sp.R' 'SISe_sp.R' 'SimInf-package.R'
-        'SimInf.R' 'SimInf_events.R' 'SimInf_indiv_events.R' 'run.R'
-        'density_ratio.R' 'abc.R' 'degree.R' 'distance.R'
-        'distributions.R' 'edge_properties.R' 'match_compartments.R'
-        'mparse.R' 'n.R' 'openmp.R' 'package_skeleton.R' 'pfilter.R'
-        'plot.R' 'prevalence.R' 'print.R' 'punchcard.R' 'trajectory.R'
-        'u0.R' 'v0.R'
+        'SimInf.R' 'SimInf_events.R' 'SimInf_individual_events.R'
+        'run.R' 'density_ratio.R' 'abc.R' 'degree.R' 'distance.R'
+        'distributions.R' 'edge_properties.R' 'lambert.R'
+        'match_compartments.R' 'mparse.R' 'pmcmc.R' 'pfilter.R' 'n.R'
+        'openmp.R' 'package_skeleton.R' 'plot.R' 'prevalence.R'
+        'print.R' 'punchcard.R' 'trajectory.R' 'u0.R' 'v0.R'
 Encoding: UTF-8
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.3
 VignetteBuilder: utils, knitr
-Packaged: 2024-06-21 11:42:08 UTC; stefan
-Author: Stefan Widgren [aut, cre] (<https://orcid.org/0000-0001-5745-2284>),
-  Robin Eriksson [aut] (<https://orcid.org/0000-0002-4291-712X>),
-  Stefan Engblom [aut] (<https://orcid.org/0000-0002-3614-1732>),
-  Pavol Bauer [aut] (<https://orcid.org/0000-0003-4328-7171>),
-  Thomas Rosendal [ctb] (<https://orcid.org/0000-0002-6576-9668>),
-  Ivana Rodriguez Ewerlöf [ctb] (<https://orcid.org/0000-0002-9678-9813>),
+Packaged: 2025-11-13 17:54:52 UTC; stefan
+Author: Stefan Widgren [aut, cre] (ORCID:
+    <https://orcid.org/0000-0001-5745-2284>),
+  Robin Eriksson [aut] (ORCID: <https://orcid.org/0000-0002-4291-712X>),
+  Stefan Engblom [aut] (ORCID: <https://orcid.org/0000-0002-3614-1732>),
+  Pavol Bauer [aut] (ORCID: <https://orcid.org/0000-0003-4328-7171>),
+  Thomas Rosendal [ctb] (ORCID: <https://orcid.org/0000-0002-6576-9668>),
+  Ivana Rodriguez Ewerlöf [ctb] (ORCID:
+    <https://orcid.org/0000-0002-9678-9813>),
   Attractive Chaos [cph] (Author of 'kvec.h'.)
 Maintainer: Stefan Widgren <stefan.widgren@gmail.com>
 Repository: CRAN
-Date/Publication: 2024-06-21 12:10:02 UTC
+Date/Publication: 2025-11-13 19:10:12 UTC

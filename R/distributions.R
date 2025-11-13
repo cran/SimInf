@@ -1,7 +1,7 @@
 ## This file is part of SimInf, a framework for stochastic
 ## disease spread simulations.
 ##
-## Copyright (C) 2015 -- 2023 Stefan Widgren
+## Copyright (C) 2015 -- 2024 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -55,6 +55,19 @@ check_gamma_distribution <- function(hyperparameters, symbols) {
     }
 }
 
+check_lognormal_distribution <- function(hyperparameters, symbols) {
+    if (length(hyperparameters) != 2 || anyNA(hyperparameters)) {
+        stop("Invalid formula specification for lognormal distribution.",
+             call. = FALSE)
+    }
+
+    if (is.null(symbols) && hyperparameters[2] < 0) {
+        stop("Invalid distribution: ",
+             "lognormal standard deviation must be >= 0.",
+             call. = FALSE)
+    }
+}
+
 check_normal_distribution <- function(hyperparameters, symbols) {
     if (length(hyperparameters) != 2 || anyNA(hyperparameters)) {
         stop("Invalid formula specification for normal distribution.",
@@ -103,6 +116,9 @@ check_hyperparameters <- function(distribution, hyperparameters, symbols) {
            },
            gamma = {
                check_gamma_distribution(hyperparameters, symbols)
+           },
+           lognormal = {
+               check_lognormal_distribution(hyperparameters, symbols)
            },
            normal = {
                check_normal_distribution(hyperparameters, symbols)
@@ -233,4 +249,52 @@ match_priors <- function(model, priors) {
     }
 
     list(pars = pars, target = target)
+}
+
+##' Generate random deviates from priors.
+##' @noRd
+rpriors <- function(priors, n = 1) {
+    mapply(function(parameter, distribution, p1, p2) {
+        switch(
+            distribution,
+            "gamma" = stats::rgamma(n = n, shape = p1, rate = 1 / p2),
+            "lognormal" = stats::rlnorm(n = n, meanlog = p1, sdlog = p2),
+            "normal" = stats::rnorm(n = n, mean = p1, sd = p2),
+            "uniform" = stats::runif(n = n, min = p1, max = p2),
+            stop("Unknown distribution.", call. = FALSE))
+    },
+    priors$parameter,
+    priors$distribution,
+    priors$p1,
+    priors$p2)
+}
+
+##' Determine the sum of the log of the densities for the priors.
+##' @noRd
+dpriors <- function(x, priors) {
+    sum(mapply(function(x, distribution, p1, p2) {
+        switch(
+            distribution,
+            "gamma" = stats::dgamma(x = x,
+                                    shape = p1,
+                                    rate = 1 / p2,
+                                    log = TRUE),
+            "lognormal" = stats::dlnorm(x = x,
+                                        meanlog = p1,
+                                        sdlog = p2,
+                                        log = TRUE),
+            "normal" = stats::dnorm(x = x,
+                                    mean = p1,
+                                    sd = p2,
+                                    log = TRUE),
+            "uniform" = stats::dunif(x = x,
+                                     min = p1,
+                                     max = p2,
+                                     log = TRUE),
+            stop("Unknown distribution.", call. = FALSE))
+    },
+    x,
+    priors$distribution,
+    priors$p1,
+    priors$p2))
 }

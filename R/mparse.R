@@ -4,7 +4,7 @@
 ## Copyright (C) 2015 Pavol Bauer
 ## Copyright (C) 2017 -- 2019 Robin Eriksson
 ## Copyright (C) 2015 -- 2019 Stefan Engblom
-## Copyright (C) 2015 -- 2024 Stefan Widgren
+## Copyright (C) 2015 -- 2025 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -54,7 +54,7 @@ tokenize <- function(code) {
                     x <- as.character(x[1, 1])
                     j <- 1
                     xx <- NULL
-                    for (i in seq_len(length(m))) {
+                    for (i in seq_along(m)) {
                         if (m[i] > j)
                             xx <- c(xx, substr(x, j, m[i] - 1))
                         j <- m[i] + attr(m, "match.length")[i]
@@ -419,8 +419,12 @@ parse_transitions <- function(transitions, compartments, ldata_names,
 
 ##' Extract variable names from data
 ##'
-##' @param x data to extract the variable names from.
+##' @param x data to extract the variable names from. Varible names
+##'     can be empty, i.e., "", however, the empty variable names will
+##'     be removed from the return value.
 ##' @param is_vector_ok TRUE if x can be a numeric vector, else FALSE.
+##' @return character vector containting the variables with name and
+##'     their enumeration value as attribute.
 ##' @noRd
 variable_names <- function(x, is_vector_ok) {
     if (is.null(x))
@@ -447,6 +451,18 @@ variable_names <- function(x, is_vector_ok) {
              call. = FALSE)
     }
 
+    ## Add enumeration value.
+    value <- seq_along(lbl) - 1L
+    n_values <- length(value)
+
+    ## Keep only non-empty variable names.
+    i <- which(nchar(lbl) > 0)
+    lbl <- lbl[i]
+    if (length(i)) {
+        attr(lbl, "value") <- value[i]
+        attr(lbl, "n_values") <- n_values
+    }
+
     if (any(duplicated(lbl)) || any(nchar(lbl) == 0)) {
         stop(paste0("'",
                     as.character(substitute(x)),
@@ -461,7 +477,7 @@ variable_names <- function(x, is_vector_ok) {
 state_change_matrix <- function(transitions, compartments) {
     S <- do.call("cbind", lapply(transitions, "[[", "S"))
     colnames(S) <- as.character(seq_len(dim(S)[2]))
-    rownames(S) <- compartments
+    rownames(S) <- as.character(compartments)
     S
 }
 
@@ -515,11 +531,15 @@ dependency_graph <- function(transitions, S) {
 ##'     parameters. The local data vector is passed as an argument to
 ##'     the transition rate functions and the post time step function.
 ##' @param gdata optional data that are common to all nodes in the
-##'     model. Can be specified either as a named numeric vector or as
-##'     as a one-row data.frame. The names are used to identify the
-##'     parameters in the transitions. The global data vector is
-##'     passed as an argument to the transition rate functions and the
-##'     post time step function.
+##'     model. Can be specified either as a optionally named numeric
+##'     vector or as as a one-row data.frame. The names are used to
+##'     identify the parameters in the transitions. When \code{gdata}
+##'     is specified as a vector, it is possible to have parameters
+##'     without names, however, these parameters will not be
+##'     automatically identified by mparse but need to be identified
+##'     in the code by the user. The global data vector is passed as
+##'     an argument to the transition rate functions and the post time
+##'     step function.
 ##' @template u0-param
 ##' @param v0 optional data with the initial continuous state in each
 ##'     node. \code{v0} can be specified as a \code{data.frame} with
@@ -552,7 +572,11 @@ dependency_graph <- function(transitions, S) {
 ##'     in the generated C code. The name of each enumeration constant
 ##'     will be transformed to the upper-case name of the
 ##'     corresponding parameter, for example, a parameter 'beta' will
-##'     become 'BETA'. Using enumeration constants can make it easier
+##'     become 'BETA'. The enumeration constants 'N_COMPARTMENTS_U'
+##'     and 'N_COMPARTMENTS_V' will be automatically added to
+##'     facilitate indexing 'u' and 'v' in the C code. These two
+##'     enumeration constants cannot be used as a compartment or
+##'     variable name. Using enumeration constants can make it easier
 ##'     to modify the C code afterwards, or when writing C code for
 ##'     the \code{pts_fun} parameter. Default is \code{FALSE}, i.e.,
 ##'     the parameters are specified by using integer indices for the
@@ -574,19 +598,23 @@ mparse <- function(transitions = NULL, compartments = NULL, ldata = NULL,
     ## Check u0 and compartments
     u0 <- check_u0(u0, compartments)
 
+    ## Add enumeration value to compartments.
+    attr(compartments, "value") <- seq_along(compartments) - 1L
+    attr(compartments, "n_values") <- length(compartments)
+
     ## Extract variable names from data.
-    if (is.vector(x = ldata, mode = "numeric") && nrow(u0) == 1)
-        ldata <- as.data.frame(t(ldata))
-    ldata_names <- variable_names(ldata, FALSE)
-
+    ldata_names <- variable_names(ldata, nrow(u0) == 1L)
     gdata_names <- variable_names(gdata, TRUE)
-
-    if (is.vector(x = v0, mode = "numeric") && nrow(u0) == 1)
-        v0 <- as.data.frame(t(v0))
-    v0_names <- variable_names(v0, FALSE)
+    v0_names <- variable_names(v0, nrow(u0) == 1L)
 
     if (any(duplicated(c(compartments, gdata_names, ldata_names, v0_names)))) {
         stop("'u0', 'gdata', 'ldata' and 'v0' have names in common.",
+             call. = FALSE)
+    }
+
+    if (any(c("N_COMPARTMENTS_U", "N_COMPARTMENTS_V") %in%
+            c(compartments, gdata_names, ldata_names, v0_names))) {
+        stop("Invalid compartment or variable name.",
              call. = FALSE)
     }
 

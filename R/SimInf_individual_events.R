@@ -2,7 +2,7 @@
 ## disease spread simulations.
 ##
 ## Copyright (C) 2022 -- 2023 Ivana Rodriguez Ewerlöf
-## Copyright (C) 2015 -- 2024 Stefan Widgren
+## Copyright (C) 2015 -- 2025 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-##' Class \code{"SimInf_indiv_events"}
+##' Class \code{"SimInf_individual_events"}
 ##'
 ##' @slot id an integer or character identifier of the individual.
 ##' @slot event four event types are supported: \emph{exit},
@@ -36,7 +36,7 @@
 ##'     node.
 ##' @export
 setClass(
-    "SimInf_indiv_events",
+    "SimInf_individual_events",
     slots = c(id    = "ANY",
               event = "integer",
               time  = "integer",
@@ -45,19 +45,19 @@ setClass(
     )
 )
 
-##' Check if a SimInf_indiv_events object is valid
+##' Check if a SimInf_individual_events object is valid
 ##'
-##' @param object The SimInf_indiv_events object to check.
+##' @param object The SimInf_individual_events object to check.
 ##' @noRd
-valid_SimInf_indiv_events <- function(object) {
+valid_SimInf_individual_events <- function(object) {
     TRUE
 }
 
 ## Assign the function as the validity method for the class.
-setValidity("SimInf_indiv_events", valid_SimInf_indiv_events)
+setValidity("SimInf_individual_events", valid_SimInf_individual_events)
 
 setAs(
-    from = "SimInf_indiv_events",
+    from = "SimInf_individual_events",
     to = "data.frame",
     def = function(from) {
         events <- data.frame(id    = from@id,
@@ -84,22 +84,22 @@ setAs(
 
 ##' Coerce to data frame
 ##'
-##' @method as.data.frame SimInf_indiv_events
+##' @method as.data.frame SimInf_individual_events
 ##'
 ##' @inheritParams base::as.data.frame
 ##' @export
-as.data.frame.SimInf_indiv_events <- function(x, ...) {
+as.data.frame.SimInf_individual_events <- function(x, ...) {
     methods::as(x, "data.frame")
 }
 
-##' Print summary of a \code{SimInf_indiv_events} object
+##' Print summary of a \code{SimInf_individual_events} object
 ##'
-##' @param object The \code{SimInf_indiv_events} object.
+##' @param object The \code{SimInf_individual_events} object.
 ##' @return \code{invisible(object)}.
 ##' @export
 setMethod(
     "show",
-    signature(object = "SimInf_indiv_events"),
+    signature(object = "SimInf_individual_events"),
     function(object) {
         cat(sprintf(
             paste0("Number of individuals: %i\n",
@@ -112,15 +112,15 @@ setMethod(
     }
 )
 
-##' Detailed summary of a \code{SimInf_indiv_events} object
+##' Detailed summary of a \code{SimInf_individual_events} object
 ##'
-##' @param object The \code{SimInf_indiv_events} object
+##' @param object The \code{SimInf_individual_events} object
 ##' @param ... Additional arguments affecting the summary produced.
 ##' @return None (invisible 'NULL').
 ##' @export
 setMethod(
     "summary",
-    signature(object = "SimInf_indiv_events"),
+    signature(object = "SimInf_individual_events"),
     function(object, ...) {
         show(object)
 
@@ -139,7 +139,7 @@ setMethod(
     }
 )
 
-check_indiv_events_id <- function(id) {
+check_individual_events_id <- function(id) {
     msg <- "'id' must be an integer or character vector with non-NA values."
 
     if (anyNA(id))
@@ -160,7 +160,7 @@ check_indiv_events_id <- function(id) {
     stop(msg, call. = FALSE)
 }
 
-check_indiv_events_event <- function(event) {
+check_individual_events_event <- function(event) {
     msg <- "'event' must be an integer or character vector with non-NA values."
 
     if (anyNA(event))
@@ -193,7 +193,7 @@ check_indiv_events_event <- function(event) {
     stop(msg, call. = FALSE)
 }
 
-check_indiv_events_time <- function(time) {
+check_individual_events_time <- function(time) {
     msg <- "'time' must be an integer or character vector with non-NA values."
 
     if (is.numeric(time)) {
@@ -219,7 +219,7 @@ check_indiv_events_time <- function(time) {
     stop(msg, call. = FALSE)
 }
 
-check_indiv_events_nodes <- function(event, node, dest) {
+check_individual_events_nodes <- function(event, node, dest) {
     if (any(anyNA(node), anyNA(dest[event == 3L]))) {
         stop("'node' or 'dest' contain NA values.",
              call. = FALSE)
@@ -247,6 +247,15 @@ check_indiv_events_nodes <- function(event, node, dest) {
 
     stop("'node' and 'dest' must both be integer or character.",
          call. = FALSE)
+}
+
+##' Compare two vectors and return TRUE wherever elements are the
+##' same, including NA's, and FALSE everywhere else.
+##' @noRd
+compareNA <- function(x, y) {
+    z <- (x == y) | (is.na(x) & is.na(y))
+    z[is.na(z)] <- FALSE
+    z
 }
 
 ##' Individual events
@@ -279,7 +288,7 @@ check_indiv_events_nodes <- function(event, node, dest) {
 ##' @param events a \code{data.frame} with the columns `id`, `event`,
 ##'     `time`, `node`, and `dest` to define the events, see
 ##'     `details`.
-##' @return \linkS4class{SimInf_indiv_events}
+##' @return \linkS4class{SimInf_individual_events}
 ##' @export
 ##' @seealso \code{\link{node_events}}.
 ##' @md
@@ -291,16 +300,28 @@ individual_events <- function(events) {
         stop("Missing columns in 'events'.", call. = FALSE)
     events <- events[, columns, drop = FALSE]
 
-    id <- check_indiv_events_id(events$id)
-    event <- check_indiv_events_event(events$event)
-    time <- check_indiv_events_time(events$time)
+    id <- check_individual_events_id(events$id)
+    event <- check_individual_events_event(events$event)
+    time <- check_individual_events_time(events$time)
     events$dest[event != 3L] <- NA
-    nodes <- check_indiv_events_nodes(event, events$node, events$dest)
+    nodes <- check_individual_events_nodes(event, events$node, events$dest)
 
     ## Ensure the events are sorted.
-    i <- order(id, time, event)
+    i <- order(id, time, event, nodes$node, nodes$dest)
 
-    keep <- .Call(SimInf_clean_indiv_events,
+    ## Remove duplicated events.
+    if (length(i) > 1L) {
+        j <- i[-1L]
+        k <- i[-length(i)]
+        d <- compareNA(id[j], id[k]) &
+            compareNA(time[j], time[k]) &
+            compareNA(event[j], event[k]) &
+            compareNA(nodes$node[j], nodes$node[k]) &
+            compareNA(nodes$dest[j], nodes$dest[k])
+        i <- i[!d]
+    }
+
+    keep <- .Call(SimInf_individual_events,
                   id[i],
                   event[i],
                   time[i],
@@ -317,7 +338,7 @@ individual_events <- function(events) {
     if (!is.null(origin))
         attr(event, "origin") <- origin
 
-    methods::new("SimInf_indiv_events",
+    methods::new("SimInf_individual_events",
                  id    = events$id[i][keep],
                  event = event,
                  time  = time,
@@ -355,12 +376,12 @@ indiv_events_time <- function(events, time) {
     stop(msg, call. = FALSE)
 }
 
-##' Extract individuals from \code{SimInf_indiv_events}
+##' Extract individuals from \code{SimInf_individual_events}
 ##'
 ##' Lookup individuals, in which node they are located and their age
 ##' at a specified time-point.
 ##' @param x an individual events object of class
-##'     \code{SimInf_indiv_events}.
+##'     \code{SimInf_individual_events}.
 ##' @param time the time-point for the lookup of individuals. Default
 ##'     is \code{NULL} which means to extract the individuals at the
 ##'     minimum time-point in the events object \code{x}.
@@ -379,7 +400,7 @@ setGeneric(
 ##' @export
 setMethod(
     "get_individuals",
-    signature(x = "SimInf_indiv_events"),
+    signature(x = "SimInf_individual_events"),
     function(x, time = NULL) {
         ## Check that all individuals have an enter event.
         if (length(setdiff(x@id, x@id[x@event == 1L])))
@@ -413,11 +434,11 @@ setMethod(
 ##' @template plot-frame-param
 ##' @param ... Other graphical parameters that are passed on to the
 ##'     plot function.
-##' @aliases plot,SimInf_indiv_events-method
+##' @aliases plot,SimInf_individual_events-method
 ##' @export
 setMethod(
     "plot",
-    signature(x = "SimInf_indiv_events"),
+    signature(x = "SimInf_individual_events"),
     function(x, frame.plot = FALSE, ...) {
         savepar <- graphics::par(mfrow = c(2, 2),
                                  oma = c(1, 1, 2, 0),
@@ -465,7 +486,7 @@ inject_ageing_events <- function(events, age) {
     ## Clear select for non-enter events.
     events[events[, "event"] != 1L, "select"] <- NA_integer_
 
-    for (i in seq_len(length(age))[-1]) {
+    for (i in seq_along(age)[-1]) {
         ## Determine which individuals are eligble for ageing.
         j <- which(ageing[, "exit"] - ageing[, "enter"] > age[i])
         ageing <- ageing[j, , drop = FALSE]
@@ -569,11 +590,11 @@ events_target <- function(events, target) {
 ##' \code{select=4,5,6} for all other events.
 ##'
 ##' @param x an individual events object of class
-##'     \code{SimInf_indiv_events}.
+##'     \code{SimInf_individual_events}.
 ##' @param time All events that occur after \sQuote{time} are
 ##'     included. Default is \code{NULL} which means to extract the
 ##'     events after the minimum time-point in the
-##'     \code{SimInf_indiv_events} object.
+##'     \code{SimInf_individual_events} object.
 ##' @param target The SimInf model ('SEIR', 'SIR', 'SIS', 'SISe3',
 ##'     'SISe3_sp', 'SISe', or 'SISe_sp') to target the events and u0
 ##'     for. The default, \code{NULL}, creates events but they might
@@ -597,7 +618,7 @@ setGeneric(
 ##' @export
 setMethod(
     "node_events",
-    signature(x = "SimInf_indiv_events"),
+    signature(x = "SimInf_individual_events"),
     function(x, time = NULL, target = NULL, age = NULL) {
         age <- check_age(age)
         target <- check_target(target, age)
@@ -707,21 +728,33 @@ events_to_tex <- function(events) {
         stop("Missing columns in 'events'.", call. = FALSE)
     events <- events[, columns, drop = FALSE]
 
-    id <- check_indiv_events_id(events$id)
+    id <- check_individual_events_id(events$id)
     stopifnot(length(unique(id)) == 1)
-    event <- check_indiv_events_event(events$event)
-    time <- check_indiv_events_time(events$time)
+    event <- check_individual_events_event(events$event)
+    time <- check_individual_events_time(events$time)
     time <- as.integer(factor(time - min(time)))
     events$dest[event != 3L] <- NA
-    nodes <- check_indiv_events_nodes(event, events$node, events$dest)
+    nodes <- check_individual_events_nodes(event, events$node, events$dest)
     levels <- sort(unique(c(nodes$node, nodes$dest)))
     nodes$node <- as.integer(factor(nodes$node, levels = levels))
     nodes$dest <- as.integer(factor(nodes$dest, levels = levels))
 
     ## Ensure the events are sorted.
-    i <- order(id, time, event)
+    i <- order(id, time, event, nodes$node, nodes$dest)
 
-    keep <- .Call(SimInf_clean_indiv_events,
+    ## Remove duplicated events.
+    if (length(i) > 1L) {
+        j <- i[-1L]
+        k <- i[-length(i)]
+        d <- compareNA(id[j], id[k]) &
+            compareNA(time[j], time[k]) &
+            compareNA(event[j], event[k]) &
+            compareNA(nodes$node[j], nodes$node[k]) &
+            compareNA(nodes$dest[j], nodes$dest[k])
+        i <- i[!d]
+    }
+
+    keep <- .Call(SimInf_individual_events,
                   id[i],
                   event[i],
                   time[i],

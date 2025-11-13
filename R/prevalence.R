@@ -4,7 +4,7 @@
 ## Copyright (C) 2015 Pavol Bauer
 ## Copyright (C) 2017 -- 2019 Robin Eriksson
 ## Copyright (C) 2015 -- 2019 Stefan Engblom
-## Copyright (C) 2015 -- 2024 Stefan Widgren
+## Copyright (C) 2015 -- 2025 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@
 sum_compartments <- function(model, compartments, index) {
     m <- NULL
 
-    for (j in seq_len(length(compartments))) {
+    for (j in seq_along(compartments)) {
         for (compartment in names(compartments[[j]])) {
             if (is.null(m)) {
                 m <- trajectory(model, compartment, index, "matrix")
@@ -41,7 +41,7 @@ evaluate_condition <- function(model, compartments, index, n) {
     ## Create an environment to hold the trajectory data with one
     ## column for each compartment.
     e <- new.env(parent = baseenv())
-    for (j in seq_len(length(compartments$rhs))) {
+    for (j in seq_along(compartments$rhs)) {
         if (length(compartments$rhs[[j]]) > 0) {
             ac <- attr(compartments$rhs[[j]], "available_compartments")
             for (compartment in ac) {
@@ -239,5 +239,36 @@ setMethod(
     function(model, formula, level, index,
              format = c("data.frame", "matrix")) {
         prevalence(model@model, formula, level, index, format)
+    }
+)
+
+##' Extract prevalence from fitting a PMCMC algorithm
+##'
+##' Extract prevalence from the filtered trajectories from a particle
+##' Markov chain Monte Carlo algorithm.
+##' @param model the \code{SimInf_pmcmc} object to extract the
+##'     prevalence from.
+##' @template prevalence-formula-param
+##' @template prevalence-level-param
+##' @template index-param
+##' @template start-param
+##' @template end-param
+##' @template thin-param
+##' @return A \code{data.frame} where the first column is the
+##'     \code{iteration} and the remaining columns are the result from
+##'     calling \code{\link{prevalence,SimInf_model-method}} with the
+##'     arguments \code{formula}, \code{level} and \code{index} for
+##'     each iteration.
+##' @include pmcmc.R
+##' @export
+setMethod(
+    "prevalence",
+    signature(model = "SimInf_pmcmc"),
+    function(model, formula, level, index, start = 1, end = NULL, thin = 1) {
+        iterations <- pmcmc_iterations(model, start, end, thin)
+        do.call("rbind", lapply(iterations, function(i) {
+            cbind(iteration = i,
+                  prevalence(model@pf[[i]], formula, level, index))
+        }))
     }
 )

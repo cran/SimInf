@@ -4,7 +4,7 @@
 ## Copyright (C) 2015 Pavol Bauer
 ## Copyright (C) 2017 -- 2019 Robin Eriksson
 ## Copyright (C) 2015 -- 2019 Stefan Engblom
-## Copyright (C) 2015 -- 2022 Stefan Widgren
+## Copyright (C) 2015 -- 2025 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -47,6 +47,8 @@ init_x0 <- function(x, storage_mode = c("integer", "double"), null_ok = FALSE) {
         x <- matrix(numeric(0), nrow = 0, ncol = 0)
     }
 
+    if (is.vector(x, mode = "numeric"))
+        x <- as.matrix(x)
     if (is.data.frame(x))
         x <- as_t_matrix(x)
 
@@ -79,6 +81,8 @@ init_sparse_matrix <- function(x) {
 init_data_matrix <- function(x) {
     if (is.null(x))
         x <- matrix(numeric(0), nrow = 0, ncol = 0)
+    if (is.vector(x, mode = "numeric"))
+        x <- as.matrix(x)
     if (is.data.frame(x))
         x <- as_t_matrix(x)
     if (is.integer(x))
@@ -99,6 +103,9 @@ init_data_vector <- function(x) {
         }
         x <- unlist(x)
     }
+
+    if (is.integer(x))
+        storage.mode(x) <- "double"
 
     x
 }

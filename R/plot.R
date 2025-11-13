@@ -4,7 +4,7 @@
 ## Copyright (C) 2015 Pavol Bauer
 ## Copyright (C) 2017 -- 2019 Robin Eriksson
 ## Copyright (C) 2015 -- 2019 Stefan Engblom
-## Copyright (C) 2015 -- 2023 Stefan Widgren
+## Copyright (C) 2015 -- 2025 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -199,7 +199,7 @@ init_plot_prevalence_data <- function(model, compartments,
     } else {
         y <- apply(
             prevalence(model, compartments, level, index, "matrix"),
-            2, stats::quantile, probs = c(range, 0.5, 1 - range))
+            2, stats::quantile, probs = c(range, 0.5, 1 - range), na.rm = TRUE)
 
         ## Matrices for quantile ranges and median.
         j <- seq_len(ncol(y))
@@ -222,7 +222,7 @@ init_plot_trajectory_data <- function(model, compartments, index, range) {
 
     ## Create a matrix with one row for each line in the plot.
     y <- list()
-    for (j in seq_len(length(compartments$rhs))) {
+    for (j in seq_along(compartments$rhs)) {
         for (compartment in names(compartments$rhs[[j]])) {
             if (identical(range, FALSE) || identical(length(index), 1L)) {
                 y[[length(y) + 1]] <-
@@ -308,7 +308,10 @@ init_plot_argv <- function(model, compartments, pd, type, lwd, ...) {
     argv
 }
 
-plot_data <- function(pd, argv, lty, col, frame.plot, legend) {
+plot_data <- function(pd, argv, lty, col, frame.plot, legend, log) {
+    if (length(grep("y", log)) > 0)
+        argv$ylim[1] <- 1
+
     ## Plot lines
     for (i in seq_len(dim(pd$y)[1])) {
         argv$y <- pd$y[i, ]
@@ -317,7 +320,7 @@ plot_data <- function(pd, argv, lty, col, frame.plot, legend) {
 
         if (i == 1) {
             argv$frame.plot <- frame.plot
-            do.call(plot, argv)
+            do.call(plot, c(argv, log = log))
             argv$frame.plot <- NULL
         } else {
             do.call(lines, argv)
@@ -383,6 +386,31 @@ plot_density <- function(x, ...) {
     }
 }
 
+plot_trace <- function(x, i, j, ...) {
+    mfrow <- switch(min(length(j), 10),
+                    c(1, 1),
+                    c(1, 2),
+                    c(2, 2),
+                    c(2, 2),
+                    c(3, 2),
+                    c(3, 2),
+                    c(3, 3),
+                    c(3, 3),
+                    c(3, 3),
+                    stop("To many variables to plot."))
+    opar <- par(mfrow = mfrow)
+    on.exit(par(opar), add = TRUE)
+
+    for (k in j) {
+        plot(x[i, k] ~ i,
+             xlab = "Iterations",
+             ylab = colnames(x)[k],
+             type = "l",
+             main = sprintf("Trace of %s", colnames(x)[k]),
+             ...)
+    }
+}
+
 ##' Display the outcome from a simulated trajectory
 ##'
 ##' Plot either the median and the quantile range of the counts in all
@@ -396,6 +424,10 @@ plot_density <- function(x, ...) {
 ##' @template plot-lwd-param
 ##' @template plot-frame-param
 ##' @template plot-legend-param
+##' @param log A character string which contains \code{"x"} if the x
+##'     axis is to be logarithmic, \code{"y"} if the y axis is to be
+##'     logarithmic and \code{"xy"} or \code{"yx"} if both axes are to
+##'     be logarithmic.
 ##' @param ... Other graphical parameters that are passed on to the
 ##'     plot function.
 ##' @rdname plot
@@ -469,7 +501,7 @@ setMethod(
     "plot",
     signature(x = "SimInf_model", y = "ANY"),
     function(x, y, level = 1, index = NULL, range = 0.5, type = "s",
-             lwd = 2, frame.plot = FALSE, legend = TRUE, ...) {
+             lwd = 2, frame.plot = FALSE, legend = TRUE, log = "", ...) {
         if (missing(y))
             y <- NULL
 
@@ -489,7 +521,7 @@ setMethod(
         lty <- init_plot_line_type(argv$lty, pd$compartments, pd$each)
         col <- init_plot_color(argv$col, pd$compartments, pd$each)
 
-        plot_data(pd, argv, lty, col, frame.plot, legend)
+        plot_data(pd, argv, lty, col, frame.plot, legend, log)
 
         invisible(NULL)
     }
@@ -517,6 +549,47 @@ setMethod(
         }
 
         plot_density(abc_particles(x, y), ...)
+
+        invisible(NULL)
+    }
+)
+
+##' Display the PMCMC posterior distribution
+##'
+##' Display the (approximate) posterior distributions obtained from
+#'      fitting a particle Markov chain Monte Carlo algorithm, or the
+#'      corresponding trace plots.
+##' @param x The \code{SimInf_pmcmc} object to plot.
+##' @param y The trace of all variables and logPost are plotted when
+##'     \code{y = "trace"} or \code{y = ~trace}, else the posterior
+##'     distributions are plotted. Default is to plot the posterier
+##'     distributions.
+##' @template start-param
+##' @template end-param
+##' @template thin-param
+##' @param ... Additional arguments affecting the plot.
+##' @aliases plot,SimInf_pmcmc-method
+##' @export
+##' @include pmcmc.R
+setMethod(
+    "plot",
+    signature(x = "SimInf_pmcmc"),
+    function(x, y, start = 1, end = NULL, thin = 1, ...) {
+        if (missing(y))
+            y <- "density"
+        if (is(y, "formula") && identical(as.character(y), c("~", "trace")))
+            y <- "trace"
+        y <- as.character(y)
+
+        i <- pmcmc_iterations(x, start, end, thin)
+        j <- seq(from = 5, by = 1, length.out = length(x@pars))
+
+        if (identical(y, "trace")) {
+            ## Include the logPost column.
+            plot_trace(x@chain, i, c(j, 1), ...)
+        } else {
+            plot_density(x@chain[i, j, drop = FALSE], ...)
+        }
 
         invisible(NULL)
     }

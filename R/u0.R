@@ -1,7 +1,7 @@
 ## This file is part of SimInf, a framework for stochastic
 ## disease spread simulations.
 ##
-## Copyright (C) 2015 -- 2024 Stefan Widgren
+## Copyright (C) 2015 -- 2025 Stefan Widgren
 ##
 ## SimInf is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -87,24 +87,25 @@ u0_target <- function(u0, target) {
 
 ##' @rdname u0
 ##' @param time Only used when object is of class
-##'     \code{SimInf_indiv_events} object. The time-point that will be
-##'     used to create u0. If left empty (the default), the earliest
-##'     time among the events will be used.
+##'     \code{SimInf_individual_events} object. The time-point that
+##'     will be used to create u0. If left empty (the default), the
+##'     earliest time among the events will be used.
 ##' @param target Only used when object is of class
-##'     \code{SimInf_indiv_events} object. The SimInf model ('SEIR',
-##'     'SIR', 'SIS', 'SISe3', 'SISe3_sp', 'SISe', or 'SISe_sp') to
-##'     target the events and u0 for. The default, \code{NULL},
-##'     creates an \code{u0}, but where the compartments might have to
-##'     be renamed and post-processed to fit the specific use case.
+##'     \code{SimInf_individual_events} object. The SimInf model
+##'     ('SEIR', 'SIR', 'SIS', 'SISe3', 'SISe3_sp', 'SISe', or
+##'     'SISe_sp') to target the events and u0 for. The default,
+##'     \code{NULL}, creates an \code{u0}, but where the compartments
+##'     might have to be renamed and post-processed to fit the
+##'     specific use case.
 ##' @param age Only used when object is of class
-##'     \code{SimInf_indiv_events} object. An integer vector with
+##'     \code{SimInf_individual_events} object. An integer vector with
 ##'     break points in days for the ageing events. The default,
 ##'     \code{NULL}, creates an \code{u0} where all individuals belong
 ##'     to the same age category.
 ##' @export
 setMethod(
     "u0",
-    signature(object = "SimInf_indiv_events"),
+    signature(object = "SimInf_individual_events"),
     function(object, time = NULL, target = NULL, age = NULL) {
         age <- check_age(age)
         target <- check_target(target, age)
@@ -116,7 +117,7 @@ setMethod(
         all_nodes <- unique(c(object@node, object@dest))
         all_nodes <- all_nodes[!is.na(all_nodes)]
         missing_nodes <- setdiff(all_nodes, individuals$node)
-        S_columns <- paste0("S_", seq_len(length(age)))
+        S_columns <- paste0("S_", seq_along(age))
 
         if (nrow(individuals)) {
             ## Determine the age categories.

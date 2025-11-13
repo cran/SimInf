@@ -59,11 +59,15 @@ parameters. The local data vector is passed as an argument to
 the transition rate functions and the post time step function.}
 
 \item{gdata}{optional data that are common to all nodes in the
-model. Can be specified either as a named numeric vector or as
-as a one-row data.frame. The names are used to identify the
-parameters in the transitions. The global data vector is
-passed as an argument to the transition rate functions and the
-post time step function.}
+model. Can be specified either as a optionally named numeric
+vector or as as a one-row data.frame. The names are used to
+identify the parameters in the transitions. When \code{gdata}
+is specified as a vector, it is possible to have parameters
+without names, however, these parameters will not be
+automatically identified by mparse but need to be identified
+in the code by the user. The global data vector is passed as
+an argument to the transition rate functions and the post time
+step function.}
 
 \item{u0}{A \code{data.frame} with the initial state in each node,
 i.e., the number of individuals in each compartment in each
@@ -115,7 +119,11 @@ each parameter in the 'u', 'v', 'ldata', and 'gdata' vectors
 in the generated C code. The name of each enumeration constant
 will be transformed to the upper-case name of the
 corresponding parameter, for example, a parameter 'beta' will
-become 'BETA'. Using enumeration constants can make it easier
+become 'BETA'. The enumeration constants 'N_COMPARTMENTS_U'
+and 'N_COMPARTMENTS_V' will be automatically added to
+facilitate indexing 'u' and 'v' in the C code. These two
+enumeration constants cannot be used as a compartment or
+variable name. Using enumeration constants can make it easier
 to modify the C code afterwards, or when writing C code for
 the \code{pts_fun} parameter. Default is \code{FALSE}, i.e.,
 the parameters are specified by using integer indices for the
