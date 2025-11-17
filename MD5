@@ -1,6 +1,6 @@
-477f021ceefad8e95aac5267b0653700 *DESCRIPTION
+a17b817ecae5c20663e405685e53c9c3 *DESCRIPTION
 70b805f61b807b965734156b53208bd9 *NAMESPACE
-e04fe65e8e42bdf8a134218d54b31f40 *NEWS.md
+bafc3961994d02b052da731b999a68f3 *NEWS.md
 5c740038be23025dbb78c4438b9d965b *R/C-generator.R
 559f0034a918c5b77998e664e4a5cf7c *R/SEIR.R
 c64ea5e66f0d9cc82315c12e146b00f1 *R/SIR.R
@@ -52,7 +52,7 @@ e4cc4ca1a5ff459aaa9b3c9d42d6f1dd *data/u0_SISe3.rda
 b02e5cd1ef2d8a43b24c8ad1b7716bfd *inst/CITATION
 280369a1ec9d9a280312de28039360ca *inst/doc/SimInf.R
 902e4be246775730376484e5b1f38239 *inst/doc/SimInf.Rnw
-48c889f9c8fd353cca1859bb6485c167 *inst/doc/SimInf.pdf
+7ad9b3eb73f59f0b60f4b49f7aec58c2 *inst/doc/SimInf.pdf
 336966f1cc6e55d6ddfa6dde055d7214 *inst/doc/post-process-data.R
 33f9bcfe765abeb9bdd7cb801c84d4ba *inst/doc/post-process-data.Rmd
 6e41da5405205bb65675c804d7b740b5 *inst/doc/post-process-data.html
@@ -193,10 +193,10 @@ d677197c8ce447e0c833f200fd7c1e53 *src/misc/kvec.h
 8acb09a66e650457ce2f8c7f1a6e8b5e *src/models/SISe3.c
 1b88cee7458e6e84fe32008c095fb8b0 *src/models/SISe3_sp.c
 0da3cb400991a0bf61dd970adbba1a46 *src/models/SISe_sp.c
-32d863e8ec093202a0f5c27754f5ee0b *src/solvers/SimInf_solver.c
-b72b91d3cd8d2f88a4395e74788bc5b5 *src/solvers/SimInf_solver_aem.c
-344ed91415e45ac3ef89ed1ee0cb79e7 *src/solvers/SimInf_solver_mssm.c
-172602f8a2e0e6186dd34ff50590b1a6 *src/solvers/SimInf_solver_ssm.c
+461e371fc750abe04f1c7b0c85125b1b *src/solvers/SimInf_solver.c
+0f92d11e1121462050cf09d1a8d8ed33 *src/solvers/SimInf_solver_aem.c
+c9a02ff6fa1eaa064856d14e596f49a9 *src/solvers/SimInf_solver_mssm.c
+9abec86ef58e8456cd2c36ac3c6f4ffb *src/solvers/SimInf_solver_ssm.c
 6cfbda1c6ade0d8b7bf4665266a2d526 *tests/SEIR.R
 cfdc98b3e38ef9aa91b7560d066ea19f *tests/SIR.R
 4e311ca41d8d208b0f2f7ed3a6e6d68f *tests/SIS.R
